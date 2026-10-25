@@ -102,9 +102,10 @@ private fun AprenderApp() {
     var pinStored by remember { mutableStateOf(preferences.getString("parent_pin", "1234") ?: "1234") }
     var newPinDraft by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
+    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "Primeras palabras\\nCasa y familia\\nNaturaleza") ?: "").split("\\n").filter { it.isNotBlank() }) }
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
-    val categories = (listOf("Primeras palabras", "Casa y familia", "Naturaleza") + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
+    val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
     val exercisePairs = pairs.filter { it.active && it.difficulty == difficulty }.take(4)
     val pairCount = exercisePairs.size
     val rewardSeconds = when (difficulty) { "Normal" -> 300; "Difícil" -> 420; else -> 120 }
@@ -220,7 +221,7 @@ private fun AprenderApp() {
                         Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Añade categorías y, antes de borrar una, elige dónde mover sus palabras.", fontSize = 14.sp, color = Color(0xFF667085))
                         OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = it }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryDraftName = ""; categoryMessage = "Categoría creada. Ya puedes asignarla a una palabra." ; categoryDraftName = clean } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
+                        Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("\\n")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
                         if (categoryMessage.isNotBlank()) Text(categoryMessage, color = Color(0xFF24733B))
                         categories.forEach { name ->
                             Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -232,7 +233,7 @@ private fun AprenderApp() {
                                         categories.filterNot { it.equals(name, ignoreCase = true) }.forEach { destination ->
                                             OutlinedButton(onClick = { pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }; savePairs(preferences, pairs); categoryToRemove = ""; categoryMessage = "Palabras reasignadas a $destination." }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
                                         }
-                                        OutlinedButton(onClick = { if (pairs.none { it.category.equals(name, ignoreCase = true) }) { categoryToRemove = ""; categoryMessage = "Categoría retirada de la lista." } else categoryMessage = "Primero mueve las palabras a otra categoría." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                        OutlinedButton(onClick = { if (pairs.none { it.category.equals(name, ignoreCase = true) }) { categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }; preferences.edit().putString("categories", categoryNames.joinToString("\\n")).apply(); categoryToRemove = ""; categoryMessage = "Categoría eliminada." } else categoryMessage = "Primero mueve las palabras a otra categoría." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                                     } else if (name !in listOf("Primeras palabras", "Casa y familia", "Naturaleza")) {
                                         OutlinedButton(onClick = { categoryToRemove = name; categoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                     }
