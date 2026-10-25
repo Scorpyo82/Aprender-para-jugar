@@ -1,6 +1,10 @@
 package es.aprenderparajugar
 
 import android.os.Bundle
+import android.content.Intent
+import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Context
 import android.net.Uri
 import android.widget.ImageView
@@ -62,6 +66,9 @@ import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
+        }
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFFFF8E8)) {
@@ -343,13 +350,20 @@ private fun AprenderApp() {
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
-    androidx.compose.runtime.LaunchedEffect(screen, appInForeground, balanceSeconds) {
-        while (screen == "play-time" && appInForeground && balanceSeconds > 0) {
+    androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
+        while (screen == "play-time" && appInForeground) {
+            val deadline = preferences.getLong("play_deadline_ms", 0L)
+            val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else preferences.getInt("balance_seconds", 0).coerceAtLeast(0)
+            if (remaining != balanceSeconds) {
+                balanceSeconds = remaining
+                preferences.edit().putInt("balance_seconds", remaining).apply()
+            }
+            if (remaining <= 0) {
+                screen = "home"
+                break
+            }
             delay(1000L)
-            balanceSeconds = (balanceSeconds - 1).coerceAtLeast(0)
-            preferences.edit().putInt("balance_seconds", balanceSeconds).apply()
         }
-        if (screen == "play-time" && balanceSeconds <= 0) screen = "home"
     }
 
     if (screen == "parent-pin") {
@@ -713,9 +727,14 @@ private fun AprenderApp() {
             Text("Este es el tiempo que has ganado al aprender.", fontSize = 16.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(24.dp))
             Text(String.format(java.util.Locale.ROOT, "%02d:%02d", balanceSeconds / 60, balanceSeconds % 60), fontSize = 54.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF267A55))
-            Text(if (appInForeground) "El tiempo se está consumiendo." else "Tiempo pausado mientras la app está en segundo plano.", fontSize = 15.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("El tiempo sigue descontándose aunque uses otras aplicaciones.", fontSize = 15.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(24.dp))
-            Button(onClick = { screen = "home" }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
+            Button(onClick = {
+                context.stopService(Intent(context, PlayTimeService::class.java))
+                preferences.edit().putLong("play_deadline_ms", 0L).putInt("balance_seconds", 0).apply()
+                balanceSeconds = 0
+                screen = "home"
+            }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
         }
     } else if (screen == "result") {
         Column(
@@ -812,7 +831,15 @@ private fun AprenderApp() {
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
-                Button(onClick = { if (balanceSeconds > 0) screen = "play-time" }, enabled = balanceSeconds > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
+                Button(onClick = {
+                    if (balanceSeconds > 0) {
+                        val deadline = System.currentTimeMillis() + balanceSeconds.toLong() * 1000L
+                        preferences.edit().putLong("play_deadline_ms", deadline).apply()
+                        androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START))
+                        screen = "play-time"
+                        (context as? ComponentActivity)?.moveTaskToBack(true)
+                    }
+                }, enabled = balanceSeconds > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
                     Text(if (balanceSeconds > 0) "▶ Jugar con el tiempo ganado" else "🔒 Sin tiempo para jugar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
