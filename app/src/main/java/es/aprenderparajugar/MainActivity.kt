@@ -119,7 +119,7 @@ private fun chooseAdaptivePairs(
 
 private fun exportContentPackage(context: Context, target: Uri, pairs: List<PairItem>, categories: List<String>) {
     val resolver = context.contentResolver
-    ZipOutputStream(resolver.openOutputStream(target)?.buffered()).use { zip ->
+    ZipOutputStream(resolver.openOutputStream(target)?.buffered() ?: throw IllegalArgumentException("No se puede escribir en el destino.")).use { zip ->
         val root = JSONObject()
         root.put("format", "aprender-para-jugar-content")
         root.put("version", 1)
@@ -162,7 +162,7 @@ private data class ImportedContent(val categories: List<String>, val pairs: List
 
 private fun importContentPackage(context: Context, source: Uri): ImportedContent {
     val entries = mutableMapOf<String, ByteArray>()
-    ZipInputStream(context.contentResolver.openInputStream(source)?.buffered()).use { zip ->
+    ZipInputStream(context.contentResolver.openInputStream(source)?.buffered() ?: throw IllegalArgumentException("No se puede leer el archivo seleccionado.")).use { zip ->
         while (true) {
             val entry = zip.nextEntry ?: break
             if (!entry.isDirectory) {
