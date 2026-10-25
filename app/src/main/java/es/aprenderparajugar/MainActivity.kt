@@ -60,12 +60,14 @@ private fun AprenderApp() {
     var screen by remember { mutableStateOf("home") }
     var mode by remember { mutableStateOf("Al azar") }
     var difficulty by remember { mutableStateOf("Fácil") }
-    var balanceMinutes by remember { mutableIntStateOf(0) }
+    var balanceSeconds by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf(mapOf<String, String>()) }
     var resolved by remember { mutableStateOf(setOf<String>()) }
     var correct by remember { mutableIntStateOf(0) }
     val pairCount = 4
-    val reward = when (difficulty) { "Normal" -> 5; "Difícil" -> 7; else -> 2 }
+    val rewardSeconds = when (difficulty) { "Normal" -> 300; "Difícil" -> 420; else -> 120 }
+    val balanceMinutes = balanceSeconds / 60
+    val balanceRemainderSeconds = balanceSeconds % 60
 
     if (screen == "exercise") {
         Column(
@@ -91,10 +93,11 @@ private fun AprenderApp() {
                             if (word != null && word !in resolved) {
                                 val match = samplePairs.first { it.word == word }
                                 resolved = resolved + word
-                                if (match.picture == item.picture) correct++
+                                val newCorrect = correct + if (match.picture == item.picture) 1 else 0
+                                correct = newCorrect
                                 selected = emptyMap()
                                 if (resolved.size == pairCount) {
-                                    balanceMinutes += (reward * correct) / pairCount
+                                    balanceSeconds += (rewardSeconds * newCorrect) / pairCount
                                     screen = "result"
                                 }
                             }
@@ -116,7 +119,7 @@ private fun AprenderApp() {
             Text("¡Buen trabajo!", fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
             Text("Aciertos: $correct de $pairCount", fontSize = 22.sp)
-            Text("Saldo de prueba: $balanceMinutes min", fontSize = 20.sp)
+            Text("Saldo de prueba: $balanceMinutes min $balanceRemainderSeconds s", fontSize = 20.sp)
             Spacer(Modifier.height(16.dp))
             Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); correct = 0 }) {
                 Text("Volver al inicio")
@@ -135,7 +138,7 @@ private fun AprenderApp() {
                 Card {
                     Column(Modifier.fillMaxWidth().padding(16.dp)) {
                         Text("Tiempo ganado", fontSize = 16.sp)
-                        Text("$balanceMinutes min", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text("$balanceMinutes min $balanceRemainderSeconds s", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                         Text("Prototipo: el saldo aún no se guarda al cerrar la app.")
                     }
                 }
@@ -157,7 +160,7 @@ private fun AprenderApp() {
                         else OutlinedButton(onClick = { difficulty = option }, modifier = Modifier.weight(1f)) { Text(option) }
                     }
                 }
-                Text("Recompensa máxima orientativa: $reward min")
+                Text("Recompensa máxima orientativa: ${rewardSeconds / 60} min")
             }
             item {
                 Button(onClick = { resolved = emptySet(); selected = emptyMap(); correct = 0; screen = "exercise" }, modifier = Modifier.fillMaxWidth()) {
