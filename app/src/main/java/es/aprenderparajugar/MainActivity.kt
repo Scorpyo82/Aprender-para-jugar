@@ -312,6 +312,8 @@ private fun AprenderApp() {
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
+    var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "Primeras palabras") ?: "Primeras palabras") }
+    var exerciseCategoryMenuExpanded by remember { mutableStateOf(false) }
 
     val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) {
@@ -343,7 +345,10 @@ private fun AprenderApp() {
         }
     }
 
-    val availableExercisePairs = pairs.filter { it.active && it.difficulty == difficulty }
+    val availableExercisePairs = pairs.filter {
+        it.active && it.difficulty == difficulty &&
+            (mode != "Elegir" || it.category.equals(selectedExerciseCategory, ignoreCase = true))
+    }
     val exercisePairs = if (screen == "exercise" || screen == "result") activeExercisePairs else availableExercisePairs.take(questionCount)
     val pairCount = exercisePairs.size
     val rewardSeconds = when (difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
@@ -791,6 +796,27 @@ private fun AprenderApp() {
                                         Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                         Text(when(option) { "Al azar" -> "Una categoría sorpresa"; "Mezcladas" -> "Varias categorías"; else -> "Escoge categoría" }, fontSize = 10.sp, color = Color(0xFF667085))
                                     }
+                                }
+                            }
+                        }
+                        if (mode == "Elegir") {
+                            Spacer(Modifier.height(4.dp))
+                            OutlinedButton(onClick = { exerciseCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text("📚 Tema: $selectedExerciseCategory  ▾")
+                            }
+                            DropdownMenu(
+                                expanded = exerciseCategoryMenuExpanded,
+                                onDismissRequest = { exerciseCategoryMenuExpanded = false }
+                            ) {
+                                categories.forEach { category ->
+                                    DropdownMenuItem(
+                                        text = { Text(category) },
+                                        onClick = {
+                                            selectedExerciseCategory = category
+                                            preferences.edit().putString("selected_exercise_category", category).apply()
+                                            exerciseCategoryMenuExpanded = false
+                                        }
+                                    )
                                 }
                             }
                         }
