@@ -246,7 +246,7 @@ private fun AprenderApp() {
             Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    samplePairs.take(pairCount).forEach { item ->
+                    exercisePairs.forEach { item ->
                         val isSelected = selected["word"] == item.word
                         val isResolved = item.word in resolved
                         Card(
@@ -286,7 +286,7 @@ private fun AprenderApp() {
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    samplePairs.take(pairCount).reversed().forEach { item ->
+                    exercisePairs.reversed().forEach { item ->
                         Card(Modifier.fillMaxWidth().clickable {
                             val word = selected["word"]
                             if (word == null) {
@@ -385,7 +385,7 @@ private fun AprenderApp() {
                 Button(onClick = { resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; screen = "exercise" }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
                     Text("📚 Empezar ejercicio", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
-                OutlinedButton(onClick = { screen = "parent" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
                 Button(onClick = { }, enabled = balanceSeconds > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
