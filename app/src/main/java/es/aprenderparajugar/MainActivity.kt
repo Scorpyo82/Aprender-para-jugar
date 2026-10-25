@@ -317,7 +317,7 @@ private fun AprenderApp() {
                                         selected = mapOf("word" to item.word)
                                         feedback = "Ahora busca el dibujo de «" + item.word + "»."
                                     } else {
-                                        val isCorrect = samplePairs.first { it.word == item.word }.picture == pendingPicture
+                                        val isCorrect = exercisePairs.first { it.word == item.word }.picture == pendingPicture
                                         resolved = resolved + item.word
                                         val newCorrect = correct + if (isCorrect) 1 else 0
                                         correct = newCorrect
@@ -354,7 +354,7 @@ private fun AprenderApp() {
                                 selectedPicture = item.picture
                                 feedback = "Has elegido un dibujo. Ahora toca la palabra que le corresponde."
                             } else if (word !in resolved) {
-                                val isCorrect = samplePairs.first { it.word == word }.picture == item.picture
+                                val isCorrect = exercisePairs.first { it.word == word }.picture == item.picture
                                 resolved = resolved + word
                                 if (isCorrect) correct += 1
                                 evaluatedPictures = evaluatedPictures + (item.picture to isCorrect)
