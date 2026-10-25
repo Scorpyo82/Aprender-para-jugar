@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +66,7 @@ private fun AprenderApp() {
     var selected by remember { mutableStateOf(mapOf<String, String>()) }
     var resolved by remember { mutableStateOf(setOf<String>()) }
     var correct by remember { mutableIntStateOf(0) }
+    var feedback by remember { mutableStateOf("") }
     val pairCount = 4
     val rewardSeconds = when (difficulty) { "Normal" -> 300; "Difícil" -> 420; else -> 120 }
     val balanceMinutes = balanceSeconds / 60
@@ -74,15 +77,30 @@ private fun AprenderApp() {
             modifier = Modifier.fillMaxSize().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Relaciona cada palabra con su dibujo", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text("Toca una palabra y después el dibujo que le corresponde.")
+            Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63))
+            Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     samplePairs.take(pairCount).forEach { item ->
-                        Card(Modifier.fillMaxWidth().clickable {
-                            if (item.word !in resolved) selected = selected + ("word" to item.word)
-                        }) {
-                            Text(item.word, Modifier.padding(16.dp), fontSize = 23.sp, fontWeight = FontWeight.Medium)
+                        val isSelected = selected["word"] == item.word
+                        val isResolved = item.word in resolved
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                if (!isResolved) {
+                                    selected = selected + ("word" to item.word)
+                                    feedback = "Busca el dibujo de " + item.word
+                                }
+                            },
+                            colors = CardDefaults.cardColors(
+                                containerColor = when {
+                                    isResolved -> Color(0xFFD9F2D9)
+                                    isSelected -> Color(0xFFFFD66B)
+                                    else -> Color(0xFFF0E8F5)
+                                }
+                            ),
+                            border = if (isSelected) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null
+                        ) {
+                            Text(item.word, Modifier.padding(16.dp), fontSize = 27.sp, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, color = Color(0xFF29213B))
                         }
                     }
                 }
@@ -93,21 +111,24 @@ private fun AprenderApp() {
                             if (word != null && word !in resolved) {
                                 val match = samplePairs.first { it.word == word }
                                 resolved = resolved + word
-                                val newCorrect = correct + if (match.picture == item.picture) 1 else 0
+                                val isCorrect = match.picture == item.picture
+                                val newCorrect = correct + if (isCorrect) 1 else 0
                                 correct = newCorrect
+                                feedback = if (isCorrect) "Muy bien: " + word + " es correcto" else "No es esa pareja. Sigue con otra."
                                 selected = emptyMap()
                                 if (resolved.size == pairCount) {
                                     balanceSeconds += (rewardSeconds * newCorrect) / pairCount
                                     screen = "result"
                                 }
                             }
-                        }) {
-                            Text(item.picture, Modifier.padding(12.dp).align(Alignment.CenterHorizontally), fontSize = 30.sp)
+                        }, colors = CardDefaults.cardColors(containerColor = Color(0xFFF0E8F5))) {
+                            Text(item.picture, Modifier.padding(12.dp).align(Alignment.CenterHorizontally), fontSize = 34.sp)
                         }
                     }
                 }
             }
-            Text("Parejas resueltas: ${resolved.size}/$pairCount")
+            Text("Parejas resueltas: ${resolved.size}/$pairCount", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
             OutlinedButton(onClick = { screen = "home" }) { Text("Salir del ejercicio") }
         }
     } else if (screen == "result") {
@@ -121,7 +142,7 @@ private fun AprenderApp() {
             Text("Aciertos: $correct de $pairCount", fontSize = 22.sp)
             Text("Saldo de prueba: $balanceMinutes min $balanceRemainderSeconds s", fontSize = 20.sp)
             Spacer(Modifier.height(16.dp))
-            Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); correct = 0 }) {
+            Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); correct = 0; feedback = "" }) {
                 Text("Volver al inicio")
             }
         }
@@ -163,7 +184,7 @@ private fun AprenderApp() {
                 Text("Recompensa máxima orientativa: ${rewardSeconds / 60} min")
             }
             item {
-                Button(onClick = { resolved = emptySet(); selected = emptyMap(); correct = 0; screen = "exercise" }, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { resolved = emptySet(); selected = emptyMap(); correct = 0; feedback = ""; screen = "exercise" }, modifier = Modifier.fillMaxWidth()) {
                     Text("Empezar ejercicio")
                 }
             }
