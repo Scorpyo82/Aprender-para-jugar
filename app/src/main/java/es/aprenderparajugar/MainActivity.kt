@@ -368,6 +368,12 @@ private fun AprenderApp() {
                         }, modifier = Modifier.fillMaxWidth()) { Text(if (soundEnabled) "Silenciar sonido" else "Activar sonido") }
                         if (musicMessage.isNotBlank()) Text(musicMessage, color = Color(0xFF24733B))
                         Text("Consejo: elige una melodía instrumental tranquila, sin cambios bruscos de volumen y con un final que encaje bien al repetirse.", fontSize = 13.sp, color = Color(0xFF667085))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Agradecimientos musicales", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Música Infantil 2 — Ezequiel David Urbano", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Licencia declarada por el autor: Creative Commons Zero (CC0 1.0).", fontSize = 13.sp, color = Color(0xFF667085))
+                        OutlinedButton(onClick = { androidx.compose.ui.platform.LocalUriHandler.current.openUri("https://open.spotify.com/artist/3FnwImaOicMeRPERcj6ueb?si=LBbyDbPYRyyO1Z6ium2P0w") }, modifier = Modifier.fillMaxWidth()) { Text("Escuchar al autor en Spotify") }
+                        OutlinedButton(onClick = { androidx.compose.ui.platform.LocalUriHandler.current.openUri("https://www.instagram.com/ezequieldavidurbano/") }, modifier = Modifier.fillMaxWidth()) { Text("Instagram del autor") }
                     }
                     "security" -> item {
                         Text("Seguridad y saldo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
