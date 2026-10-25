@@ -1,6 +1,7 @@
 package es.aprenderparajugar
 
 import android.os.Bundle
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -31,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -51,7 +53,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class PairItem(val word: String, val picture: String)
+private data class PairItem(val word: String, val picture: String, val category: String = "Primeras palabras", val difficulty: String = "Fácil", val active: Boolean = true)
 private val samplePairs = listOf(
     PairItem("mamá", "👩"), PairItem("sol", "☀️"),
     PairItem("casa", "🏠"), PairItem("gato", "🐈"),
@@ -60,6 +62,15 @@ private val samplePairs = listOf(
 
 @Composable
 private fun AprenderApp() {
+    val context = LocalContext.current
+    val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
+    var pairs by remember { mutableStateOf(loadPairs(preferences)) }
+    var wordDraft by remember { mutableStateOf("") }
+    var pictureDraft by remember { mutableStateOf("🐱") }
+    var categoryDraft by remember { mutableStateOf("Primeras palabras") }
+    var difficultyDraft by remember { mutableStateOf("Fácil") }
+    var editingWord by remember { mutableStateOf<String?>(null) }
+    var libraryMessage by remember { mutableStateOf("") }
     var screen by remember { mutableStateOf("home") }
     var mode by remember { mutableStateOf("Al azar") }
     var difficulty by remember { mutableStateOf("Fácil") }
