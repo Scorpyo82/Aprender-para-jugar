@@ -314,6 +314,9 @@ private fun AprenderApp() {
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
     var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "Primeras palabras") ?: "Primeras palabras") }
     var exerciseCategoryMenuExpanded by remember { mutableStateOf(false) }
+    var libraryCategoryFilter by remember { mutableStateOf("Todas") }
+    var libraryDifficultyFilter by remember { mutableStateOf("Todas") }
+    var libraryFilterCategoryExpanded by remember { mutableStateOf(false) }
 
     val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) {
@@ -450,7 +453,35 @@ private fun AprenderApp() {
                             OutlinedButton(onClick = { pendingImportMode = "merge"; importPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar contenido") }
                             if (packageMessage.isNotBlank()) Text(packageMessage, fontSize = 14.sp, color = if (packageMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontWeight = FontWeight.SemiBold)
 
-                            pairs.forEach { pair ->
+                            Text("Filtrar contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            androidx.compose.foundation.layout.Box {
+                                OutlinedButton(onClick = { libraryFilterCategoryExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("🗂️ Categoría: $libraryCategoryFilter  ▾")
+                                }
+                                DropdownMenu(expanded = libraryFilterCategoryExpanded, onDismissRequest = { libraryFilterCategoryExpanded = false }) {
+                                    (listOf("Todas") + categories).forEach { name ->
+                                        DropdownMenuItem(text = { Text(name) }, onClick = { libraryCategoryFilter = name; libraryFilterCategoryExpanded = false })
+                                    }
+                                }
+                            }
+                            Text("Dificultad", fontWeight = FontWeight.SemiBold)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                listOf("Todas", "Fácil", "Normal", "Difícil").forEach { level ->
+                                    OutlinedButton(
+                                        onClick = { libraryDifficultyFilter = level },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text(if (libraryDifficultyFilter == level) "✓ $level" else level, fontSize = 11.sp) }
+                                }
+                            }
+                            val filteredLibraryPairs = pairs.filter { pair ->
+                                (libraryCategoryFilter == "Todas" || pair.category.equals(libraryCategoryFilter, ignoreCase = true)) &&
+                                    (libraryDifficultyFilter == "Todas" || pair.difficulty.equals(libraryDifficultyFilter, ignoreCase = true))
+                            }
+                            Text("Mostrando ${filteredLibraryPairs.size} de ${pairs.size} palabras", fontSize = 13.sp, color = Color(0xFF667085))
+                            if (filteredLibraryPairs.isEmpty()) {
+                                Text("No hay palabras que coincidan con estos filtros.", color = Color(0xFF667085))
+                            }
+                            filteredLibraryPairs.forEach { pair ->
                                 Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Column(Modifier.padding(12.dp)) {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
