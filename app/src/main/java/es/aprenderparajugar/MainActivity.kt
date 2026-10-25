@@ -219,36 +219,6 @@ private fun AprenderApp() {
 
     var packageMessage by remember { mutableStateOf("") }
     var pendingImportMode by remember { mutableStateOf("replace") }
-    val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-        if (uri != null) {
-            packageMessage = try {
-                exportContentPackage(context, uri, pairs, categories)
-                "Exportación completada: ${pairs.size} palabras y ${categories.size} categorías."
-            } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
-        }
-    }
-    val importPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            packageMessage = try {
-                val imported = importContentPackage(context, uri)
-                val mergedPairs = if (pendingImportMode == "replace") imported.pairs else {
-                    val merged = pairs.toMutableList()
-                    imported.pairs.forEach { incoming ->
-                        val existingIndex = merged.indexOfFirst { it.word.equals(incoming.word, ignoreCase = true) }
-                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
-                    }
-                    merged
-                }
-                pairs = mergedPairs
-                savePairs(preferences, mergedPairs)
-                val mergedCategories = if (pendingImportMode == "replace") imported.categories else (categoryNames + imported.categories).distinctBy { it.lowercase() }
-                categoryNames = mergedCategories
-                preferences.edit().putString("categories", mergedCategories.joinToString("|")).apply()
-                "Importación completada: ${imported.pairs.size} palabras procesadas. ${if (pendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado; las palabras con el mismo nombre se actualizaron."}"
-            } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
-        }
-    }
-
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
@@ -335,6 +305,37 @@ private fun AprenderApp() {
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
+
+    val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) {
+            packageMessage = try {
+                exportContentPackage(context, uri, pairs, categories)
+                "Exportación completada: ${pairs.size} palabras y ${categories.size} categorías."
+            } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
+        }
+    }
+    val importPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            packageMessage = try {
+                val imported = importContentPackage(context, uri)
+                val mergedPairs = if (pendingImportMode == "replace") imported.pairs else {
+                    val merged = pairs.toMutableList()
+                    imported.pairs.forEach { incoming ->
+                        val existingIndex = merged.indexOfFirst { it.word.equals(incoming.word, ignoreCase = true) }
+                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
+                    }
+                    merged
+                }
+                pairs = mergedPairs
+                savePairs(preferences, mergedPairs)
+                val mergedCategories = if (pendingImportMode == "replace") imported.categories else (categoryNames + imported.categories).distinctBy { it.lowercase() }
+                categoryNames = mergedCategories
+                preferences.edit().putString("categories", mergedCategories.joinToString("|")).apply()
+                "Importación completada: ${imported.pairs.size} palabras procesadas. ${if (pendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado; las palabras con el mismo nombre se actualizaron."}"
+            } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
+        }
+    }
+
     val availableExercisePairs = pairs.filter { it.active && it.difficulty == difficulty }
     val exercisePairs = if (screen == "exercise" || screen == "result") activeExercisePairs else availableExercisePairs.take(questionCount)
     val pairCount = exercisePairs.size
