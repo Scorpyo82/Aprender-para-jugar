@@ -88,7 +88,7 @@ private fun AprenderApp() {
     var screen by remember { mutableStateOf("home") }
     var mode by remember { mutableStateOf("Al azar") }
     var difficulty by remember { mutableStateOf("Fácil") }
-    var balanceSeconds by remember { mutableIntStateOf(0) }
+    var balanceSeconds by remember { mutableIntStateOf(preferences.getInt("balance_seconds", 0)) }
     var selected by remember { mutableStateOf(mapOf<String, String>()) }
     var selectedPicture by remember { mutableStateOf("") }
     var evaluatedPictures by remember { mutableStateOf(mapOf<String, Boolean>()) }
@@ -98,7 +98,13 @@ private fun AprenderApp() {
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf("menu") }
-    var dailyManualLimit by remember { mutableIntStateOf(2) }
+    var dailyManualLimit by remember { mutableIntStateOf(preferences.getInt("daily_manual_limit", 2)) }
+    var pinStored by remember { mutableStateOf(preferences.getString("parent_pin", "1234") ?: "1234") }
+    var newPinDraft by remember { mutableStateOf("") }
+    var categoryDraftName by remember { mutableStateOf("") }
+    var categoryMessage by remember { mutableStateOf("") }
+    var categoryToRemove by remember { mutableStateOf("") }
+    val categories = (listOf("Primeras palabras", "Casa y familia", "Naturaleza") + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
     val exercisePairs = pairs.filter { it.active && it.difficulty == difficulty }.take(4)
     val pairCount = exercisePairs.size
     val rewardSeconds = when (difficulty) { "Normal" -> 300; "Difícil" -> 420; else -> 120 }
@@ -115,11 +121,11 @@ private fun AprenderApp() {
             if (pinError) Text("PIN incorrecto. Prueba otra vez.", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
             Button(onClick = {
-                if (pinEntry == "1234") { screen = "parent"; parentSection = "menu"; pinEntry = ""; pinError = false }
+                if (pinEntry == pinStored) { screen = "parent"; parentSection = "menu"; pinEntry = ""; pinError = false }
                 else pinError = true
             }, modifier = Modifier.fillMaxWidth()) { Text("Entrar") }
             OutlinedButton(onClick = { screen = "home"; pinEntry = ""; pinError = false }, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
-            Text("PIN provisional de esta versión: 1234. Cámbialo antes de dejar que el niño use la app.", fontSize = 12.sp, color = Color(0xFF667085))
+            Text("Introduce el PIN familiar.", fontSize = 12.sp, color = Color(0xFF667085))
         }
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -212,9 +218,26 @@ private fun AprenderApp() {
                     }
                     "categories" -> item {
                         Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("La gestión de categorías se conectará a la biblioteca en la siguiente fase.", fontSize = 16.sp)
-                        listOf("Primeras palabras", "Casa y familia", "Naturaleza").forEach { name ->
-                            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) { Text(name, Modifier.padding(14.dp), fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
+                        Text("Añade categorías y, antes de borrar una, elige dónde mover sus palabras.", fontSize = 14.sp, color = Color(0xFF667085))
+                        OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = it }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryDraftName = ""; categoryMessage = "Categoría creada. Ya puedes asignarla a una palabra." ; categoryDraftName = clean } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
+                        if (categoryMessage.isNotBlank()) Text(categoryMessage, color = Color(0xFF24733B))
+                        categories.forEach { name ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("${pairs.count { it.category.equals(name, ignoreCase = true) }} palabras", color = Color(0xFF667085))
+                                    if (name.equals(categoryToRemove, ignoreCase = true)) {
+                                        Text("Mover palabras a:", fontWeight = FontWeight.SemiBold)
+                                        categories.filterNot { it.equals(name, ignoreCase = true) }.forEach { destination ->
+                                            OutlinedButton(onClick = { pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }; savePairs(preferences, pairs); categoryToRemove = ""; categoryMessage = "Palabras reasignadas a $destination." }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                        }
+                                        OutlinedButton(onClick = { if (pairs.none { it.category.equals(name, ignoreCase = true) }) { categoryToRemove = ""; categoryMessage = "Categoría retirada de la lista." } else categoryMessage = "Primero mueve las palabras a otra categoría." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                    } else if (name !in listOf("Primeras palabras", "Casa y familia", "Naturaleza")) {
+                                        OutlinedButton(onClick = { categoryToRemove = name; categoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
+                                    }
+                                }
+                            }
                         }
                     }
                     "rewards" -> item {
@@ -223,16 +246,19 @@ private fun AprenderApp() {
                         Spacer(Modifier.height(8.dp))
                         Text("Límite diario de elecciones manuales: $dailyManualLimit", fontSize = 17.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { if (dailyManualLimit > 0) dailyManualLimit-- }) { Text("−") }
-                            OutlinedButton(onClick = { if (dailyManualLimit < 10) dailyManualLimit++ }) { Text("+") }
+                            OutlinedButton(onClick = { if (dailyManualLimit > 0) { dailyManualLimit--; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("−") }
+                            OutlinedButton(onClick = { if (dailyManualLimit < 10) { dailyManualLimit++; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("+") }
                         }
-                        Text("El límite cambia durante esta sesión; todavía no se guarda al cerrar la app.", fontSize = 13.sp, color = Color(0xFF667085))
+                        Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
                     }
                     "security" -> item {
                         Text("Seguridad y saldo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("PIN de demostración: 1234", fontSize = 17.sp)
-                        Text("Cambiar el PIN y guardar el saldo permanentemente quedan pendientes.", fontSize = 16.sp)
+                        Text("Cambiar PIN familiar", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        OutlinedTextField(value = newPinDraft, onValueChange = { newPinDraft = it.filter { ch -> ch.isDigit() }.take(4) }, label = { Text("Nuevo PIN de 4 cifras") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        Button(onClick = { if (newPinDraft.length == 4) { pinStored = newPinDraft; preferences.edit().putString("parent_pin", pinStored).apply(); newPinDraft = ""; libraryMessage = "PIN actualizado." } else libraryMessage = "El PIN debe tener 4 cifras." }, modifier = Modifier.fillMaxWidth()) { Text("Guardar PIN") }
+                        if (libraryMessage.isNotBlank()) Text(libraryMessage, color = Color(0xFF24733B))
                         Text("Saldo actual: $balanceMinutes min $balanceRemainderSeconds s", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        OutlinedButton(onClick = { balanceSeconds = 0; preferences.edit().putInt("balance_seconds", 0).apply() }, modifier = Modifier.fillMaxWidth()) { Text("Poner saldo a cero") }
                     }
                 }
             }
@@ -268,6 +294,7 @@ private fun AprenderApp() {
                                         selectedPicture = ""
                                         if (resolved.size == pairCount) {
                                             balanceSeconds += (rewardSeconds * newCorrect) / pairCount
+                                            preferences.edit().putInt("balance_seconds", balanceSeconds).apply()
                                             screen = "result"
                                         }
                                     }
@@ -303,6 +330,7 @@ private fun AprenderApp() {
                                 selectedPicture = ""
                                 if (resolved.size == pairCount) {
                                     balanceSeconds += (rewardSeconds * correct) / pairCount
+                                    preferences.edit().putInt("balance_seconds", balanceSeconds).apply()
                                     screen = "result"
                                 }
                             }
