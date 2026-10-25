@@ -546,6 +546,26 @@ private fun AprenderApp() {
                         }
                     }
                     "rewards" -> item {
+                        Text("Saldo de juego", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("Saldo actual: ${balanceSeconds / 60} min ${balanceSeconds % 60} s", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(onClick = {
+                                val updated = (balanceSeconds + 60).coerceAtMost(24 * 60 * 60)
+                                balanceSeconds = updated
+                                preferences.edit().putInt("balance_seconds", updated).apply()
+                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text("+1 minuto") }
+                            OutlinedButton(onClick = {
+                                val updated = (balanceSeconds + 5 * 60).coerceAtMost(24 * 60 * 60)
+                                balanceSeconds = updated
+                                preferences.edit().putInt("balance_seconds", updated).apply()
+                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text("+5 minutos") }
+                            OutlinedButton(onClick = {
+                                balanceSeconds = 0
+                                preferences.edit().putInt("balance_seconds", 0).putLong("play_deadline_ms", 0L).putLong("expiry_last_launch_ms", 0L).apply()
+                                context.stopService(Intent(context, PlayTimeService::class.java))
+                            }, enabled = balanceSeconds > 0) { Text("Poner a cero") }
+                        }
+                        Spacer(Modifier.height(12.dp))
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Minutos que se ganan al completar un ejercicio", fontSize = 17.sp)
                         Text("El premio final se calcula proporcionalmente según los aciertos.", fontSize = 14.sp, color = Color(0xFF667085))
