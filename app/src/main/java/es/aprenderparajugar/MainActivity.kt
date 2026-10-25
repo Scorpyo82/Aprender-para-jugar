@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -102,6 +104,7 @@ private fun AprenderApp() {
     var pinStored by remember { mutableStateOf(preferences.getString("parent_pin", "1234") ?: "1234") }
     var newPinDraft by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
+    var categoryMenuExpanded by remember { mutableStateOf(false) }
     var categoryNames by remember { mutableStateOf((preferences.getString("categories", "Primeras palabras|Casa y familia|Naturaleza") ?: "").split("|").filter { it.isNotBlank() }) }
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
@@ -196,7 +199,19 @@ private fun AprenderApp() {
                             Text(if (editingWord == null) "Añadir palabra" else "Editar palabra", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                             Text("Completa los datos y guarda. La imagen se elige desde la galería.", fontSize = 14.sp, color = Color(0xFF667085))
                             OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = it }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                            OutlinedTextField(value = categoryDraft, onValueChange = { categoryDraft = it }, label = { Text("Categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            Column {
+                                Text("Categoría", fontWeight = FontWeight.SemiBold)
+                                androidx.compose.foundation.layout.Box {
+                                    OutlinedButton(onClick = { categoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(categoryDraft.ifBlank { "Seleccionar categoría" })
+                                    }
+                                    DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+                                        categories.forEach { name ->
+                                            DropdownMenuItem(text = { Text(name) }, onClick = { categoryDraft = name; categoryMenuExpanded = false })
+                                        }
+                                    }
+                                }
+                            }
                             Text("Dificultad", fontWeight = FontWeight.SemiBold)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { listOf("Fácil", "Normal", "Difícil").forEach { level -> OutlinedButton(onClick = { difficultyDraft = level }) { Text(if (difficultyDraft == level) "✓ $level" else level) } } }
                             if (pictureDraft.startsWith("content://") || pictureDraft.startsWith("file://")) {
@@ -229,11 +244,28 @@ private fun AprenderApp() {
                                     Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                                     Text("${pairs.count { it.category.equals(name, ignoreCase = true) }} palabras", color = Color(0xFF667085))
                                     if (name.equals(categoryToRemove, ignoreCase = true)) {
-                                        Text("Mover palabras a:", fontWeight = FontWeight.SemiBold)
+                                        Text("Borrar categoría y contenido", fontWeight = FontWeight.SemiBold)
+                                        Text("Esta opción eliminará también las ${pairs.count { it.category.equals(name, ignoreCase = true) }} palabras de esta categoría.", fontSize = 13.sp, color = Color(0xFFB3261E))
+                                        Button(onClick = {
+                                            pairs = pairs.filterNot { it.category.equals(name, ignoreCase = true) }
+                                            savePairs(preferences, pairs)
+                                            categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
+                                            preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
+                                            categoryToRemove = ""
+                                            categoryMessage = "Categoría y palabras eliminadas."
+                                        }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
+                                        Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.SemiBold)
                                         categories.filterNot { it.equals(name, ignoreCase = true) }.forEach { destination ->
-                                            OutlinedButton(onClick = { pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }; savePairs(preferences, pairs); categoryToRemove = ""; categoryMessage = "Palabras reasignadas a $destination." }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                            OutlinedButton(onClick = {
+                                                pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }
+                                                savePairs(preferences, pairs)
+                                                categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
+                                                preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
+                                                categoryToRemove = ""
+                                                categoryMessage = "Categoría eliminada; palabras movidas a $destination."
+                                            }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
                                         }
-                                        OutlinedButton(onClick = { if (pairs.none { it.category.equals(name, ignoreCase = true) }) { categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }; preferences.edit().putString("categories", categoryNames.joinToString("\\n")).apply(); categoryToRemove = ""; categoryMessage = "Categoría eliminada." } else categoryMessage = "Primero mueve las palabras a otra categoría." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                        OutlinedButton(onClick = { categoryToRemove = ""; categoryMessage = "Operación cancelada. No se ha borrado nada." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                                     } else if (name !in listOf("Primeras palabras", "Casa y familia", "Naturaleza")) {
                                         OutlinedButton(onClick = { categoryToRemove = name; categoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                     }
