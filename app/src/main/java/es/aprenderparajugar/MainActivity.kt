@@ -730,9 +730,11 @@ private fun AprenderApp() {
             Text("El tiempo sigue descontándose aunque uses otras aplicaciones.", fontSize = 15.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(24.dp))
             Button(onClick = {
+                val deadline = preferences.getLong("play_deadline_ms", 0L)
+                val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else balanceSeconds.coerceAtLeast(0)
                 context.stopService(Intent(context, PlayTimeService::class.java))
-                preferences.edit().putLong("play_deadline_ms", 0L).putInt("balance_seconds", 0).apply()
-                balanceSeconds = 0
+                preferences.edit().putLong("play_deadline_ms", 0L).putInt("balance_seconds", remaining).apply()
+                balanceSeconds = remaining
                 screen = "home"
             }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
         }
