@@ -12,9 +12,11 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         val deadline = prefs.getLong("play_deadline_ms", 0L)
         if (deadline <= 0L || System.currentTimeMillis() < deadline) return
         if (event.packageName?.toString() == packageName) return
-        if (prefs.getBoolean("expiry_relaunch_attempted", false)) return
+        val now = System.currentTimeMillis()
+        val lastAttempt = prefs.getLong("expiry_last_launch_ms", 0L)
+        if (now - lastAttempt < 1500L) return
 
-        prefs.edit().putInt("balance_seconds", 0).putBoolean("expiry_relaunch_attempted", true).apply()
+        prefs.edit().putInt("balance_seconds", 0).putLong("expiry_last_launch_ms", now).apply()
         val launch = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra("play_time_expired", true)
@@ -22,7 +24,7 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         try {
             startActivity(launch)
         } catch (_: Exception) {
-            prefs.edit().putBoolean("expiry_relaunch_attempted", false).apply()
+            prefs.edit().putLong("expiry_last_launch_ms", 0L).apply()
         }
     }
 
