@@ -6,6 +6,12 @@ import android.net.Uri
 import android.widget.ImageView
 import android.media.MediaPlayer
 import android.view.ViewGroup
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.viewinterop.AndroidView
@@ -110,6 +116,87 @@ private fun chooseAdaptivePairs(
     }.take(count)
 }
 
+
+private fun exportContentPackage(context: Context, target: Uri, pairs: List<PairItem>, categories: List<String>) {
+    val resolver = context.contentResolver
+    ZipOutputStream(resolver.openOutputStream(target)?.buffered()).use { zip ->
+        val root = JSONObject()
+        root.put("format", "aprender-para-jugar-content")
+        root.put("version", 1)
+        root.put("categories", JSONArray(categories))
+        val words = JSONArray()
+        pairs.forEachIndexed { index, pair ->
+            val item = JSONObject()
+            item.put("word", pair.word)
+            item.put("category", pair.category)
+            item.put("difficulty", pair.difficulty)
+            item.put("active", pair.active)
+            val uri = Uri.parse(pair.picture)
+            val imageName = if (pair.picture.startsWith("content://") || pair.picture.startsWith("file://")) {
+                val extension = when (resolver.getType(uri)?.lowercase()) {
+                    "image/png" -> "png"
+                    "image/webp" -> "webp"
+                    "image/gif" -> "gif"
+                    else -> "jpg"
+                }
+                val name = "images/${index}_image.$extension"
+                val bytes = runCatching { resolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                if (bytes != null) {
+                    zip.putNextEntry(ZipEntry(name))
+                    zip.write(bytes)
+                    zip.closeEntry()
+                    name
+                } else null
+            } else null
+            if (imageName != null) item.put("image", imageName) else item.put("picture", pair.picture)
+            words.put(item)
+        }
+        root.put("words", words)
+        zip.putNextEntry(ZipEntry("content.json"))
+        zip.write(root.toString(2).toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+    }
+}
+
+private data class ImportedContent(val categories: List<String>, val pairs: List<PairItem>)
+
+private fun importContentPackage(context: Context, source: Uri): ImportedContent {
+    val entries = mutableMapOf<String, ByteArray>()
+    ZipInputStream(context.contentResolver.openInputStream(source)?.buffered()).use { zip ->
+        while (true) {
+            val entry = zip.nextEntry ?: break
+            if (!entry.isDirectory) {
+                val out = ByteArrayOutputStream()
+                zip.copyTo(out)
+                entries[entry.name] = out.toByteArray()
+            }
+            zip.closeEntry()
+        }
+    }
+    val jsonBytes = entries["content.json"] ?: throw IllegalArgumentException("El ZIP no contiene content.json.")
+    val root = JSONObject(String(jsonBytes, Charsets.UTF_8))
+    require(root.optString("format") == "aprender-para-jugar-content") { "El archivo no es una exportación de Aprender para jugar." }
+    val categoriesJson = root.optJSONArray("categories") ?: JSONArray()
+    val categories = (0 until categoriesJson.length()).map { categoriesJson.getString(it) }.filter { it.isNotBlank() }
+    val words = root.optJSONArray("words") ?: JSONArray()
+    val importedPairs = (0 until words.length()).mapNotNull { index ->
+        val item = words.optJSONObject(index) ?: return@mapNotNull null
+        val word = item.optString("word").trim()
+        if (word.isBlank()) return@mapNotNull null
+        val imageName = item.optString("image")
+        val picture = if (imageName.isNotBlank()) {
+            val bytes = entries[imageName] ?: throw IllegalArgumentException("Falta la imagen $imageName.")
+            val extension = imageName.substringAfterLast('.', "jpg").filter { it.isLetterOrDigit() }.ifBlank { "jpg" }
+            val file = java.io.File(context.filesDir, "imported_${word.hashCode()}.$extension")
+            file.writeBytes(bytes)
+            Uri.fromFile(file).toString()
+        } else item.optString("picture", "❔")
+        PairItem(word, picture, item.optString("category", "Primeras palabras"), item.optString("difficulty", "Fácil"), item.optBoolean("active", true))
+    }
+    require(importedPairs.isNotEmpty()) { "El archivo no contiene palabras válidas." }
+    return ImportedContent(categories, importedPairs)
+}
+
 private val samplePairs = listOf(
     PairItem("mamá", "👩"), PairItem("sol", "☀️"),
     PairItem("casa", "🏠"), PairItem("gato", "🐈"),
@@ -129,6 +216,39 @@ private fun AprenderApp() {
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
     var libraryPage by remember { mutableStateOf("list") }
+
+    var packageMessage by remember { mutableStateOf("") }
+    var pendingImportMode by remember { mutableStateOf("replace") }
+    val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) {
+            packageMessage = try {
+                exportContentPackage(context, uri, pairs, categories)
+                "Exportación completada: ${pairs.size} palabras y ${categories.size} categorías."
+            } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
+        }
+    }
+    val importPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            packageMessage = try {
+                val imported = importContentPackage(context, uri)
+                val mergedPairs = if (pendingImportMode == "replace") imported.pairs else {
+                    val merged = pairs.toMutableList()
+                    imported.pairs.forEach { incoming ->
+                        val existingIndex = merged.indexOfFirst { it.word.equals(incoming.word, ignoreCase = true) }
+                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
+                    }
+                    merged
+                }
+                pairs = mergedPairs
+                savePairs(preferences, mergedPairs)
+                val mergedCategories = if (pendingImportMode == "replace") imported.categories else (categoryNames + imported.categories).distinctBy { it.lowercase() }
+                categoryNames = mergedCategories
+                preferences.edit().putString("categories", mergedCategories.joinToString("|")).apply()
+                "Importación completada: ${imported.pairs.size} palabras procesadas. ${if (pendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado; las palabras con el mismo nombre se actualizaron."}"
+            } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
+        }
+    }
+
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
@@ -302,6 +422,14 @@ private fun AprenderApp() {
                             Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                             Text("Gestiona las palabras guardadas. Pulsa Añadir para crear una nueva.", fontSize = 14.sp, color = Color(0xFF667085))
                             Button(onClick = { editingWord = null; wordDraft = ""; pictureDraft = ""; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir palabra") }
+                            Spacer(Modifier.height(8.dp))
+                            Text("Copia de seguridad y traslado", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Exporta categorías, palabras, dificultad, estado e imágenes en un ZIP. El PIN y el saldo no se incluyen.", fontSize = 13.sp, color = Color(0xFF667085))
+                            OutlinedButton(onClick = { exportPackageLauncher.launch("aprender-para-jugar-contenido.zip") }, modifier = Modifier.fillMaxWidth()) { Text("📦 Exportar contenido a ZIP") }
+                            OutlinedButton(onClick = { pendingImportMode = "replace"; importPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("♻️ Importar y sustituir biblioteca") }
+                            OutlinedButton(onClick = { pendingImportMode = "merge"; importPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar contenido") }
+                            if (packageMessage.isNotBlank()) Text(packageMessage, fontSize = 14.sp, color = if (packageMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontWeight = FontWeight.SemiBold)
+
                             pairs.forEach { pair ->
                                 Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Column(Modifier.padding(12.dp)) {
