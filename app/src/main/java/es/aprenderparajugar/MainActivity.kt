@@ -101,6 +101,9 @@ private fun AprenderApp() {
     var pinError by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf("menu") }
     var dailyManualLimit by remember { mutableIntStateOf(preferences.getInt("daily_manual_limit", 2)) }
+    var easyRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_easy_minutes", 2).coerceIn(0, 120)) }
+    var normalRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_normal_minutes", 5).coerceIn(0, 120)) }
+    var hardRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_hard_minutes", 7).coerceIn(0, 120)) }
     var pinStored by remember { mutableStateOf(preferences.getString("parent_pin", "1234") ?: "1234") }
     var newPinDraft by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
@@ -111,7 +114,7 @@ private fun AprenderApp() {
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
     val exercisePairs = pairs.filter { it.active && it.difficulty == difficulty }.take(4)
     val pairCount = exercisePairs.size
-    val rewardSeconds = when (difficulty) { "Normal" -> 300; "Difícil" -> 420; else -> 120 }
+    val rewardSeconds = when (difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
@@ -275,7 +278,33 @@ private fun AprenderApp() {
                     }
                     "rewards" -> item {
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Recompensa base: Fácil 2 min · Normal 5 min · Difícil 7 min", fontSize = 17.sp)
+                        Text("Minutos que se ganan al completar un ejercicio", fontSize = 17.sp)
+                        Text("El premio final se calcula proporcionalmente según los aciertos.", fontSize = 14.sp, color = Color(0xFF667085))
+                        listOf("Fácil", "Normal", "Difícil").forEach { level ->
+                            val minutes = when (level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
+                            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Text("$level: $minutes min", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        OutlinedButton(onClick = {
+                                            when (level) {
+                                                "Normal" -> { normalRewardMinutes = (normalRewardMinutes - 1).coerceAtLeast(0); preferences.edit().putInt("reward_normal_minutes", normalRewardMinutes).apply() }
+                                                "Difícil" -> { hardRewardMinutes = (hardRewardMinutes - 1).coerceAtLeast(0); preferences.edit().putInt("reward_hard_minutes", hardRewardMinutes).apply() }
+                                                else -> { easyRewardMinutes = (easyRewardMinutes - 1).coerceAtLeast(0); preferences.edit().putInt("reward_easy_minutes", easyRewardMinutes).apply() }
+                                            }
+                                        }, enabled = minutes > 0) { Text("−") }
+                                        Text("$minutes min", fontWeight = FontWeight.Bold)
+                                        OutlinedButton(onClick = {
+                                            when (level) {
+                                                "Normal" -> { normalRewardMinutes = (normalRewardMinutes + 1).coerceAtMost(120); preferences.edit().putInt("reward_normal_minutes", normalRewardMinutes).apply() }
+                                                "Difícil" -> { hardRewardMinutes = (hardRewardMinutes + 1).coerceAtMost(120); preferences.edit().putInt("reward_hard_minutes", hardRewardMinutes).apply() }
+                                                else -> { easyRewardMinutes = (easyRewardMinutes + 1).coerceAtMost(120); preferences.edit().putInt("reward_easy_minutes", easyRewardMinutes).apply() }
+                                            }
+                                        }, enabled = minutes < 120) { Text("+") }
+                                    }
+                                }
+                            }
+                        }
                         Spacer(Modifier.height(8.dp))
                         Text("Límite diario de elecciones manuales: $dailyManualLimit", fontSize = 17.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -439,7 +468,7 @@ private fun AprenderApp() {
                                 Card(modifier = Modifier.weight(1f).clickable { difficulty = option }, shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = if (difficulty == option) Color(0xFFEAF2FF) else Color.White), border = androidx.compose.foundation.BorderStroke(if (difficulty == option) 2.dp else 1.dp, if (difficulty == option) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
                                     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                        Text(when(option) { "Normal" -> "5 min"; "Difícil" -> "7 min"; else -> "2 min" }, fontSize = 12.sp, color = Color(0xFF667085))
+                                        Text(when(option) { "Normal" -> "$normalRewardMinutes min"; "Difícil" -> "$hardRewardMinutes min"; else -> "$easyRewardMinutes min" }, fontSize = 12.sp, color = Color(0xFF667085))
                                     }
                                 }
                             }
