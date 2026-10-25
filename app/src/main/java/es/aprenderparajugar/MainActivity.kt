@@ -146,6 +146,7 @@ private fun AprenderApp() {
     }
     var mode by remember { mutableStateOf("Al azar") }
     var difficulty by remember { mutableStateOf("Fácil") }
+    var questionCount by remember { mutableIntStateOf(preferences.getInt("question_count", 4).coerceIn(1, 10)) }
     var balanceSeconds by remember { mutableIntStateOf(preferences.getInt("balance_seconds", 0)) }
     var selected by remember { mutableStateOf(mapOf<String, String>()) }
     var selectedPicture by remember { mutableStateOf("") }
@@ -168,7 +169,8 @@ private fun AprenderApp() {
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
-    val exercisePairs = pairs.filter { it.active && it.difficulty == difficulty }.take(4)
+    val availableExercisePairs = pairs.filter { it.active && it.difficulty == difficulty }
+    val exercisePairs = availableExercisePairs.take(questionCount)
     val pairCount = exercisePairs.size
     val rewardSeconds = when (difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
     val balanceMinutes = balanceSeconds / 60
@@ -577,6 +579,18 @@ private fun AprenderApp() {
                                 }
                             }
                         }
+                        Text("Número de preguntas", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                        Text("Preguntas por partida: $questionCount · Disponibles en ${difficulty.lowercase()}: ${availableExercisePairs.size}", fontSize = 14.sp, color = Color(0xFF667085))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
+                            Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
+                        }
+                        if (availableExercisePairs.isEmpty()) {
+                            Text("No hay preguntas activas para esta dificultad. Entra en Configuración parental → Biblioteca de palabras y activa o crea palabras de dificultad $difficulty.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold)
+                        } else if (availableExercisePairs.size < questionCount) {
+                            Text("La partida tendrá ${availableExercisePairs.size} preguntas: no hay más palabras activas de esta dificultad.", color = Color(0xFF8A5A00))
+                        }
                         Text("Dificultad y recompensa", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("Fácil", "Normal", "Difícil").forEach { option ->
@@ -592,7 +606,7 @@ private fun AprenderApp() {
                 }
             }
             item {
-                Button(onClick = { resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; screen = "exercise" }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
+                Button(onClick = { resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; if (pairCount > 0) screen = "exercise" }, enabled = pairCount > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
                     Text("📚 Empezar ejercicio", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
