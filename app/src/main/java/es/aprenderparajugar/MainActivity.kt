@@ -150,14 +150,34 @@ private fun AprenderApp() {
                 when (parentSection) {
                     "words" -> item {
                         Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Gestiona el vocabulario: alta, edición y estado de cada palabra.", fontSize = 16.sp)
-                        samplePairs.forEach { pair ->
+                        Text("Los cambios se guardan en el dispositivo. Dibujo mediante emoji en esta versión.", fontSize = 14.sp, color = Color(0xFF667085))
+                        OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = it }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = pictureDraft, onValueChange = { pictureDraft = it }, label = { Text("Dibujo / emoji") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = categoryDraft, onValueChange = { categoryDraft = it }, label = { Text("Categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            listOf("Fácil", "Normal", "Difícil").forEach { level -> OutlinedButton(onClick = { difficultyDraft = level }) { Text(if (difficultyDraft == level) "✓ $level" else level) } }
+                        }
+                        Button(onClick = {
+                            val clean = wordDraft.trim()
+                            if (clean.isBlank() || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa los campos."
+                            else if (pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord }) libraryMessage = "Esa palabra ya existe."
+                            else {
+                                pairs = if (editingWord == null) pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft)
+                                else pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
+                                savePairs(preferences, pairs)
+                                wordDraft = ""; pictureDraft = "🐱"; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; editingWord = null; libraryMessage = "Guardado."
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text(if (editingWord == null) "Añadir palabra" else "Guardar cambios") }
+                        if (libraryMessage.isNotBlank()) Text(libraryMessage, color = Color(0xFF24733B))
+                        pairs.forEach { pair ->
                             Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text(pair.picture, fontSize = 28.sp)
-                                    Column {
-                                        Text(pair.word, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-                                        Text("Ejemplo · Dificultad inicial", color = Color(0xFF667085))
+                                Column(Modifier.padding(12.dp)) {
+                                    Text("${pair.picture}  ${pair.word}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    Text("${pair.category} · ${pair.difficulty} · ${if (pair.active) "Activa" else "Inactiva"}", color = Color(0xFF667085))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        OutlinedButton(onClick = { editingWord = pair.word; wordDraft = pair.word; pictureDraft = pair.picture; categoryDraft = pair.category; difficultyDraft = pair.difficulty }) { Text("Editar") }
+                                        OutlinedButton(onClick = { pairs = pairs.map { if (it.word == pair.word) it.copy(active = !it.active) else it }; savePairs(preferences, pairs) }) { Text(if (pair.active) "Desactivar" else "Activar") }
+                                        OutlinedButton(onClick = { pairs = pairs.filterNot { it.word == pair.word }; savePairs(preferences, pairs); if (editingWord == pair.word) editingWord = null }) { Text("Eliminar") }
                                     }
                                 }
                             }
