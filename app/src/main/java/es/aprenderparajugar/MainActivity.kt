@@ -49,6 +49,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,6 +97,19 @@ private fun AprenderApp() {
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
     var soundEnabled by remember { mutableStateOf(preferences.getBoolean("sound_enabled", true)) }
     var musicMessage by remember { mutableStateOf("") }
+    var appInForeground by remember { mutableStateOf(true) }
+    val lifecycleOwner = remember(context) { context as? ComponentActivity }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> appInForeground = true
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> appInForeground = false
+                else -> Unit
+            }
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
+    }
     val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
@@ -102,9 +118,9 @@ private fun AprenderApp() {
             musicMessage = "Música seleccionada. Se reproducirá en bucle cuando el sonido esté activado."
         }
     }
-    DisposableEffect(musicUri, soundEnabled) {
+    DisposableEffect(musicUri, soundEnabled, appInForeground) {
         var player: MediaPlayer? = null
-        if (soundEnabled) {
+        if (soundEnabled && appInForeground) {
             try {
                 player = if (musicUri.isNullOrBlank()) {
                     MediaPlayer.create(context, R.raw.musica_infantil_2)
@@ -157,6 +173,15 @@ private fun AprenderApp() {
     val rewardSeconds = when (difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
+
+    androidx.compose.runtime.LaunchedEffect(screen, appInForeground, balanceSeconds) {
+        while (screen == "play-time" && appInForeground && balanceSeconds > 0) {
+            delay(1000L)
+            balanceSeconds = (balanceSeconds - 1).coerceAtLeast(0)
+            preferences.edit().putInt("balance_seconds", balanceSeconds).apply()
+        }
+        if (screen == "play-time" && balanceSeconds <= 0) screen = "home"
+    }
 
     if (screen == "parent-pin") {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -481,6 +506,21 @@ private fun AprenderApp() {
             if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
             OutlinedButton(onClick = { screen = "home" }) { Text("Salir del ejercicio") }
         }
+    } else if (screen == "play-time") {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("🎮 Tiempo de juego", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+            Spacer(Modifier.height(12.dp))
+            Text("Este es el tiempo que has ganado al aprender.", fontSize = 16.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(24.dp))
+            Text(String.format(java.util.Locale.ROOT, "%02d:%02d", balanceSeconds / 60, balanceSeconds % 60), fontSize = 54.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF267A55))
+            Text(if (appInForeground) "El tiempo se está consumiendo." else "Tiempo pausado mientras la app está en segundo plano.", fontSize = 15.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = { screen = "home" }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
+        }
     } else if (screen == "result") {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -558,7 +598,7 @@ private fun AprenderApp() {
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
-                Button(onClick = { }, enabled = balanceSeconds > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
+                Button(onClick = { if (balanceSeconds > 0) screen = "play-time" }, enabled = balanceSeconds > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
                     Text(if (balanceSeconds > 0) "▶ Jugar con el tiempo ganado" else "🔒 Sin tiempo para jugar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
