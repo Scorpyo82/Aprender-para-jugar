@@ -556,6 +556,15 @@ private fun AprenderApp() {
                             }
                         }
                         Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Preguntas por partida", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Tú decides cuántas preguntas tendrá cada partida. Izan no podrá cambiar esta cantidad desde la pantalla de inicio.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("Cantidad configurada: $questionCount", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
+                            Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
+                        }
                         Text("Límite diario de elecciones manuales: $dailyManualLimit", fontSize = 17.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { if (dailyManualLimit > 0) { dailyManualLimit--; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("−") }
@@ -764,13 +773,7 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        Text("Número de preguntas", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                         Text("Preguntas por partida: $questionCount · Disponibles en ${difficulty.lowercase()}: ${availableExercisePairs.size}", fontSize = 14.sp, color = Color(0xFF667085))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
-                            Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
-                        }
                         if (availableExercisePairs.isEmpty()) {
                             Text("No hay preguntas activas para esta dificultad. Entra en Configuración parental → Biblioteca de palabras y activa o crea palabras de dificultad $difficulty.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold)
                         } else if (availableExercisePairs.size < questionCount) {
