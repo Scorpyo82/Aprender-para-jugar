@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.content.Context
 import android.net.Uri
 import android.widget.ImageView
+import android.media.MediaPlayer
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +90,35 @@ private fun AprenderApp() {
         }
     }
     var screen by remember { mutableStateOf("home") }
+    var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
+    var soundEnabled by remember { mutableStateOf(preferences.getBoolean("sound_enabled", true)) }
+    var musicMessage by remember { mutableStateOf("") }
+    val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+            musicUri = uri.toString()
+            preferences.edit().putString("background_music_uri", musicUri).apply()
+            musicMessage = "Música seleccionada. Se reproducirá en bucle cuando el sonido esté activado."
+        }
+    }
+    DisposableEffect(musicUri, soundEnabled) {
+        var player: MediaPlayer? = null
+        if (soundEnabled && !musicUri.isNullOrBlank()) {
+            try {
+                player = MediaPlayer.create(context, Uri.parse(musicUri)).apply {
+                    isLooping = true
+                    setVolume(0.22f, 0.22f)
+                    start()
+                }
+            } catch (_: Exception) {
+                musicMessage = "No se ha podido reproducir este archivo. Prueba con otro MP3."
+            }
+        }
+        onDispose {
+            try { player?.stop() } catch (_: Exception) { }
+            player?.release()
+        }
+    }
     var mode by remember { mutableStateOf("Al azar") }
     var difficulty by remember { mutableStateOf("Fácil") }
     var balanceSeconds by remember { mutableIntStateOf(preferences.getInt("balance_seconds", 0)) }
@@ -162,6 +193,14 @@ private fun AprenderApp() {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⏱️", fontSize = 30.sp)
                             Column { Text("Recompensas y límites", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Minutos por dificultad y elecciones diarias", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "music" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🎵", fontSize = 30.sp)
+                            Column { Text("Música de fondo", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Elige un MP3 y configura el sonido", color = Color(0xFF667085)) }
                         }
                     }
                 }
@@ -313,6 +352,23 @@ private fun AprenderApp() {
                         }
                         Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
                     }
+                    "music" -> item {
+                        Text("Música de fondo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("La música comienza al abrir la aplicación y se repite en bucle. Usa el altavoz de la pantalla principal para silenciar o activar todo el sonido.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text(if (musicUri.isNullOrBlank()) "No hay ninguna canción seleccionada." else "Archivo de música seleccionado.", fontWeight = FontWeight.SemiBold)
+                        Button(onClick = { musicPicker.launch(arrayOf("audio/mpeg", "audio/mp3", "audio/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir archivo MP3") }
+                        OutlinedButton(onClick = {
+                            musicUri = null
+                            preferences.edit().remove("background_music_uri").apply()
+                            musicMessage = "Se ha quitado la música seleccionada."
+                        }, enabled = !musicUri.isNullOrBlank(), modifier = Modifier.fillMaxWidth()) { Text("Quitar música") }
+                        OutlinedButton(onClick = {
+                            soundEnabled = !soundEnabled
+                            preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
+                        }, modifier = Modifier.fillMaxWidth()) { Text(if (soundEnabled) "Silenciar sonido" else "Activar sonido") }
+                        if (musicMessage.isNotBlank()) Text(musicMessage, color = Color(0xFF24733B))
+                        Text("Consejo: elige una melodía instrumental tranquila, sin cambios bruscos de volumen y con un final que encaje bien al repetirse.", fontSize = 13.sp, color = Color(0xFF667085))
+                    }
                     "security" -> item {
                         Text("Seguridad y saldo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Cambiar PIN familiar", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
@@ -432,7 +488,11 @@ private fun AprenderApp() {
         ) {
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("🌱 Aprender para jugar", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                    Text("🌱 Aprender para jugar", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), modifier = Modifier.weight(1f))
+                    OutlinedButton(onClick = {
+                        soundEnabled = !soundEnabled
+                        preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
+                    }) { Text(if (soundEnabled) "🔊" else "🔇") }
                     Card(shape = RoundedCornerShape(50), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Text("⏱ $balanceMinutes min", Modifier.padding(horizontal = 12.dp, vertical = 9.dp), fontWeight = FontWeight.Bold)
                     }
