@@ -64,6 +64,7 @@ private fun AprenderApp() {
     var difficulty by remember { mutableStateOf("Fácil") }
     var balanceSeconds by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf(mapOf<String, String>()) }
+    var selectedPicture by remember { mutableStateOf("") }
     var resolved by remember { mutableStateOf(setOf<String>()) }
     var correct by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
@@ -107,6 +108,7 @@ private fun AprenderApp() {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     samplePairs.take(pairCount).reversed().forEach { item ->
                         Card(Modifier.fillMaxWidth().clickable {
+                            selectedPicture = item.picture
                             val word = selected["word"]
                             if (word != null && word !in resolved) {
                                 val match = samplePairs.first { it.word == word }
@@ -116,12 +118,13 @@ private fun AprenderApp() {
                                 correct = newCorrect
                                 feedback = if (isCorrect) "Muy bien: " + word + " es correcto" else "No es esa pareja. Sigue con otra."
                                 selected = emptyMap()
+                                selectedPicture = ""
                                 if (resolved.size == pairCount) {
                                     balanceSeconds += (rewardSeconds * newCorrect) / pairCount
                                     screen = "result"
                                 }
                             }
-                        }, colors = CardDefaults.cardColors(containerColor = Color(0xFFF0E8F5))) {
+                        }, colors = CardDefaults.cardColors(containerColor = if (selectedPicture == item.picture) Color(0xFFFFD66B) else Color(0xFFF0E8F5)), border = if (selectedPicture == item.picture) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null) {
                             Text(item.picture, Modifier.padding(12.dp).align(Alignment.CenterHorizontally), fontSize = 34.sp)
                         }
                     }
@@ -169,15 +172,6 @@ private fun AprenderApp() {
                 }
             }
             item {
-                Card {
-                    Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                        Text("Tiempo ganado", fontSize = 16.sp)
-                        Text("$balanceMinutes min $balanceRemainderSeconds s", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                        Text("Prototipo: el saldo aún no se guarda al cerrar la app.")
-                    }
-                }
-            }
-            item {
                 Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDF7)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8E0D2))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("¿Cómo quieres jugar?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
@@ -205,16 +199,6 @@ private fun AprenderApp() {
                         }
                     }
                 }
-            }
-            item {
-                Text("Dificultad", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Fácil", "Normal", "Difícil").forEach { option ->
-                        if (difficulty == option) Button(onClick = { difficulty = option }, modifier = Modifier.weight(1f)) { Text(option) }
-                        else OutlinedButton(onClick = { difficulty = option }, modifier = Modifier.weight(1f)) { Text(option) }
-                    }
-                }
-                Text("Recompensa máxima orientativa: ${rewardSeconds / 60} min")
             }
             item {
                 Button(onClick = { resolved = emptySet(); selected = emptyMap(); correct = 0; feedback = ""; screen = "exercise" }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
