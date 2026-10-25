@@ -67,6 +67,49 @@ class MainActivity : ComponentActivity() {
 }
 
 private data class PairItem(val word: String, val picture: String, val category: String = "Primeras palabras", val difficulty: String = "Fácil", val active: Boolean = true)
+
+private data class WordLearning(
+    val streak: Int = 0,
+    val lastShownTurn: Int = 0,
+    val lastCorrect: Boolean = true
+)
+
+private fun loadLearningStats(preferences: android.content.SharedPreferences): Map<String, WordLearning> {
+    val saved = preferences.getString("word_learning_v1", null) ?: return emptyMap()
+    return saved.split("\n").mapNotNull { line ->
+        val fields = line.split("\t")
+        if (fields.size < 4) null else try {
+            fields[0] to WordLearning(fields[1].toInt(), fields[2].toInt(), fields[3].toBoolean())
+        } catch (_: Exception) { null }
+    }.toMap()
+}
+
+private fun saveLearningStats(preferences: android.content.SharedPreferences, stats: Map<String, WordLearning>) {
+    val saved = stats.entries.joinToString("\n") { (word, state) ->
+        listOf(word, state.streak.toString(), state.lastShownTurn.toString(), state.lastCorrect.toString()).joinToString("\t")
+    }
+    preferences.edit().putString("word_learning_v1", saved).apply()
+}
+
+private fun chooseAdaptivePairs(
+    candidates: List<PairItem>,
+    count: Int,
+    stats: Map<String, WordLearning>,
+    turn: Int
+): List<PairItem> {
+    return candidates.shuffled().sortedBy { pair ->
+        val state = stats[pair.word] ?: WordLearning()
+        val elapsed = turn - state.lastShownTurn
+        when {
+            state.lastShownTurn == 0 -> -1000
+            !state.lastCorrect && elapsed >= 3 -> -500
+            !state.lastCorrect -> -200 + elapsed
+            elapsed >= 5 + state.streak * 5 -> -100
+            else -> elapsed
+        }
+    }.take(count)
+}
+
 private val samplePairs = listOf(
     PairItem("mamá", "👩"), PairItem("sol", "☀️"),
     PairItem("casa", "🏠"), PairItem("gato", "🐈"),
@@ -148,6 +191,9 @@ private fun AprenderApp() {
     var difficulty by remember { mutableStateOf("Fácil") }
     var questionCount by remember { mutableIntStateOf(preferences.getInt("question_count", 4).coerceIn(1, 10)) }
     var balanceSeconds by remember { mutableIntStateOf(preferences.getInt("balance_seconds", 0)) }
+    var learningStats by remember { mutableStateOf(loadLearningStats(preferences)) }
+    var learningTurn by remember { mutableIntStateOf(preferences.getInt("learning_turn_v1", 0)) }
+    var activeExercisePairs by remember { mutableStateOf<List<PairItem>>(emptyList()) }
     var selected by remember { mutableStateOf(mapOf<String, String>()) }
     var selectedPicture by remember { mutableStateOf("") }
     var evaluatedPictures by remember { mutableStateOf(mapOf<String, Boolean>()) }
@@ -170,7 +216,7 @@ private fun AprenderApp() {
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
     val availableExercisePairs = pairs.filter { it.active && it.difficulty == difficulty }
-    val exercisePairs = availableExercisePairs.take(questionCount)
+    val exercisePairs = if (screen == "exercise" || screen == "result") activeExercisePairs else availableExercisePairs.take(questionCount)
     val pairCount = exercisePairs.size
     val rewardSeconds = when (difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
     val balanceMinutes = balanceSeconds / 60
@@ -446,6 +492,11 @@ private fun AprenderApp() {
                                     } else {
                                         val isCorrect = exercisePairs.first { it.word == item.word }.picture == pendingPicture
                                         resolved = resolved + item.word
+                                        learningTurn += 1
+                                        val oldLearning = learningStats[item.word] ?: WordLearning()
+                                        learningStats = learningStats + (item.word to WordLearning(if (isCorrect) oldLearning.streak + 1 else 0, oldLearning.lastShownTurn, isCorrect))
+                                        preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
+                                        saveLearningStats(preferences, learningStats)
                                         val newCorrect = correct + if (isCorrect) 1 else 0
                                         correct = newCorrect
                                         evaluatedPictures = evaluatedPictures + (pendingPicture to isCorrect)
@@ -483,6 +534,11 @@ private fun AprenderApp() {
                             } else if (word !in resolved) {
                                 val isCorrect = exercisePairs.first { it.word == word }.picture == item.picture
                                 resolved = resolved + word
+                                learningTurn += 1
+                                val oldLearning = learningStats[word] ?: WordLearning()
+                                learningStats = learningStats + (word to WordLearning(if (isCorrect) oldLearning.streak + 1 else 0, oldLearning.lastShownTurn, isCorrect))
+                                preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
+                                saveLearningStats(preferences, learningStats)
                                 if (isCorrect) correct += 1
                                 evaluatedPictures = evaluatedPictures + (item.picture to isCorrect)
                                 feedback = if (isCorrect) "¡Muy bien! «" + word + "» corresponde a ese dibujo." else "No coincide. «" + word + "» queda resuelta; prueba con otra palabra."
@@ -606,7 +662,19 @@ private fun AprenderApp() {
                 }
             }
             item {
-                Button(onClick = { resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; if (pairCount >= questionCount) screen = "exercise" }, enabled = pairCount >= questionCount, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
+                Button(onClick = {
+                    if (availableExercisePairs.size >= questionCount) {
+                        activeExercisePairs = chooseAdaptivePairs(availableExercisePairs, questionCount, learningStats, learningTurn)
+                        activeExercisePairs.forEach { pair ->
+                            learningTurn += 1
+                            val state = learningStats[pair.word] ?: WordLearning()
+                            learningStats = learningStats + (pair.word to state.copy(lastShownTurn = learningTurn))
+                        }
+                        preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
+                        saveLearningStats(preferences, learningStats)
+                        resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; screen = "exercise"
+                    }
+                }, enabled = availableExercisePairs.size >= questionCount, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
                     Text("📚 Empezar ejercicio", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
