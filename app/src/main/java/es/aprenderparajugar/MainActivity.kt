@@ -104,15 +104,23 @@ private fun AprenderApp() {
     }
     DisposableEffect(musicUri, soundEnabled) {
         var player: MediaPlayer? = null
-        if (soundEnabled && !musicUri.isNullOrBlank()) {
+        if (soundEnabled) {
             try {
-                player = MediaPlayer.create(context, Uri.parse(musicUri)).apply {
+                player = if (musicUri.isNullOrBlank()) {
+                    MediaPlayer.create(context, R.raw.musica_infantil_2)
+                } else {
+                    MediaPlayer.create(context, Uri.parse(musicUri))
+                }
+                player?.apply {
                     isLooping = true
                     setVolume(0.22f, 0.22f)
                     start()
                 }
+                if (player == null) {
+                    musicMessage = "No se ha podido cargar la música."
+                }
             } catch (_: Exception) {
-                musicMessage = "No se ha podido reproducir este archivo. Prueba con otro MP3."
+                musicMessage = "No se ha podido reproducir la música. Prueba con otro MP3."
             }
         }
         onDispose {
@@ -356,12 +364,12 @@ private fun AprenderApp() {
                     "music" -> item {
                         Text("Música de fondo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("La música comienza al abrir la aplicación y se repite en bucle. Usa el altavoz de la pantalla principal para silenciar o activar todo el sonido.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Text(if (musicUri.isNullOrBlank()) "No hay ninguna canción seleccionada." else "Archivo de música seleccionado.", fontWeight = FontWeight.SemiBold)
+                        Text(if (musicUri.isNullOrBlank()) "Música predeterminada: Música Infantil 2." else "Archivo de música personalizado seleccionado.", fontWeight = FontWeight.SemiBold)
                         Button(onClick = { musicPicker.launch(arrayOf("audio/mpeg", "audio/mp3", "audio/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir archivo MP3") }
                         OutlinedButton(onClick = {
                             musicUri = null
                             preferences.edit().remove("background_music_uri").apply()
-                            musicMessage = "Se ha quitado la música seleccionada."
+                            musicMessage = "Se ha restaurado la música predeterminada."
                         }, enabled = !musicUri.isNullOrBlank(), modifier = Modifier.fillMaxWidth()) { Text("Quitar música") }
                         OutlinedButton(onClick = {
                             soundEnabled = !soundEnabled
