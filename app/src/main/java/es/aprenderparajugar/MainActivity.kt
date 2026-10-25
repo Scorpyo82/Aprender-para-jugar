@@ -352,3 +352,18 @@ private fun AprenderApp() {
         }
     }
 }
+
+private fun loadPairs(preferences: android.content.SharedPreferences): List<PairItem> {
+    val saved = preferences.getString("pairs_v1", null) ?: return samplePairs
+    return saved.split("\n").mapNotNull { line ->
+        val fields = line.split("\t")
+        if (fields.size < 5) null else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
+    }.ifEmpty { samplePairs }
+}
+
+private fun savePairs(preferences: android.content.SharedPreferences, pairs: List<PairItem>) {
+    val saved = pairs.joinToString("\n") { pair ->
+        listOf(pair.word, pair.picture, pair.category, pair.difficulty, pair.active.toString()).joinToString("\t")
+    }
+    preferences.edit().putString("pairs_v1", saved).apply()
+}
