@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_play_time_description">Permite a Aprender para jugar detectar el agotamiento del tiempo ganado y volver a mostrar la aplicación.</string>
+</resources>
