@@ -99,7 +99,8 @@ private fun AprenderApp() {
     var pinError by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf("menu") }
     var dailyManualLimit by remember { mutableIntStateOf(2) }
-    val pairCount = 4
+    val exercisePairs = pairs.filter { it.active && it.difficulty == difficulty }.take(4)
+    val pairCount = exercisePairs.size
     val rewardSeconds = when (difficulty) { "Normal" -> 300; "Difícil" -> 420; else -> 120 }
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
