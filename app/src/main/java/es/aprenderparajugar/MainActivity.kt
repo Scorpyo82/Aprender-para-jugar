@@ -102,7 +102,7 @@ private fun AprenderApp() {
     var pinStored by remember { mutableStateOf(preferences.getString("parent_pin", "1234") ?: "1234") }
     var newPinDraft by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
-    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "Primeras palabras\\nCasa y familia\\nNaturaleza") ?: "").split("\\n").filter { it.isNotBlank() }) }
+    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "Primeras palabras|Casa y familia|Naturaleza") ?: "").split("|").filter { it.isNotBlank() }) }
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
@@ -221,7 +221,7 @@ private fun AprenderApp() {
                         Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Añade categorías y, antes de borrar una, elige dónde mover sus palabras.", fontSize = 14.sp, color = Color(0xFF667085))
                         OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = it }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("\\n")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
+                        Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("|")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
                         if (categoryMessage.isNotBlank()) Text(categoryMessage, color = Color(0xFF24733B))
                         categories.forEach { name ->
                             Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
