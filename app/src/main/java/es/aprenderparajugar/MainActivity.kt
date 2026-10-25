@@ -2,6 +2,12 @@ package es.aprenderparajugar
 
 import android.os.Bundle
 import android.content.Context
+import android.net.Uri
+import android.widget.ImageView
+import android.view.ViewGroup
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -71,6 +77,14 @@ private fun AprenderApp() {
     var difficultyDraft by remember { mutableStateOf("Fácil") }
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
+    var libraryPage by remember { mutableStateOf("list") }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+            pictureDraft = uri.toString()
+            libraryMessage = "Imagen seleccionada."
+        }
+    }
     var screen by remember { mutableStateOf("home") }
     var mode by remember { mutableStateOf("Al azar") }
     var difficulty by remember { mutableStateOf("Fácil") }
@@ -149,38 +163,50 @@ private fun AprenderApp() {
                 item { OutlinedButton(onClick = { parentSection = "menu" }) { Text("← Volver al menú de control") } }
                 when (parentSection) {
                     "words" -> item {
-                        Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Los cambios se guardan en el dispositivo. Dibujo mediante emoji en esta versión.", fontSize = 14.sp, color = Color(0xFF667085))
-                        OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = it }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(value = pictureDraft, onValueChange = { pictureDraft = it }, label = { Text("Dibujo / emoji") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(value = categoryDraft, onValueChange = { categoryDraft = it }, label = { Text("Categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            listOf("Fácil", "Normal", "Difícil").forEach { level -> OutlinedButton(onClick = { difficultyDraft = level }) { Text(if (difficultyDraft == level) "✓ $level" else level) } }
-                        }
-                        Button(onClick = {
-                            val clean = wordDraft.trim()
-                            if (clean.isBlank() || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa los campos."
-                            else if (pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord }) libraryMessage = "Esa palabra ya existe."
-                            else {
-                                pairs = if (editingWord == null) pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft)
-                                else pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
-                                savePairs(preferences, pairs)
-                                wordDraft = ""; pictureDraft = "🐱"; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; editingWord = null; libraryMessage = "Guardado."
-                            }
-                        }, modifier = Modifier.fillMaxWidth()) { Text(if (editingWord == null) "Añadir palabra" else "Guardar cambios") }
-                        if (libraryMessage.isNotBlank()) Text(libraryMessage, color = Color(0xFF24733B))
-                        pairs.forEach { pair ->
-                            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text("${pair.picture}  ${pair.word}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                    Text("${pair.category} · ${pair.difficulty} · ${if (pair.active) "Activa" else "Inactiva"}", color = Color(0xFF667085))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        OutlinedButton(onClick = { editingWord = pair.word; wordDraft = pair.word; pictureDraft = pair.picture; categoryDraft = pair.category; difficultyDraft = pair.difficulty }) { Text("Editar") }
-                                        OutlinedButton(onClick = { pairs = pairs.map { if (it.word == pair.word) it.copy(active = !it.active) else it }; savePairs(preferences, pairs) }) { Text(if (pair.active) "Desactivar" else "Activar") }
-                                        OutlinedButton(onClick = { pairs = pairs.filterNot { it.word == pair.word }; savePairs(preferences, pairs); if (editingWord == pair.word) editingWord = null }) { Text("Eliminar") }
+                        if (libraryPage == "list") {
+                            Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                            Text("Gestiona las palabras guardadas. Pulsa Añadir para crear una nueva.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Button(onClick = { editingWord = null; wordDraft = ""; pictureDraft = ""; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir palabra") }
+                            pairs.forEach { pair ->
+                                Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            if (pair.picture.startsWith("content://") || pair.picture.startsWith("file://")) {
+                                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP; layoutParams = ViewGroup.LayoutParams(120, 120) } }, update = { view -> try { view.setImageURI(Uri.parse(pair.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.width(64.dp).height(64.dp))
+                                            } else Text(pair.picture, fontSize = 28.sp)
+                                            Column(Modifier.weight(1f)) { Text(pair.word, fontSize = 19.sp, fontWeight = FontWeight.SemiBold); Text("${pair.category} · ${pair.difficulty} · ${if (pair.active) "Activa" else "Inactiva"}", color = Color(0xFF667085)) }
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            OutlinedButton(onClick = { editingWord = pair.word; wordDraft = pair.word; pictureDraft = pair.picture; categoryDraft = pair.category; difficultyDraft = pair.difficulty; libraryMessage = ""; libraryPage = "edit" }) { Text("Editar") }
+                                            OutlinedButton(onClick = { pairs = pairs.map { if (it.word == pair.word) it.copy(active = !it.active) else it }; savePairs(preferences, pairs) }) { Text(if (pair.active) "Desactivar" else "Activar") }
+                                            OutlinedButton(onClick = { pairs = pairs.filterNot { it.word == pair.word }; savePairs(preferences, pairs) }) { Text("Eliminar") }
+                                        }
                                     }
                                 }
                             }
+                        } else {
+                            Text(if (editingWord == null) "Añadir palabra" else "Editar palabra", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                            Text("Completa los datos y guarda. La imagen se elige desde la galería.", fontSize = 14.sp, color = Color(0xFF667085))
+                            OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = it }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = categoryDraft, onValueChange = { categoryDraft = it }, label = { Text("Categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            Text("Dificultad", fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { listOf("Fácil", "Normal", "Difícil").forEach { level -> OutlinedButton(onClick = { difficultyDraft = level }) { Text(if (difficultyDraft == level) "✓ $level" else level) } } }
+                            if (pictureDraft.startsWith("content://") || pictureDraft.startsWith("file://")) {
+                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 320) } }, update = { view -> try { view.setImageURI(Uri.parse(pictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(180.dp))
+                            } else Text(if (pictureDraft.isBlank()) "Todavía no has elegido una imagen." else "Dibujo actual: $pictureDraft", fontSize = 18.sp)
+                            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
+                            Button(onClick = {
+                                val clean = wordDraft.trim()
+                                if (clean.isBlank() || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
+                                else if (pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord }) libraryMessage = "Esa palabra ya existe."
+                                else {
+                                    pairs = if (editingWord == null) pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft) else pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
+                                    savePairs(preferences, pairs)
+                                    wordDraft = ""; pictureDraft = ""; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; editingWord = null; libraryMessage = "Palabra guardada."; libraryPage = "list"
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar palabra") }
+                            OutlinedButton(onClick = { libraryPage = "list"; editingWord = null; libraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a la biblioteca") }
+                            if (libraryMessage.isNotBlank()) Text(libraryMessage, color = Color(0xFF24733B))
                         }
                     }
                     "categories" -> item {
