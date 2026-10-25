@@ -21,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -68,12 +69,107 @@ private fun AprenderApp() {
     var resolved by remember { mutableStateOf(setOf<String>()) }
     var correct by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
+    var pinEntry by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf(false) }
+    var parentSection by remember { mutableStateOf("menu") }
+    var dailyManualLimit by remember { mutableIntStateOf(2) }
     val pairCount = 4
     val rewardSeconds = when (difficulty) { "Normal" -> 300; "Difícil" -> 420; else -> 120 }
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
-    if (screen == "exercise") {
+    if (screen == "parent-pin") {
+        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("🔐 Zona de familias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+            Spacer(Modifier.height(8.dp))
+            Text("Introduce el PIN para acceder a los controles.", fontSize = 17.sp)
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(value = pinEntry, onValueChange = { value -> pinEntry = value.filter { it.isDigit() }.take(4); pinError = false }, label = { Text("PIN de 4 cifras") }, singleLine = true)
+            if (pinError) Text("PIN incorrecto. Prueba otra vez.", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = {
+                if (pinEntry == "1234") { screen = "parent"; parentSection = "menu"; pinEntry = ""; pinError = false }
+                else pinError = true
+            }, modifier = Modifier.fillMaxWidth()) { Text("Entrar") }
+            OutlinedButton(onClick = { screen = "home"; pinEntry = ""; pinError = false }, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
+            Text("PIN provisional de esta versión: 1234. Cámbialo antes de dejar que el niño use la app.", fontSize = 12.sp, color = Color(0xFF667085))
+        }
+    } else if (screen == "parent") {
+        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                Text("⚙️ Control parental", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Configura el contenido y las recompensas de Aprender para jugar.", fontSize = 16.sp, color = Color(0xFF667085))
+            }
+            if (parentSection == "menu") {
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "words" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🖼️", fontSize = 30.sp)
+                            Column { Text("Biblioteca de palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Palabras, dibujos y dificultad", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "categories" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🗂️", fontSize = 30.sp)
+                            Column { Text("Categorías", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Organiza el vocabulario por temas", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "rewards" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("⏱️", fontSize = 30.sp)
+                            Column { Text("Recompensas y límites", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Minutos por dificultad y elecciones diarias", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "security" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🔐", fontSize = 30.sp)
+                            Column { Text("Seguridad y saldo", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("PIN y minutos acumulados", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+            } else {
+                item { OutlinedButton(onClick = { parentSection = "menu" }) { Text("← Volver al menú de control") } }
+                when (parentSection) {
+                    "words" -> item {
+                        Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("El contenido de ejemplo sigue siendo fijo. Editar palabras, elegir imágenes de la galería y guardar localmente queda pendiente.", fontSize = 16.sp)
+                        samplePairs.forEach { pair -> Text("• ${pair.word}  ${pair.picture}", fontSize = 18.sp) }
+                    }
+                    "categories" -> item {
+                        Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("La gestión de categorías se conectará a la biblioteca en la siguiente fase.", fontSize = 16.sp)
+                        listOf("Primeras palabras", "Casa y familia", "Naturaleza").forEach { name ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) { Text(name, Modifier.padding(14.dp), fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
+                        }
+                    }
+                    "rewards" -> item {
+                        Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("Recompensa base: Fácil 2 min · Normal 5 min · Difícil 7 min", fontSize = 17.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Límite diario de elecciones manuales: $dailyManualLimit", fontSize = 17.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { if (dailyManualLimit > 0) dailyManualLimit-- }) { Text("−") }
+                            OutlinedButton(onClick = { if (dailyManualLimit < 10) dailyManualLimit++ }) { Text("+") }
+                        }
+                        Text("El límite cambia durante esta sesión; todavía no se guarda al cerrar la app.", fontSize = 13.sp, color = Color(0xFF667085))
+                    }
+                    "security" -> item {
+                        Text("Seguridad y saldo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("PIN de demostración: 1234", fontSize = 17.sp)
+                        Text("Cambiar el PIN y guardar el saldo permanentemente quedan pendientes.", fontSize = 16.sp)
+                        Text("Saldo actual: $balanceMinutes min $balanceRemainderSeconds s", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            item { OutlinedButton(onClick = { screen = "home"; parentSection = "menu" }, modifier = Modifier.fillMaxWidth()) { Text("Salir de configuración") } }
+        }
+    } else if (screen == "exercise") {
         Column(
             modifier = Modifier.fillMaxSize().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
