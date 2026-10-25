@@ -139,7 +139,7 @@ private fun AprenderApp() {
                 when (parentSection) {
                     "words" -> item {
                         Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Vocabulario de ejemplo. La edición completa se incorporará en una siguiente actualización.", fontSize = 16.sp)
+                        Text("Gestiona el vocabulario: alta, edición y estado de cada palabra.", fontSize = 16.sp)
                         samplePairs.forEach { pair ->
                             Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
