@@ -139,8 +139,18 @@ private fun AprenderApp() {
                 when (parentSection) {
                     "words" -> item {
                         Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("El contenido de ejemplo sigue siendo fijo. Editar palabras, elegir imágenes de la galería y guardar localmente queda pendiente.", fontSize = 16.sp)
-                        samplePairs.forEach { pair -> Text("• ${pair.word}  ${pair.picture}", fontSize = 18.sp) }
+                        Text("Vocabulario de ejemplo. La edición completa se incorporará en una siguiente actualización.", fontSize = 16.sp)
+                        samplePairs.forEach { pair ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text(pair.picture, fontSize = 28.sp)
+                                    Column {
+                                        Text(pair.word, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                                        Text("Ejemplo · Dificultad inicial", color = Color(0xFF667085))
+                                    }
+                                }
+                            }
+                        }
                     }
                     "categories" -> item {
                         Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
