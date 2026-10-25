@@ -836,7 +836,7 @@ private fun AprenderApp() {
                 Button(onClick = {
                     if (balanceSeconds > 0) {
                         val deadline = System.currentTimeMillis() + balanceSeconds.toLong() * 1000L
-                        preferences.edit().putLong("play_deadline_ms", deadline).apply()
+                        preferences.edit().putLong("play_deadline_ms", deadline).putBoolean("expiry_relaunch_attempted", false).apply()
                         androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START))
                         screen = "play-time"
                         (context as? ComponentActivity)?.moveTaskToBack(true)
