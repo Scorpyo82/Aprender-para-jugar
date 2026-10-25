@@ -192,13 +192,14 @@ private fun AprenderApp() {
                                     } else {
                                         val isCorrect = samplePairs.first { it.word == item.word }.picture == pendingPicture
                                         resolved = resolved + item.word
-                                        if (isCorrect) correct += 1
+                                        val newCorrect = correct + if (isCorrect) 1 else 0
+                                        correct = newCorrect
                                         evaluatedPictures = evaluatedPictures + (pendingPicture to isCorrect)
                                         feedback = if (isCorrect) "¡Muy bien! «" + item.word + "» corresponde a ese dibujo." else "No coincide. «" + item.word + "» queda resuelta; prueba con otra palabra."
                                         selected = emptyMap()
                                         selectedPicture = ""
                                         if (resolved.size == pairCount) {
-                                            balanceSeconds += (rewardSeconds * (correct + if (isCorrect) 1 else 0)) / pairCount
+                                            balanceSeconds += (rewardSeconds * newCorrect) / pairCount
                                             screen = "result"
                                         }
                                     }
