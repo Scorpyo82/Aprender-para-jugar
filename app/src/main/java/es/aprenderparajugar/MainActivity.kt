@@ -75,7 +75,8 @@ class MainActivity : ComponentActivity() {
     private fun persistAndStartEarnedCountdown() {
         val prefs = getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
         if (prefs.getBoolean("parent_area_active", false) ||
-            prefs.getBoolean("manual_exit_allowed", false)) return
+            prefs.getBoolean("manual_exit_allowed", false) ||
+            prefs.getBoolean("play_paused_for_screen_lock", false)) return
 
         val now = System.currentTimeMillis()
         val deadline = prefs.getLong("play_deadline_ms", 0L)
