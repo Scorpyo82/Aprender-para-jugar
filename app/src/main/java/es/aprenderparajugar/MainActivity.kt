@@ -876,8 +876,10 @@ private fun AprenderApp() {
             Button(onClick = {
                 val deadline = preferences.getLong("play_deadline_ms", 0L)
                 val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else balanceSeconds.coerceAtLeast(0)
-                context.stopService(Intent(context, PlayTimeService::class.java))
-                preferences.edit().putLong("play_deadline_ms", 0L).putInt("balance_seconds", remaining).apply()
+                // Returning to the learning app must not pause or reset the play-time deadline.
+                // Keep the foreground service and absolute deadline running so Home cannot
+                // make the remaining balance spendable a second time.
+                preferences.edit().putInt("balance_seconds", remaining).commit()
                 balanceSeconds = remaining
                 screen = "home"
             }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
