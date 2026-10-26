@@ -829,6 +829,11 @@ private fun AprenderApp() {
         val pictureEmojiFontSize = if (isTabletLayout) 58.sp else 42.sp
         val pictureImageHeight = if (isTabletLayout) 150.dp else 110.dp
         val cardPadding = if (isTabletLayout) 24.dp else 18.dp
+        val wordCardOrder = remember(activeExercisePairs) { exercisePairs.shuffled() }
+        val pictureCardOrder = remember(activeExercisePairs) {
+            val shuffled = exercisePairs.shuffled()
+            if (shuffled.size > 1 && shuffled.map { it.word } == wordCardOrder.map { it.word }) shuffled.drop(1) + shuffled.first() else shuffled
+        }
         Column(
             modifier = Modifier.fillMaxSize().padding(if (isTabletLayout) 28.dp else 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -837,7 +842,7 @@ private fun AprenderApp() {
             Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    exercisePairs.forEach { item ->
+                    wordCardOrder.forEach { item ->
                         val isSelected = selected["word"] == item.word
                         val isResolved = item.word in resolved
                         Card(
@@ -888,7 +893,7 @@ private fun AprenderApp() {
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    exercisePairs.reversed().forEach { item ->
+                    pictureCardOrder.forEach { item ->
                         Card(Modifier.fillMaxWidth().clickable {
                             val word = selected["word"]
                             if (word == null) {
