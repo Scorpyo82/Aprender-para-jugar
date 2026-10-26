@@ -72,6 +72,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // A manual launch re-arms the focus guard after a parent-authorized exit.
+        getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
+            .edit().putBoolean("manual_exit_allowed", false).apply()
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
         }
@@ -363,6 +366,23 @@ private fun AprenderApp() {
     val rewardSeconds = when (difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
+
+    fun addEarnedTime(seconds: Int) {
+        if (seconds <= 0) return
+        val now = System.currentTimeMillis()
+        val currentDeadline = preferences.getLong("play_deadline_ms", 0L)
+        if (currentDeadline > now) {
+            val newDeadline = currentDeadline + seconds.toLong() * 1000L
+            val remaining = ((newDeadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
+            preferences.edit().putLong("play_deadline_ms", newDeadline).putInt("balance_seconds", remaining).apply()
+            balanceSeconds = remaining
+            androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START))
+        } else {
+            val updated = preferences.getInt("balance_seconds", balanceSeconds).coerceAtLeast(0) + seconds
+            preferences.edit().putInt("balance_seconds", updated).apply()
+            balanceSeconds = updated
+        }
+    }
 
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
         while (screen == "play-time" && appInForeground) {
@@ -749,8 +769,7 @@ private fun AprenderApp() {
                                         selected = emptyMap()
                                         selectedPicture = ""
                                         if (resolved.size == pairCount) {
-                                            balanceSeconds += (rewardSeconds * newCorrect) / pairCount
-                                            preferences.edit().putInt("balance_seconds", balanceSeconds).apply()
+                                            addEarnedTime((rewardSeconds * newCorrect) / pairCount)
                                             screen = "result"
                                         }
                                     }
@@ -790,8 +809,7 @@ private fun AprenderApp() {
                                 selected = emptyMap()
                                 selectedPicture = ""
                                 if (resolved.size == pairCount) {
-                                    balanceSeconds += (rewardSeconds * correct) / pairCount
-                                    preferences.edit().putInt("balance_seconds", balanceSeconds).apply()
+                                    addEarnedTime((rewardSeconds * correct) / pairCount)
                                     screen = "result"
                                 }
                             }
