@@ -334,6 +334,7 @@ private fun AprenderApp() {
     var difficulty by remember { mutableStateOf("Fácil") }
     var questionCount by remember { mutableIntStateOf(preferences.getInt("question_count", 4).coerceIn(1, 10)) }
     var balanceSeconds by remember { mutableIntStateOf(preferences.getInt("balance_seconds", 0)) }
+    var lastEarnedSeconds by remember { mutableIntStateOf(0) }
     var learningStats by remember { mutableStateOf(loadLearningStats(preferences)) }
     var learningTurn by remember { mutableIntStateOf(preferences.getInt("learning_turn_v1", 0)) }
     var activeExercisePairs by remember { mutableStateOf<List<PairItem>>(emptyList()) }
@@ -406,6 +407,7 @@ private fun AprenderApp() {
 
     fun addEarnedTime(seconds: Int) {
         if (seconds <= 0) return
+        lastEarnedSeconds = seconds
         val now = System.currentTimeMillis()
         val currentDeadline = preferences.getLong("play_deadline_ms", 0L)
         if (currentDeadline > now) {
@@ -904,18 +906,36 @@ private fun AprenderApp() {
             }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
         }
     } else if (screen == "result") {
+        val rewardIcon = when {
+            correct == 0 -> "😢"
+            correct == pairCount -> "🏆"
+            correct * 2 < pairCount -> "⭐"
+            correct * 2 == pairCount -> "⭐⭐"
+            else -> "⭐⭐⭐"
+        }
+        val rewardMessage = when {
+            correct == 0 -> "¡Vamos a intentarlo otra vez!"
+            correct == pairCount -> "¡PERFECTO! ¡Eres un campeón!"
+            correct * 2 < pairCount -> "¡Buen intento! Sigue practicando"
+            correct * 2 == pairCount -> "¡Bien hecho! Has conseguido la mitad"
+            else -> "¡Muy bien! Cada vez lo haces mejor"
+        }
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("¡Buen trabajo!", fontSize = 30.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
-            Text("Aciertos: $correct de $pairCount", fontSize = 22.sp)
-            Text("Saldo de prueba: $balanceMinutes min $balanceRemainderSeconds s", fontSize = 20.sp)
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }) {
-                Text("Volver al inicio")
+            Text(rewardIcon, fontSize = if (correct == pairCount) 104.sp else 76.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(rewardMessage, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(18.dp))
+            Text("+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55))
+            Text("MINUTOS GANADOS", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
+            Spacer(Modifier.height(14.dp))
+            Text("$correct de $pairCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }, modifier = Modifier.fillMaxWidth()) {
+                Text("🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     } else {
