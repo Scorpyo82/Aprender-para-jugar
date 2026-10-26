@@ -6,6 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.os.Build
 import android.os.IBinder
 import android.os.Handler
@@ -17,6 +20,47 @@ class PlayTimeService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("aprender_para_jugar", MODE_PRIVATE) }
     private var expiryHandled = false
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> pauseForScreenLock()
+                Intent.ACTION_USER_PRESENT -> resumeAfterScreenUnlock()
+            }
+        }
+    }
+
+    private fun pauseForScreenLock() {
+        val deadline = prefs.getLong("play_deadline_ms", 0L)
+        if (deadline <= 0L) return
+        val remaining = ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
+        prefs.edit()
+            .putInt("balance_seconds", remaining)
+            .putLong("play_deadline_ms", 0L)
+            .putBoolean("play_paused_for_screen_lock", true)
+            .commit()
+        handler.removeCallbacks(tick)
+        getSystemService(NotificationManager::class.java).notify(
+            NOTIFICATION_ID,
+            buildNotification("Tiempo pausado: tablet bloqueada", true)
+        )
+    }
+
+    private fun resumeAfterScreenUnlock() {
+        if (!prefs.getBoolean("play_paused_for_screen_lock", false)) return
+        val remaining = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
+        prefs.edit()
+            .putBoolean("play_paused_for_screen_lock", false)
+            .putLong("play_deadline_ms", if (remaining > 0) System.currentTimeMillis() + remaining.toLong() * 1000L else 0L)
+            .commit()
+        if (remaining > 0) {
+            expiryHandled = false
+            handler.removeCallbacks(tick)
+            handler.post(tick)
+        } else {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+    }
     private val tick = object : Runnable {
         override fun run() {
             val deadline = prefs.getLong("play_deadline_ms", 0L)
@@ -47,6 +91,16 @@ class PlayTimeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenStateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(screenStateReceiver, filter)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(CHANNEL_ID, "Tiempo de juego", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Cuenta atrás del tiempo de juego ganado"
@@ -64,6 +118,10 @@ class PlayTimeService : Service() {
             return START_NOT_STICKY
         }
         expiryHandled = false
+        if (prefs.getBoolean("play_paused_for_screen_lock", false)) {
+            startForeground(NOTIFICATION_ID, buildNotification("Tiempo pausado: tablet bloqueada", true))
+            return START_STICKY
+        }
         if (prefs.getLong("play_deadline_ms", 0L) <= 0L) {
             stopSelf()
             return START_NOT_STICKY
@@ -76,6 +134,7 @@ class PlayTimeService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(tick)
+        try { unregisterReceiver(screenStateReceiver) } catch (_: Exception) { }
         super.onDestroy()
     }
 
