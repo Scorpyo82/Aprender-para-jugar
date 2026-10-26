@@ -1,6 +1,7 @@
 package es.aprenderparajugar
 
 import android.os.Bundle
+import android.graphics.Bitmap
 import android.content.Intent
 import android.os.Build
 import android.Manifest
@@ -13,6 +14,8 @@ import android.view.ViewGroup
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -293,6 +296,24 @@ private fun AprenderApp() {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
             pictureDraft = uri.toString()
             libraryMessage = "Imagen seleccionada."
+        }
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (bitmap != null) {
+            try {
+                val imagesDir = File(context.filesDir, "word_images").apply { mkdirs() }
+                val imageFile = File(imagesDir, "captured_\${System.currentTimeMillis()}.jpg")
+                FileOutputStream(imageFile).use { output ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 60, output)
+                }
+                pictureDraft = Uri.fromFile(imageFile).toString()
+                libraryMessage = "Foto añadida y comprimida para ocupar poco espacio."
+            } catch (_: Exception) {
+                libraryMessage = "No se ha podido guardar la foto."
+            } finally {
+                bitmap.recycle()
+            }
         }
     }
     var screen by remember { mutableStateOf("home") }
@@ -655,6 +676,14 @@ private fun AprenderApp() {
                                     .commit()
                                 imagePicker.launch(arrayOf("image/*"))
                             }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
+                            OutlinedButton(onClick = {
+                                // The external camera app temporarily backgrounds this Activity.
+                                preferences.edit()
+                                    .putBoolean("content_picker_active", true)
+                                    .putBoolean("parent_area_active", true)
+                                    .commit()
+                                cameraLauncher.launch(null)
+                            }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
                             Button(onClick = {
                                 val clean = wordDraft.trim()
                                 if (clean.isBlank() || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
