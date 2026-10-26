@@ -10,6 +10,8 @@ class PlayTimeAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         if (event.packageName?.toString() == packageName) return
+        // A parent explicitly confirmed exiting; do not relaunch until the app is opened manually again.
+        if (prefs.getBoolean("manual_exit_allowed", false)) return
         // Do not treat the keyboard or other focus changes inside the parental PIN/configuration flow as leaving play.
         if (prefs.getBoolean("parent_area_active", false)) return
         val now = System.currentTimeMillis()
