@@ -383,11 +383,35 @@ private fun AprenderApp() {
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
         preferences.edit().putBoolean(
             "parent_area_active",
-            appInForeground && (screen == "parent-pin" || screen == "parent")
+            appInForeground && (screen == "parent-pin" || screen == "parent" || screen == "exit-pin")
         ).apply()
     }
 
-    if (screen == "parent-pin") {
+    if (screen == "exit-pin") {
+        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("🔒 Salir de la aplicación", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+            Spacer(Modifier.height(8.dp))
+            Text("Introduce el PIN familiar para confirmar la salida.", fontSize = 17.sp)
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(value = pinEntry, onValueChange = { value -> pinEntry = value.filter { it.isDigit() }.take(4); pinError = false }, label = { Text("PIN de 4 cifras") }, singleLine = true)
+            if (pinError) Text("PIN incorrecto. Prueba otra vez.", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = {
+                if (pinEntry == pinStored) {
+                    preferences.edit()
+                        .putBoolean("manual_exit_allowed", true)
+                        .putBoolean("parent_area_active", false)
+                        .putLong("play_deadline_ms", 0L)
+                        .apply()
+                    context.stopService(Intent(context, PlayTimeService::class.java))
+                    (context as? ComponentActivity)?.finishAndRemoveTask()
+                } else {
+                    pinError = true
+                }
+            }, modifier = Modifier.fillMaxWidth()) { Text("Confirmar salida") }
+            OutlinedButton(onClick = { screen = "home"; pinEntry = ""; pinError = false }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+        }
+    } else if (screen == "parent-pin") {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text("🔐 Zona de familias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
             Spacer(Modifier.height(8.dp))
@@ -921,6 +945,7 @@ private fun AprenderApp() {
                     Text("📚 Empezar ejercicio", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
                 Button(onClick = {
