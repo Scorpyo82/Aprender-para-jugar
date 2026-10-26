@@ -10,6 +10,8 @@ class PlayTimeAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         if (event.packageName?.toString() == packageName) return
+        // Do not treat the keyboard or other focus changes inside the parental PIN/configuration flow as leaving play.
+        if (prefs.getBoolean("parent_area_active", false)) return
         val now = System.currentTimeMillis()
         val deadline = prefs.getLong("play_deadline_ms", 0L)
 
