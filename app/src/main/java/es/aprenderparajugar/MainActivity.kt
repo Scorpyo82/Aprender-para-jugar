@@ -433,6 +433,18 @@ private fun AprenderApp() {
         }
     }
 
+    // When the app regains focus while play time is running, show the live countdown
+    // first. From there the parent/child can explicitly end the session, bank only the
+    // remaining seconds, and return to learning to earn more time.
+    androidx.compose.runtime.LaunchedEffect(appInForeground) {
+        if (appInForeground) {
+            val deadline = preferences.getLong("play_deadline_ms", 0L)
+            if (deadline > System.currentTimeMillis() && screen == "home") {
+                screen = "play-time"
+            }
+        }
+    }
+
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
         preferences.edit().putBoolean(
             "parent_area_active",
