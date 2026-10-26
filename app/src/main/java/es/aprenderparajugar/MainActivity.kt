@@ -303,7 +303,7 @@ private fun AprenderApp() {
         if (bitmap != null) {
             try {
                 val imagesDir = File(context.filesDir, "word_images").apply { mkdirs() }
-                val imageFile = File(imagesDir, "captured_\${System.currentTimeMillis()}.jpg")
+                val imageFile = File(imagesDir, "captured_${System.currentTimeMillis()}.jpg")
                 FileOutputStream(imageFile).use { output ->
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 60, output)
                 }
