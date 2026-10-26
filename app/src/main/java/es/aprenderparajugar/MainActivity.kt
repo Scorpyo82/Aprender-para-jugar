@@ -21,6 +21,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -920,16 +926,19 @@ private fun AprenderApp() {
             correct * 2 == pairCount -> "¡Bien hecho! Has conseguido la mitad"
             else -> "¡Muy bien! Cada vez lo haces mejor"
         }
+        val celebration = rememberInfiniteTransition(label = "celebracion")
+        val iconScale by celebration.animateFloat(initialValue = 0.88f, targetValue = 1.12f, animationSpec = infiniteRepeatable(animation = tween(650), repeatMode = RepeatMode.Reverse), label = "rebote")
+        val timeScale by celebration.animateFloat(initialValue = 1f, targetValue = 1.045f, animationSpec = infiniteRepeatable(animation = tween(900), repeatMode = RepeatMode.Reverse), label = "pulsoTiempo")
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(rewardIcon, fontSize = if (correct == pairCount) 104.sp else 76.sp)
+            Text(rewardIcon, fontSize = if (correct == pairCount) 104.sp else 76.sp, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale })
             Spacer(Modifier.height(8.dp))
             Text(rewardMessage, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(18.dp))
-            Text("+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55))
+            Text("+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
             Text("MINUTOS GANADOS", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
             Spacer(Modifier.height(14.dp))
             Text("$correct de $pairCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
