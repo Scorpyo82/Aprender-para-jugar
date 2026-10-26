@@ -374,6 +374,10 @@ private fun AprenderApp() {
         }
     }
 
+    androidx.compose.runtime.LaunchedEffect(screen) {
+        preferences.edit().putBoolean("parent_area_active", screen == "parent-pin" || screen == "parent").apply()
+    }
+
     if (screen == "parent-pin") {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text("🔐 Zona de familias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
