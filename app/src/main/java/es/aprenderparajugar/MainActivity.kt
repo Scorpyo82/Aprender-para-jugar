@@ -113,8 +113,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         persistAndStartEarnedCountdown()
-        getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
-            .edit().putBoolean("parent_area_active", false).apply()
+        val prefs = getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
+        // Android's document picker temporarily backgrounds this Activity; do not
+        // interpret that expected system UI as leaving the app's parental area.
+        if (!prefs.getBoolean("content_picker_active", false)) {
+            prefs.edit().putBoolean("parent_area_active", false).apply()
+        }
         super.onStop()
     }
 
@@ -284,6 +288,7 @@ private fun AprenderApp() {
     var packageMessage by remember { mutableStateOf("") }
     var pendingImportMode by remember { mutableStateOf("replace") }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
             pictureDraft = uri.toString()
@@ -641,7 +646,15 @@ private fun AprenderApp() {
                             if (pictureDraft.startsWith("content://") || pictureDraft.startsWith("file://")) {
                                 AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 320) } }, update = { view -> try { view.setImageURI(Uri.parse(pictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(180.dp))
                             } else Text(if (pictureDraft.isBlank()) "Todavía no has elegido una imagen." else "Dibujo actual: $pictureDraft", fontSize = 18.sp)
-                            OutlinedButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
+                            OutlinedButton(onClick = {
+                                // Keep the parental-area guard armed while Android's
+                                // system document picker is temporarily in the foreground.
+                                preferences.edit()
+                                    .putBoolean("content_picker_active", true)
+                                    .putBoolean("parent_area_active", true)
+                                    .commit()
+                                imagePicker.launch(arrayOf("image/*"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
                             Button(onClick = {
                                 val clean = wordDraft.trim()
                                 if (clean.isBlank() || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
