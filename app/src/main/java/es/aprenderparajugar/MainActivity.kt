@@ -852,8 +852,13 @@ private fun AprenderApp() {
                                 if (!isResolved) {
                                     val pendingPicture = selectedPicture
                                     if (pendingPicture.isBlank()) {
-                                        selected = mapOf("word" to item.word)
-                                        feedback = "Ahora busca el dibujo de «" + item.word + "»."
+                                        if (selected["word"] == item.word) {
+                                            selected = emptyMap()
+                                            feedback = "Selección cancelada."
+                                        } else {
+                                            selected = mapOf("word" to item.word)
+                                            feedback = "Ahora busca el dibujo de «" + item.word + "»."
+                                        }
                                     } else {
                                         val isCorrect = exercisePairs.first { it.word == item.word }.picture == pendingPicture
                                         resolved = resolved + item.word
@@ -899,8 +904,13 @@ private fun AprenderApp() {
                         Card(Modifier.fillMaxWidth().clickable {
                             val word = selected["word"]
                             if (word == null) {
-                                selectedPicture = item.picture
-                                feedback = "Has elegido un dibujo. Ahora toca la palabra que le corresponde."
+                                if (selectedPicture == item.picture) {
+                                    selectedPicture = ""
+                                    feedback = "Selección cancelada."
+                                } else {
+                                    selectedPicture = item.picture
+                                    feedback = "Has elegido un dibujo. Ahora toca la palabra que le corresponde."
+                                }
                             } else if (word !in resolved) {
                                 val isCorrect = exercisePairs.first { it.word == word }.picture == item.picture
                                 resolved = resolved + word
