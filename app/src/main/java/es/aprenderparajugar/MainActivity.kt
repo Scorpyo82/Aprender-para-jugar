@@ -360,6 +360,8 @@ private fun AprenderApp() {
     var easyRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_easy_minutes", 2).coerceIn(0, 120)) }
     var normalRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_normal_minutes", 5).coerceIn(0, 120)) }
     var hardRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_hard_minutes", 7).coerceIn(0, 120)) }
+    var wrongAnswerPenalty by remember { mutableStateOf(preferences.getString("wrong_answer_penalty", "half") ?: "half") }
+    var penaltyMenuExpanded by remember { mutableStateOf(false) }
     var pinStored by remember { mutableStateOf(preferences.getString("parent_pin", "1234") ?: "1234") }
     var newPinDraft by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
@@ -730,6 +732,19 @@ private fun AprenderApp() {
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Minutos que se ganan al completar un ejercicio", fontSize = 17.sp)
                         Text("El premio final se calcula proporcionalmente según los aciertos.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Spacer(Modifier.height(8.dp))
+                        Text("Penalización por respuestas falladas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Elige cuánto descuentan los errores de la recompensa de esta partida. El saldo acumulado nunca se reduce.", fontSize = 14.sp, color = Color(0xFF667085))
+                        androidx.compose.foundation.layout.Box {
+                            OutlinedButton(onClick = { penaltyMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text(when (wrongAnswerPenalty) { "none" -> "Sin penalización ▾"; "full" -> "Penalización completa ▾"; else -> "Penalización moderada ▾" })
+                            }
+                            DropdownMenu(expanded = penaltyMenuExpanded, onDismissRequest = { penaltyMenuExpanded = false }) {
+                                DropdownMenuItem(text = { Text("Sin penalización") }, onClick = { wrongAnswerPenalty = "none"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
+                                DropdownMenuItem(text = { Text("Penalización moderada") }, onClick = { wrongAnswerPenalty = "half"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
+                                DropdownMenuItem(text = { Text("Penalización completa") }, onClick = { wrongAnswerPenalty = "full"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
+                            }
+                        }
                         listOf("Fácil", "Normal", "Difícil").forEach { level ->
                             val minutes = when (level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
                             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -848,7 +863,11 @@ private fun AprenderApp() {
                                         selectedPicture = ""
                                         if (resolved.size == pairCount) {
                                             val wrong = pairCount - newCorrect
-                                            val netCorrectUnits = (newCorrect * 2 - wrong).coerceAtLeast(0)
+                                            val netCorrectUnits = when (wrongAnswerPenalty) {
+                                                "none" -> newCorrect * 2
+                                                "full" -> (newCorrect * 2 - wrong * 2).coerceAtLeast(0)
+                                                else -> (newCorrect * 2 - wrong).coerceAtLeast(0)
+                                            }
                                             addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
                                             screen = "result"
                                         }
@@ -890,7 +909,11 @@ private fun AprenderApp() {
                                 selectedPicture = ""
                                 if (resolved.size == pairCount) {
                                     val wrong = pairCount - correct
-                                    val netCorrectUnits = (correct * 2 - wrong).coerceAtLeast(0)
+                                    val netCorrectUnits = when (wrongAnswerPenalty) {
+                                        "none" -> correct * 2
+                                        "full" -> (correct * 2 - wrong * 2).coerceAtLeast(0)
+                                        else -> (correct * 2 - wrong).coerceAtLeast(0)
+                                    }
                                     addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
                                     screen = "result"
                                 }
