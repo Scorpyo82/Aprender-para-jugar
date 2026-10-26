@@ -64,6 +64,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+    override fun onStop() {
+        getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
+            .edit().putBoolean("parent_area_active", false).apply()
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -374,8 +380,11 @@ private fun AprenderApp() {
         }
     }
 
-    androidx.compose.runtime.LaunchedEffect(screen) {
-        preferences.edit().putBoolean("parent_area_active", screen == "parent-pin" || screen == "parent").apply()
+    androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
+        preferences.edit().putBoolean(
+            "parent_area_active",
+            appInForeground && (screen == "parent-pin" || screen == "parent")
+        ).apply()
     }
 
     if (screen == "parent-pin") {
