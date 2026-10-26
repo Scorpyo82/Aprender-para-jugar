@@ -827,7 +827,9 @@ private fun AprenderApp() {
                                         selected = emptyMap()
                                         selectedPicture = ""
                                         if (resolved.size == pairCount) {
-                                            addEarnedTime((rewardSeconds * newCorrect) / pairCount)
+                                            val wrong = pairCount - newCorrect
+                                            val netCorrectUnits = (newCorrect * 2 - wrong).coerceAtLeast(0)
+                                            addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
                                             screen = "result"
                                         }
                                     }
@@ -867,7 +869,9 @@ private fun AprenderApp() {
                                 selected = emptyMap()
                                 selectedPicture = ""
                                 if (resolved.size == pairCount) {
-                                    addEarnedTime((rewardSeconds * correct) / pairCount)
+                                    val wrong = pairCount - correct
+                                    val netCorrectUnits = (correct * 2 - wrong).coerceAtLeast(0)
+                                    addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
                                     screen = "result"
                                 }
                             }
