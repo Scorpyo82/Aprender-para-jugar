@@ -74,17 +74,30 @@ class MainActivity : ComponentActivity() {
 
         // If the app leaves the foreground with earned time, start the countdown here as
         // a reliable fallback; accessibility window events are not delivered on every tablet.
-        if (!parentAreaWasActive && !manualExit && currentDeadline <= now && balance > 0) {
-            prefs.edit()
-                .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
-                .putLong("expiry_last_launch_ms", 0L)
-                .apply()
-            try {
-                androidx.core.content.ContextCompat.startForegroundService(
-                    this,
-                    Intent(this, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
-                )
-            } catch (_: Exception) { }
+        if (!parentAreaWasActive && !manualExit) {
+            if (currentDeadline > now) {
+                // Never leave the saved balance at the pre-countdown value.
+                val remaining = ((currentDeadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
+                prefs.edit().putInt("balance_seconds", remaining).commit()
+                try {
+                    androidx.core.content.ContextCompat.startForegroundService(
+                        this,
+                        Intent(this, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
+                    )
+                } catch (_: Exception) { }
+            } else if (balance > 0) {
+                // Persist the deadline synchronously before Android backgrounds this activity.
+                prefs.edit()
+                    .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
+                    .putLong("expiry_last_launch_ms", 0L)
+                    .commit()
+                try {
+                    androidx.core.content.ContextCompat.startForegroundService(
+                        this,
+                        Intent(this, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
+                    )
+                } catch (_: Exception) { }
+            }
         }
         prefs.edit().putBoolean("parent_area_active", false).apply()
         super.onStop()
