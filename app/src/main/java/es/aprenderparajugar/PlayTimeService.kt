@@ -36,7 +36,11 @@ class PlayTimeService : Service() {
                 stopSelf()
                 return
             }
-            showCountdownNotification(remaining)
+            if (remaining <= NOTIFICATION_THRESHOLD_SECONDS) {
+                showCountdownNotification(remaining)
+            } else {
+                showWaitingNotification()
+            }
             handler.postDelayed(this, 1000L)
         }
     }
@@ -99,6 +103,12 @@ class PlayTimeService : Service() {
         val text = String.format(Locale("es", "ES"), "Tiempo de juego restante: %02d:%02d", seconds / 60, seconds % 60)
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(text, true))
     }
+    private fun showWaitingNotification() {
+        getSystemService(NotificationManager::class.java).notify(
+            NOTIFICATION_ID,
+            buildNotification("El tiempo de juego se está descontando", true)
+        )
+    }
 
     private fun showExpiredNotification() {
         getSystemService(NotificationManager::class.java).notify(
@@ -112,5 +122,6 @@ class PlayTimeService : Service() {
         const val ACTION_STOP = "es.aprenderparajugar.action.STOP_PLAY_TIME"
         private const val CHANNEL_ID = "play_time_countdown"
         private const val NOTIFICATION_ID = 4102
+        private const val NOTIFICATION_THRESHOLD_SECONDS = 5 * 60
     }
 }
