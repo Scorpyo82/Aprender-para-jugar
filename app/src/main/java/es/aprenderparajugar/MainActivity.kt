@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -794,8 +795,13 @@ private fun AprenderApp() {
             item { OutlinedButton(onClick = { screen = "home"; parentSection = "menu" }, modifier = Modifier.fillMaxWidth()) { Text("Salir de configuración") } }
         }
     } else if (screen == "exercise") {
+        val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
+        val wordCardFontSize = if (isTabletLayout) 44.sp else 32.sp
+        val pictureEmojiFontSize = if (isTabletLayout) 58.sp else 42.sp
+        val pictureImageHeight = if (isTabletLayout) 150.dp else 110.dp
+        val cardPadding = if (isTabletLayout) 24.dp else 18.dp
         Column(
-            modifier = Modifier.fillMaxSize().padding(20.dp),
+            modifier = Modifier.fillMaxSize().padding(if (isTabletLayout) 28.dp else 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63))
@@ -844,7 +850,7 @@ private fun AprenderApp() {
                             ),
                             border = if (isSelected) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null
                         ) {
-                            Text(item.word, Modifier.padding(18.dp), fontSize = 32.sp, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, color = Color(0xFF29213B))
+                            Text(item.word, Modifier.padding(cardPadding), fontSize = wordCardFontSize, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, color = Color(0xFF29213B))
                         }
                     }
                 }
@@ -877,9 +883,9 @@ private fun AprenderApp() {
                             }
                         }, colors = CardDefaults.cardColors(containerColor = when { selectedPicture == item.picture -> Color(0xFFFFD66B); evaluatedPictures[item.picture] == true -> Color(0xFFD9F2D9); evaluatedPictures[item.picture] == false -> Color(0xFFFFDAD6); else -> Color(0xFFF0E8F5) }), border = when { selectedPicture == item.picture -> androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)); evaluatedPictures.containsKey(item.picture) -> androidx.compose.foundation.BorderStroke(3.dp, if (evaluatedPictures[item.picture] == true) Color(0xFF24733B) else Color(0xFFB3261E)); else -> null }) {
                             if (item.picture.startsWith("content://") || item.picture.startsWith("file://")) {
-                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 180) } }, update = { view -> try { view.setImageURI(Uri.parse(item.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(110.dp).padding(8.dp))
+                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 180) } }, update = { view -> try { view.setImageURI(Uri.parse(item.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(pictureImageHeight).padding(8.dp))
                             } else {
-                                Text(item.picture, Modifier.padding(12.dp).align(Alignment.CenterHorizontally), fontSize = 42.sp)
+                                Text(item.picture, Modifier.padding(12.dp).align(Alignment.CenterHorizontally), fontSize = pictureEmojiFontSize)
                             }
                         }
                     }
