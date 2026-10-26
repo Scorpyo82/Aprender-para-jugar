@@ -653,7 +653,7 @@ private fun AprenderApp() {
                     }
                     "categories" -> item {
                         Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Añade categorías y, antes de borrar una, elige dónde mover sus palabras.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("Activa o desactiva categorías completas sin borrar sus palabras. También puedes mover o eliminar categorías.", fontSize = 14.sp, color = Color(0xFF667085))
                         OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = it }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("|")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
                         if (categoryMessage.isNotBlank()) Text(categoryMessage, color = Color(0xFF24733B))
@@ -661,7 +661,20 @@ private fun AprenderApp() {
                             Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                 Column(Modifier.padding(12.dp)) {
                                     Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("${pairs.count { it.category.equals(name, ignoreCase = true) }} palabras", color = Color(0xFF667085))
+                                    val categoryPairs = pairs.filter { it.category.equals(name, ignoreCase = true) }
+                                    val allCategoryWordsActive = categoryPairs.isNotEmpty() && categoryPairs.all { it.active }
+                                    val anyCategoryWordsActive = categoryPairs.any { it.active }
+                                    Text("${categoryPairs.size} palabras · ${if (categoryPairs.isEmpty()) "vacía" else if (allCategoryWordsActive) "activa" else if (anyCategoryWordsActive) "parcialmente activa" else "desactivada"}", color = Color(0xFF667085))
+                                    OutlinedButton(
+                                        onClick = {
+                                            val activate = !allCategoryWordsActive
+                                            pairs = pairs.map { pair -> if (pair.category.equals(name, ignoreCase = true)) pair.copy(active = activate) else pair }
+                                            savePairs(preferences, pairs)
+                                            categoryMessage = if (categoryPairs.isEmpty()) "Esta categoría no tiene palabras todavía." else if (activate) "Categoría «$name» activada." else "Categoría «$name» desactivada."
+                                        },
+                                        enabled = categoryPairs.isNotEmpty(),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text(if (allCategoryWordsActive) "Desactivar categoría" else "Activar toda la categoría") }
                                     if (name.equals(categoryToRemove, ignoreCase = true)) {
                                         Text("Borrar categoría y contenido", fontWeight = FontWeight.SemiBold)
                                         Text("Esta opción eliminará también las ${pairs.count { it.category.equals(name, ignoreCase = true) }} palabras de esta categoría.", fontSize = 13.sp, color = Color(0xFFB3261E))
