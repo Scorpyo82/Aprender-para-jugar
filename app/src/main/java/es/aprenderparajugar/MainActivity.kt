@@ -65,8 +65,28 @@ import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onStop() {
-        getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
-            .edit().putBoolean("parent_area_active", false).apply()
+        val prefs = getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val currentDeadline = prefs.getLong("play_deadline_ms", 0L)
+        val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
+        val parentAreaWasActive = prefs.getBoolean("parent_area_active", false)
+        val manualExit = prefs.getBoolean("manual_exit_allowed", false)
+
+        // If the app leaves the foreground with earned time, start the countdown here as
+        // a reliable fallback; accessibility window events are not delivered on every tablet.
+        if (!parentAreaWasActive && !manualExit && currentDeadline <= now && balance > 0) {
+            prefs.edit()
+                .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
+                .putLong("expiry_last_launch_ms", 0L)
+                .apply()
+            try {
+                androidx.core.content.ContextCompat.startForegroundService(
+                    this,
+                    Intent(this, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
+                )
+            } catch (_: Exception) { }
+        }
+        prefs.edit().putBoolean("parent_area_active", false).apply()
         super.onStop()
     }
 
