@@ -64,42 +64,46 @@ import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
-    override fun onStop() {
+    // Start the earned-time countdown at the first lifecycle transition away from the app.
+    // onPause is earlier than onStop and closes the race with the accessibility service/Home.
+    private fun persistAndStartEarnedCountdown() {
         val prefs = getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
-        val now = System.currentTimeMillis()
-        val currentDeadline = prefs.getLong("play_deadline_ms", 0L)
-        val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
-        val parentAreaWasActive = prefs.getBoolean("parent_area_active", false)
-        val manualExit = prefs.getBoolean("manual_exit_allowed", false)
+        if (prefs.getBoolean("parent_area_active", false) ||
+            prefs.getBoolean("manual_exit_allowed", false)) return
 
-        // If the app leaves the foreground with earned time, start the countdown here as
-        // a reliable fallback; accessibility window events are not delivered on every tablet.
-        if (!parentAreaWasActive && !manualExit) {
-            if (currentDeadline > now) {
-                // Never leave the saved balance at the pre-countdown value.
-                val remaining = ((currentDeadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
-                prefs.edit().putInt("balance_seconds", remaining).commit()
-                try {
-                    androidx.core.content.ContextCompat.startForegroundService(
-                        this,
-                        Intent(this, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
-                    )
-                } catch (_: Exception) { }
-            } else if (balance > 0) {
-                // Persist the deadline synchronously before Android backgrounds this activity.
-                prefs.edit()
-                    .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
-                    .putLong("expiry_last_launch_ms", 0L)
-                    .commit()
-                try {
-                    androidx.core.content.ContextCompat.startForegroundService(
-                        this,
-                        Intent(this, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
-                    )
-                } catch (_: Exception) { }
-            }
+        val now = System.currentTimeMillis()
+        val deadline = prefs.getLong("play_deadline_ms", 0L)
+        val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
+        if (deadline > now) {
+            val remaining = ((deadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
+            prefs.edit().putInt("balance_seconds", remaining).commit()
+        } else if (balance > 0) {
+            // Save synchronously so Home/Back cannot race a pending SharedPreferences write.
+            prefs.edit()
+                .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
+                .putLong("expiry_last_launch_ms", 0L)
+                .commit()
+        } else {
+            return
         }
-        prefs.edit().putBoolean("parent_area_active", false).apply()
+
+        try {
+            androidx.core.content.ContextCompat.startForegroundService(
+                this,
+                Intent(this, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
+            )
+        } catch (_: Exception) { }
+    }
+
+    override fun onPause() {
+        persistAndStartEarnedCountdown()
+        super.onPause()
+    }
+
+    override fun onStop() {
+        persistAndStartEarnedCountdown()
+        getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
+            .edit().putBoolean("parent_area_active", false).apply()
         super.onStop()
     }
 
@@ -412,7 +416,7 @@ private fun AprenderApp() {
             androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START))
         } else {
             val updated = preferences.getInt("balance_seconds", balanceSeconds).coerceAtLeast(0) + seconds
-            preferences.edit().putInt("balance_seconds", updated).apply()
+            preferences.edit().putInt("balance_seconds", updated).commit()
             balanceSeconds = updated
         }
     }
