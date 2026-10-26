@@ -1002,12 +1002,28 @@ private fun AprenderApp() {
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
                 Button(onClick = {
-                    if (balanceSeconds > 0) {
-                        val deadline = System.currentTimeMillis() + balanceSeconds.toLong() * 1000L
-                        preferences.edit().putLong("play_deadline_ms", deadline).putBoolean("expiry_relaunch_attempted", false).apply()
+                    val now = System.currentTimeMillis()
+                    val existingDeadline = preferences.getLong("play_deadline_ms", 0L)
+                    val savedBalance = preferences.getInt("balance_seconds", balanceSeconds).coerceAtLeast(0)
+                    // If a countdown already exists, never replace it with stale Compose state.
+                    // Otherwise returning from Home could reset the deadline and spend the same
+                    // earned time twice.
+                    val deadline = if (existingDeadline > now) existingDeadline
+                        else if (savedBalance > 0) now + savedBalance.toLong() * 1000L
+                        else 0L
+                    if (deadline > now) {
+                        val remaining = ((deadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
+                        preferences.edit()
+                            .putLong("play_deadline_ms", deadline)
+                            .putInt("balance_seconds", remaining)
+                            .putBoolean("expiry_relaunch_attempted", false)
+                            .commit()
+                        balanceSeconds = remaining
                         androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START))
                         screen = "play-time"
                         (context as? ComponentActivity)?.moveTaskToBack(true)
+                    } else {
+                        balanceSeconds = 0
                     }
                 }, enabled = balanceSeconds > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
                     Text(if (balanceSeconds > 0) "▶ Jugar con el tiempo ganado" else "🔒 Sin tiempo para jugar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
