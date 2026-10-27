@@ -326,10 +326,15 @@ private fun AprenderApp() {
         }
     }
     val firstLaunchNeedsSetup = remember { !preferences.getBoolean("first_launch_setup_seen", false) }
-    if (firstLaunchNeedsSetup) preferences.edit().putBoolean("first_launch_setup_seen", true).apply()
+    if (firstLaunchNeedsSetup) {
+        preferences.edit()
+            .putBoolean("first_launch_setup_seen", true)
+            .putBoolean("sound_enabled", false)
+            .apply()
+    }
     var screen by remember { mutableStateOf(if (firstLaunchNeedsSetup) "parent" else "home") }
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
-    var soundEnabled by remember { mutableStateOf(preferences.getBoolean("sound_enabled", true)) }
+    var soundEnabled by remember { mutableStateOf(if (firstLaunchNeedsSetup) false else preferences.getBoolean("sound_enabled", true)) }
     var musicMessage by remember { mutableStateOf("") }
     var appInForeground by remember { mutableStateOf(true) }
     var setupAccessibilityEnabled by remember { mutableStateOf(false) }
