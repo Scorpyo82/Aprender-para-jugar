@@ -15,6 +15,7 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         if (event == null) return
         if (event.packageName?.toString() == packageName) return
         // A parent explicitly confirmed exiting; do not relaunch until the app is opened manually again.
+        if (prefs.getBoolean("device_setup_in_progress", false)) return
         if (prefs.getBoolean("manual_exit_allowed", false)) return
         if (prefs.getBoolean("play_paused_for_screen_lock", false)) return
         // Do not treat the keyboard or other focus changes inside the parental PIN/configuration flow as leaving play.
@@ -61,7 +62,8 @@ class PlayTimeAccessibilityService : AccessibilityService() {
     }
 
     private fun enforceLockAfterFocusChange() {
-        if (prefs.getBoolean("manual_exit_allowed", false) ||
+        if (prefs.getBoolean("device_setup_in_progress", false) ||
+            prefs.getBoolean("manual_exit_allowed", false) ||
             prefs.getBoolean("parent_area_active", false) ||
             prefs.getBoolean("play_paused_for_screen_lock", false)) return
 

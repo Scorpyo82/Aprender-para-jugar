@@ -82,7 +82,8 @@ class MainActivity : ComponentActivity() {
     // onPause is earlier than onStop and closes the race with the accessibility service/Home.
     private fun persistAndStartEarnedCountdown() {
         val prefs = getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
-        if (prefs.getBoolean("parent_area_active", false) ||
+        if (prefs.getBoolean("device_setup_in_progress", false) ||
+            prefs.getBoolean("parent_area_active", false) ||
             prefs.getBoolean("manual_exit_allowed", false) ||
             prefs.getBoolean("play_paused_for_screen_lock", false)) return
 
@@ -120,7 +121,7 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
         // Android's document picker temporarily backgrounds this Activity; do not
         // interpret that expected system UI as leaving the app's parental area.
-        if (!prefs.getBoolean("content_picker_active", false)) {
+        if (!prefs.getBoolean("content_picker_active", false) && !prefs.getBoolean("device_setup_in_progress", false)) {
             prefs.edit().putBoolean("parent_area_active", false).apply()
         }
         super.onStop()
@@ -275,6 +276,13 @@ private val samplePairs = listOf(
     PairItem("luna", "🌙"), PairItem("pan", "🥖")
 )
 
+private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val expected = android.content.ComponentName(context, PlayTimeAccessibilityService::class.java)
+    val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager ?: return false
+    return manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        .any { info -> info.resolveInfo.serviceInfo.packageName == expected.packageName && info.resolveInfo.serviceInfo.name == expected.className }
+}
+
 @Composable
 private fun AprenderApp() {
     val context = LocalContext.current
@@ -317,16 +325,23 @@ private fun AprenderApp() {
             }
         }
     }
-    var screen by remember { mutableStateOf("home") }
+    val firstLaunchNeedsSetup = remember { !preferences.getBoolean("first_launch_setup_seen", false) }
+    if (firstLaunchNeedsSetup) preferences.edit().putBoolean("first_launch_setup_seen", true).apply()
+    var screen by remember { mutableStateOf(if (firstLaunchNeedsSetup) "parent" else "home") }
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
     var soundEnabled by remember { mutableStateOf(preferences.getBoolean("sound_enabled", true)) }
     var musicMessage by remember { mutableStateOf("") }
     var appInForeground by remember { mutableStateOf(true) }
+    var setupAccessibilityEnabled by remember { mutableStateOf(false) }
     val lifecycleOwner = remember(context) { context as? ComponentActivity }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> appInForeground = true
+                Lifecycle.Event.ON_RESUME -> {
+                    appInForeground = true
+                    preferences.edit().putBoolean("device_setup_in_progress", false).apply()
+                    setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
+                }
                 Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> appInForeground = false
                 else -> Unit
             }
@@ -385,7 +400,7 @@ private fun AprenderApp() {
     var feedback by remember { mutableStateOf("") }
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
-    var parentSection by remember { mutableStateOf("menu") }
+    var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup) "device-setup" else "menu") }
     var dailyManualLimit by remember { mutableIntStateOf(preferences.getInt("daily_manual_limit", 2)) }
     var easyRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_easy_minutes", 2).coerceIn(0, 120)) }
     var normalRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_normal_minutes", 5).coerceIn(0, 120)) }
@@ -523,10 +538,12 @@ private fun AprenderApp() {
     }
 
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
-        preferences.edit().putBoolean(
-            "parent_area_active",
-            appInForeground && (screen == "parent-pin" || screen == "parent" || screen == "exit-pin")
-        ).apply()
+        if (!preferences.getBoolean("device_setup_in_progress", false)) {
+            preferences.edit().putBoolean(
+                "parent_area_active",
+                appInForeground && (screen == "parent-pin" || screen == "parent" || screen == "exit-pin")
+            ).apply()
+        }
     }
 
     if (screen == "exit-pin") {
@@ -919,11 +936,14 @@ private fun AprenderApp() {
                     }
                     "device-setup" -> item {
                         Text("Asistente de configuración", fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
+                        Text(if (setupAccessibilityEnabled) "✓ Servicio de accesibilidad activado" else "○ Servicio de accesibilidad pendiente", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF6B5AA6))
                         Text("Para que la protección de la aplicación funcione, Android requiere que una persona autorice manualmente el servicio de accesibilidad. Esta guía te llevará a los ajustes necesarios.", fontSize = 15.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Paso 1 de 2 · Permitir ajustes restringidos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("Al instalar la aplicación desde un APK, Android puede bloquear la activación del servicio. Abre la información de la aplicación y busca el menú de tres puntos (⋮). Si aparece «Permitir ajustes restringidos», selecciónalo y confirma.", fontSize = 14.sp, color = Color(0xFF667085))
                         Button(onClick = {
+                            preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
                             try {
                                 val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
                                 context.startActivity(intent)
@@ -935,6 +955,7 @@ private fun AprenderApp() {
                         Text("Paso 2 de 2 · Activar accesibilidad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("Después, abre Accesibilidad, busca «Aprender para jugar» dentro de las aplicaciones o servicios instalados y activa el interruptor. Android puede mostrar una advertencia que tendrás que aceptar. Al terminar, vuelve a la aplicación.", fontSize = 14.sp, color = Color(0xFF667085))
                         OutlinedButton(onClick = {
+                            preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
                             try {
                                 context.startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
                             } catch (_: Exception) {
