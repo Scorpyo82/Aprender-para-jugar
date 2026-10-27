@@ -942,7 +942,10 @@ private fun AprenderApp() {
                         }
                         Text("Para que la protección de la aplicación funcione, Android requiere que una persona autorice manualmente el servicio de accesibilidad. Esta guía te llevará a los ajustes necesarios.", fontSize = 15.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Paso 1 de 2 · Permitir ajustes restringidos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(if (setupAccessibilityEnabled) "✓" else "1", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF667085))
+                            Text("Permitir ajustes restringidos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                         Text("Al instalar la aplicación desde un APK, Android puede bloquear la activación del servicio. Abre la información de la aplicación y busca el menú de tres puntos (⋮). Si aparece «Permitir ajustes restringidos», selecciónalo y confirma.", fontSize = 14.sp, color = Color(0xFF667085))
                         Button(onClick = {
                             preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
@@ -954,7 +957,10 @@ private fun AprenderApp() {
                             }
                         }, modifier = Modifier.fillMaxWidth()) { Text("1. Abrir información de la aplicación") }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Paso 2 de 2 · Activar accesibilidad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(if (setupAccessibilityEnabled) "✓" else "2", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF667085))
+                            Text("Activar accesibilidad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                         Text("Después, abre Accesibilidad, busca «Aprender para jugar» dentro de las aplicaciones o servicios instalados y activa el interruptor. Android puede mostrar una advertencia que tendrás que aceptar. Al terminar, vuelve a la aplicación.", fontSize = 14.sp, color = Color(0xFF667085))
                         Button(onClick = {
                             preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
@@ -966,12 +972,15 @@ private fun AprenderApp() {
                         }, modifier = Modifier.fillMaxWidth()) { Text("2. Abrir ajustes de accesibilidad") }
                         Text("Nota: la aplicación no puede activar estos permisos por sí sola. Si «Permitir ajustes restringidos» no aparece, intenta primero activar el servicio desde Accesibilidad y vuelve después a la información de la aplicación.", fontSize = 13.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Paso 3 · Evitar que Xiaomi cierre la aplicación", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Para que la protección siga funcionando en segundo plano, revisa los ajustes de batería. En Xiaomi, entra en Batería y busca el ahorro de batería de esta aplicación; selecciona «Sin restricciones» si está disponible. Los nombres pueden variar según la versión de MIUI/HyperOS. También desactiva «Pausar la actividad de la aplicación si no se utiliza» en la información de la aplicación.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(if (preferences.getBoolean("battery_setup_done", false)) "✓" else "3", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (preferences.getBoolean("battery_setup_done", false)) Color(0xFF24733B) else Color(0xFF667085))
+                            Text("Evitar que Xiaomi cierre la aplicación", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text("Para que la protección siga funcionando en segundo plano, abre la información de la aplicación. Entra en «Ahorro de batería» o «Batería» y selecciona «Sin restricciones» si aparece. En esa misma ficha, desactiva «Pausar la actividad de la aplicación si no se utiliza». Los nombres pueden variar según MIUI/HyperOS.", fontSize = 14.sp, color = Color(0xFF667085))
                         Button(onClick = {
                             preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
                             try {
-                                context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                                context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
                             } catch (_: Exception) {
                                 try {
                                     context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
