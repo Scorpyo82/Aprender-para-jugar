@@ -483,6 +483,22 @@ private fun AprenderApp() {
     // remaining seconds, and return to learning to earn more time.
     androidx.compose.runtime.LaunchedEffect(appInForeground) {
         if (appInForeground) {
+            // Fallback for devices where ACTION_USER_PRESENT is missed: resuming
+            // the app proves the screen is unlocked, so restart the saved countdown.
+            if (preferences.getBoolean("play_paused_for_screen_lock", false)) {
+                val remaining = preferences.getInt("balance_seconds", 0).coerceAtLeast(0)
+                preferences.edit()
+                    .putBoolean("play_paused_for_screen_lock", false)
+                    .putLong("play_deadline_ms", if (remaining > 0) System.currentTimeMillis() + remaining.toLong() * 1000L else 0L)
+                    .commit()
+                if (remaining > 0) {
+                    androidx.core.content.ContextCompat.startForegroundService(
+                        context,
+                        Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
+                    )
+                    balanceSeconds = remaining
+                }
+            }
             val deadline = preferences.getLong("play_deadline_ms", 0L)
             if (deadline > System.currentTimeMillis() && screen == "home") {
                 screen = "play-time"
