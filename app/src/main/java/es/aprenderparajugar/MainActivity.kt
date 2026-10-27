@@ -20,6 +20,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.ComponentActivity
@@ -445,6 +446,13 @@ private fun AprenderApp() {
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
+    BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result") {
+        when (screen) {
+            "parent" -> if (parentSection != "menu") parentSection = "menu" else { screen = "home"; parentSection = "menu" }
+            "parent-pin", "exit-pin", "exercise", "result" -> { screen = "home"; pinEntry = ""; pinError = false }
+        }
+    }
+
     fun addEarnedTime(seconds: Int) {
         if (seconds <= 0) return
         lastEarnedSeconds = seconds
@@ -564,8 +572,9 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("⚙️ Control parental", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text("Configura el contenido y las recompensas de Aprender para jugar.", fontSize = 16.sp, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Seguridad y saldo"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Seguridad y saldo"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
                 item {
@@ -820,14 +829,17 @@ private fun AprenderApp() {
                         Text("Elige cuánto descuentan los errores de la recompensa de esta partida. El saldo acumulado nunca se reduce.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.foundation.layout.Box {
                             OutlinedButton(onClick = { penaltyMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text(when (wrongAnswerPenalty) { "none" -> "Sin penalización ▾"; "full" -> "Penalización completa ▾"; else -> "Penalización moderada ▾" })
+                                Text(when (wrongAnswerPenalty) { "none" -> "Sin penalización ▾"; "full" -> "Cada fallo resta el 100 % de un acierto ▾"; else -> "Cada fallo resta el 50 % de un acierto ▾" })
                             }
                             DropdownMenu(expanded = penaltyMenuExpanded, onDismissRequest = { penaltyMenuExpanded = false }) {
                                 DropdownMenuItem(text = { Text("Sin penalización") }, onClick = { wrongAnswerPenalty = "none"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
-                                DropdownMenuItem(text = { Text("Penalización moderada") }, onClick = { wrongAnswerPenalty = "half"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
-                                DropdownMenuItem(text = { Text("Penalización completa") }, onClick = { wrongAnswerPenalty = "full"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
+                                DropdownMenuItem(text = { Text("Cada fallo resta el 50 % del valor de un acierto") }, onClick = { wrongAnswerPenalty = "half"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
+                                DropdownMenuItem(text = { Text("Cada fallo resta el 100 % del valor de un acierto") }, onClick = { wrongAnswerPenalty = "full"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
                             }
                         }
+                        Text(when (wrongAnswerPenalty) { "none" -> "Los errores no reducen la recompensa de esta partida."; "full" -> "Cada respuesta incorrecta resta el equivalente al tiempo que vale un acierto."; else -> "Cada respuesta incorrecta resta la mitad del tiempo que vale un acierto." }, fontSize = 14.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Recompensas por dificultad", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         listOf("Fácil", "Normal", "Difícil").forEach { level ->
                             val minutes = when (level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
                             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -853,21 +865,22 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Spacer(Modifier.height(8.dp))
-                        Text("Preguntas por partida", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Tú decides cuántas preguntas tendrá cada partida. Izan no podrá cambiar esta cantidad desde la pantalla de inicio.", fontSize = 14.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Preguntas por partida", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("Configura cuántas preguntas tendrá cada ejercicio. Esta cantidad no se puede cambiar desde la pantalla de inicio.", fontSize = 14.sp, color = Color(0xFF667085))
                         Text("Cantidad configurada: $questionCount", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
                             Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                             OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
                         }
-                        Text("Límite diario de elecciones manuales: $dailyManualLimit", fontSize = 17.sp)
+                        Text("Límite diario para elegir categoría: $dailyManualLimit", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Número máximo de veces al día que el menor puede elegir por sí mismo la categoría de los ejercicios. Al alcanzar el límite, podrá seguir practicando, pero tendrá que esperar al día siguiente para volver a elegir categoría.", fontSize = 14.sp, color = Color(0xFF667085))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { if (dailyManualLimit > 0) { dailyManualLimit--; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("−") }
                             OutlinedButton(onClick = { if (dailyManualLimit < 10) { dailyManualLimit++; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("+") }
                         }
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
                     }
                     "music" -> item {
