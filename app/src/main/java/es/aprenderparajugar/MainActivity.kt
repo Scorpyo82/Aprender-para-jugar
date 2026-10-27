@@ -937,7 +937,9 @@ private fun AprenderApp() {
                     "device-setup" -> item {
                         Text("Asistente de configuración", fontSize = 21.sp, fontWeight = FontWeight.Bold)
                         setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
-                        Text(if (setupAccessibilityEnabled) "✓ Servicio de accesibilidad activado" else "○ Servicio de accesibilidad pendiente", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF6B5AA6))
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = if (setupAccessibilityEnabled) Color(0xFFE5F5E9) else Color(0xFFF0EDF7))) {
+                            Text(if (setupAccessibilityEnabled) "✓ COMPLETADO · Servicio de accesibilidad activado" else "○ PENDIENTE · Activa el servicio de accesibilidad", modifier = Modifier.padding(12.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF6B5AA6))
+                        }
                         Text("Para que la protección de la aplicación funcione, Android requiere que una persona autorice manualmente el servicio de accesibilidad. Esta guía te llevará a los ajustes necesarios.", fontSize = 15.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Paso 1 de 2 · Permitir ajustes restringidos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -954,7 +956,7 @@ private fun AprenderApp() {
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Paso 2 de 2 · Activar accesibilidad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("Después, abre Accesibilidad, busca «Aprender para jugar» dentro de las aplicaciones o servicios instalados y activa el interruptor. Android puede mostrar una advertencia que tendrás que aceptar. Al terminar, vuelve a la aplicación.", fontSize = 14.sp, color = Color(0xFF667085))
-                        OutlinedButton(onClick = {
+                        Button(onClick = {
                             preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
                             try {
                                 context.startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -963,6 +965,21 @@ private fun AprenderApp() {
                             }
                         }, modifier = Modifier.fillMaxWidth()) { Text("2. Abrir ajustes de accesibilidad") }
                         Text("Nota: la aplicación no puede activar estos permisos por sí sola. Si «Permitir ajustes restringidos» no aparece, intenta primero activar el servicio desde Accesibilidad y vuelve después a la información de la aplicación.", fontSize = 13.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text("Paso 3 · Evitar que Xiaomi cierre la aplicación", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Para que la protección siga funcionando en segundo plano, revisa los ajustes de batería. En Xiaomi, entra en Batería y busca el ahorro de batería de esta aplicación; selecciona «Sin restricciones» si está disponible. Los nombres pueden variar según la versión de MIUI/HyperOS. También desactiva «Pausar la actividad de la aplicación si no se utiliza» en la información de la aplicación.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Button(onClick = {
+                            preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
+                            try {
+                                context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                            } catch (_: Exception) {
+                                try {
+                                    context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                                } catch (_: Exception) {
+                                    android.widget.Toast.makeText(context, "Abre manualmente Ajustes > Aplicaciones > Aprender para jugar > Batería.", android.widget.Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("3. Revisar ajustes de batería") }
                     }
                     "security" -> item {
                         Text("Cambiar PIN", fontSize = 23.sp, fontWeight = FontWeight.Bold)
