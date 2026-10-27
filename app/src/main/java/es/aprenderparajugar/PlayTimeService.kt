@@ -57,6 +57,7 @@ class PlayTimeService : Service() {
             handler.removeCallbacks(tick)
             handler.post(tick)
         } else {
+            prefs.edit().putBoolean("play_session_authorized", false).commit()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -67,6 +68,14 @@ class PlayTimeService : Service() {
             val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else 0
             prefs.edit().putInt("balance_seconds", remaining).apply()
             if (remaining <= 0) {
+                // Exhausting the balance ends the authorized session. The next session
+                // must meet the parental minimum again, regardless of app navigation.
+                prefs.edit()
+                    .putInt("balance_seconds", 0)
+                    .putLong("play_deadline_ms", 0L)
+                    .putBoolean("play_session_authorized", false)
+                    .putBoolean("play_paused_for_screen_lock", false)
+                    .commit()
                 if (!expiryHandled) {
                     expiryHandled = true
                     val launch = Intent(this@PlayTimeService, MainActivity::class.java).apply {

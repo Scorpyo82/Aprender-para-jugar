@@ -371,6 +371,7 @@ private fun AprenderApp() {
     var difficulty by remember { mutableStateOf("Fácil") }
     var questionCount by remember { mutableIntStateOf(preferences.getInt("question_count", 4).coerceIn(1, 10)) }
     var balanceSeconds by remember { mutableIntStateOf(preferences.getInt("balance_seconds", 0)) }
+    var minimumPlayMinutes by remember { mutableIntStateOf(preferences.getInt("minimum_play_minutes", 5).coerceIn(0, 60)) }
     var lastEarnedSeconds by remember { mutableIntStateOf(0) }
     var learningStats by remember { mutableStateOf(loadLearningStats(preferences)) }
     var learningTurn by remember { mutableIntStateOf(preferences.getInt("learning_turn_v1", 0)) }
@@ -471,6 +472,13 @@ private fun AprenderApp() {
                 preferences.edit().putInt("balance_seconds", remaining).apply()
             }
             if (remaining <= 0) {
+                preferences.edit()
+                    .putInt("balance_seconds", 0)
+                    .putLong("play_deadline_ms", 0L)
+                    .putBoolean("play_session_authorized", false)
+                    .putBoolean("play_paused_for_screen_lock", false)
+                    .commit()
+                balanceSeconds = 0
                 screen = "home"
                 break
             }
@@ -784,12 +792,27 @@ private fun AprenderApp() {
                             }, enabled = balanceSeconds < 24 * 60 * 60) { Text("+5 minutos") }
                             OutlinedButton(onClick = {
                                 balanceSeconds = 0
-                                preferences.edit().putInt("balance_seconds", 0).putLong("play_deadline_ms", 0L).putLong("expiry_last_launch_ms", 0L).apply()
+                                preferences.edit().putInt("balance_seconds", 0).putLong("play_deadline_ms", 0L).putLong("expiry_last_launch_ms", 0L).putBoolean("play_session_authorized", false).apply()
                                 context.stopService(Intent(context, PlayTimeService::class.java))
                             }, enabled = balanceSeconds > 0) { Text("Poner a cero") }
                         }
                         Spacer(Modifier.height(12.dp))
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Tiempo mínimo para iniciar una sesión de juego", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Después de agotar todo el saldo, deberá acumular este tiempo para volver a empezar. Si la sesión se interrumpe antes de agotarse el saldo, podrá continuar aunque le quede menos.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(onClick = {
+                                minimumPlayMinutes = (minimumPlayMinutes - 1).coerceAtLeast(0)
+                                preferences.edit().putInt("minimum_play_minutes", minimumPlayMinutes).apply()
+                            }, enabled = minimumPlayMinutes > 0) { Text("−") }
+                            Text("$minimumPlayMinutes min", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            OutlinedButton(onClick = {
+                                minimumPlayMinutes = (minimumPlayMinutes + 1).coerceAtMost(60)
+                                preferences.edit().putInt("minimum_play_minutes", minimumPlayMinutes).apply()
+                            }, enabled = minimumPlayMinutes < 60) { Text("+") }
+                        }
+                        Text("Puedes configurar entre 0 y 60 minutos. Con 0, cualquier saldo positivo permite empezar.", fontSize = 13.sp, color = Color(0xFF667085))
                         Text("Minutos que se ganan al completar un ejercicio", fontSize = 17.sp)
                         Text("El premio final se calcula proporcionalmente según los aciertos.", fontSize = 14.sp, color = Color(0xFF667085))
                         Spacer(Modifier.height(8.dp))
@@ -877,7 +900,7 @@ private fun AprenderApp() {
                         Button(onClick = { if (newPinDraft.length == 4) { pinStored = newPinDraft; preferences.edit().putString("parent_pin", pinStored).apply(); newPinDraft = ""; libraryMessage = "PIN actualizado." } else libraryMessage = "El PIN debe tener 4 cifras." }, modifier = Modifier.fillMaxWidth()) { Text("Guardar PIN") }
                         if (libraryMessage.isNotBlank()) Text(libraryMessage, color = Color(0xFF24733B))
                         Text("Saldo actual: $balanceMinutes min $balanceRemainderSeconds s", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        OutlinedButton(onClick = { balanceSeconds = 0; preferences.edit().putInt("balance_seconds", 0).apply() }, modifier = Modifier.fillMaxWidth()) { Text("Poner saldo a cero") }
+                        OutlinedButton(onClick = { balanceSeconds = 0; preferences.edit().putInt("balance_seconds", 0).putBoolean("play_session_authorized", false).apply() }, modifier = Modifier.fillMaxWidth()) { Text("Poner saldo a cero") }
                     }
                 }
             }
@@ -1172,10 +1195,20 @@ private fun AprenderApp() {
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
+                val sessionAlreadyAuthorized = preferences.getBoolean("play_session_authorized", false)
+                val canStartPlaySession = balanceSeconds > 0 &&
+                    (sessionAlreadyAuthorized || balanceSeconds >= minimumPlayMinutes * 60)
                 Button(onClick = {
                     val now = System.currentTimeMillis()
                     val existingDeadline = preferences.getLong("play_deadline_ms", 0L)
                     val savedBalance = preferences.getInt("balance_seconds", balanceSeconds).coerceAtLeast(0)
+                    val sessionAuthorized = preferences.getBoolean("play_session_authorized", false)
+                    // A new session requires the configured minimum; an already-authorized
+                    // session can continue after leaving the app or returning with less time.
+                    if (!sessionAuthorized && savedBalance < minimumPlayMinutes * 60) {
+                        balanceSeconds = savedBalance
+                        return@Button
+                    }
                     // If a countdown already exists, never replace it with stale Compose state.
                     // Otherwise returning from Home could reset the deadline and spend the same
                     // earned time twice.
@@ -1187,6 +1220,7 @@ private fun AprenderApp() {
                         preferences.edit()
                             .putLong("play_deadline_ms", deadline)
                             .putInt("balance_seconds", remaining)
+                            .putBoolean("play_session_authorized", true)
                             .putBoolean("expiry_relaunch_attempted", false)
                             .commit()
                         balanceSeconds = remaining
@@ -1196,8 +1230,16 @@ private fun AprenderApp() {
                     } else {
                         balanceSeconds = 0
                     }
-                }, enabled = balanceSeconds > 0, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
-                    Text(if (balanceSeconds > 0) "▶ Jugar con el tiempo ganado" else "🔒 Sin tiempo para jugar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }, enabled = canStartPlaySession, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
+                    Text(
+                        when {
+                            balanceSeconds <= 0 -> "🔒 Sin tiempo para jugar"
+                            !canStartPlaySession -> "🔒 Necesitas $minimumPlayMinutes min para empezar"
+                            else -> "▶ Jugar con el tiempo ganado"
+                        },
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
             if (screen == "parent") item {
