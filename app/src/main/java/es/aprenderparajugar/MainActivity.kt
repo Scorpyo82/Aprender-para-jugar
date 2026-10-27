@@ -808,6 +808,7 @@ private fun AprenderApp() {
                         Spacer(Modifier.height(12.dp))
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("Tiempo mínimo para iniciar una sesión de juego", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("Después de agotar todo el saldo, deberá acumular este tiempo para volver a empezar. Si la sesión se interrumpe antes de agotarse el saldo, podrá continuar aunque le quede menos.", fontSize = 14.sp, color = Color(0xFF667085))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -822,9 +823,9 @@ private fun AprenderApp() {
                             }, enabled = minimumPlayMinutes < 60) { Text("+") }
                         }
                         Text("Puedes configurar entre 0 y 60 minutos. Con 0, cualquier saldo positivo permite empezar.", fontSize = 13.sp, color = Color(0xFF667085))
-                        Text("Minutos que se ganan al completar un ejercicio", fontSize = 17.sp)
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Minutos que se ganan al completar un ejercicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("El premio final se calcula proporcionalmente según los aciertos.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Spacer(Modifier.height(8.dp))
                         Text("Penalización por respuestas falladas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("Elige cuánto descuentan los errores de la recompensa de esta partida. El saldo acumulado nunca se reduce.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.foundation.layout.Box {
@@ -840,11 +841,12 @@ private fun AprenderApp() {
                         Text(when (wrongAnswerPenalty) { "none" -> "Los errores no reducen la recompensa de esta partida."; "full" -> "Cada respuesta incorrecta resta el equivalente al tiempo que vale un acierto."; else -> "Cada respuesta incorrecta resta la mitad del tiempo que vale un acierto." }, fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("Recompensas por dificultad", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("Tiempo que se añade al saldo según la dificultad del ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
                         listOf("Fácil", "Normal", "Difícil").forEach { level ->
                             val minutes = when (level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
                             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                 Column(Modifier.padding(12.dp)) {
-                                    Text("$level: $minutes min", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(level, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                         OutlinedButton(onClick = {
                                             when (level) {
@@ -868,16 +870,17 @@ private fun AprenderApp() {
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("Preguntas por partida", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Configura cuántas preguntas tendrá cada ejercicio. Esta cantidad no se puede cambiar desde la pantalla de inicio.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Text("Cantidad configurada: $questionCount", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
                             Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                             OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
                         }
-                        Text("Límite diario para elegir categoría: $dailyManualLimit", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Límite diario para elegir categoría", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("Número máximo de veces al día que el menor puede elegir por sí mismo la categoría de los ejercicios. Al alcanzar el límite, podrá seguir practicando, pero tendrá que esperar al día siguiente para volver a elegir categoría.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = { if (dailyManualLimit > 0) { dailyManualLimit--; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("−") }
+                            Text("$dailyManualLimit", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                             OutlinedButton(onClick = { if (dailyManualLimit < 10) { dailyManualLimit++; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("+") }
                         }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
