@@ -16,7 +16,6 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.util.Calendar
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -284,11 +283,6 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
         .any { info -> info.resolveInfo.serviceInfo.packageName == expected.packageName && info.resolveInfo.serviceInfo.name == expected.className }
 }
 
-private fun currentDayKey(): String {
-    val calendar = Calendar.getInstance()
-    return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
-}
-
 @Composable
 private fun AprenderApp() {
     val context = LocalContext.current
@@ -415,18 +409,7 @@ private fun AprenderApp() {
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup) "device-setup" else "menu") }
-    var dailyManualLimit by remember { mutableIntStateOf(preferences.getInt("daily_manual_limit", 2).coerceIn(0, 10)) }
-    val manualSelectionDayKey = currentDayKey()
-    var manualCategoryUsesToday by remember {
-        mutableIntStateOf(if (preferences.getString("manual_category_day", "") == manualSelectionDayKey) preferences.getInt("manual_category_uses", 0) else 0)
-    }
-    if (preferences.getString("manual_category_day", "") != manualSelectionDayKey) {
-        preferences.edit().putString("manual_category_day", manualSelectionDayKey).putInt("manual_category_uses", 0).apply()
-    }
-    val manualCategoryLimitReached = manualCategoryUsesToday >= dailyManualLimit
-    androidx.compose.runtime.LaunchedEffect(manualCategoryLimitReached) {
-        if (manualCategoryLimitReached && mode == "Elegir") mode = "Al azar"
-    }
+    var dailyManualLimit by remember { mutableIntStateOf(preferences.getInt("daily_manual_limit", 2)) }
     var easyRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_easy_minutes", 2).coerceIn(0, 120)) }
     var normalRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_normal_minutes", 5).coerceIn(0, 120)) }
     var hardRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_hard_minutes", 7).coerceIn(0, 120)) }
@@ -671,6 +654,8 @@ private fun AprenderApp() {
                             Text("Propósito, créditos, versión y repositorio compartido.", fontSize = 14.sp, color = Color(0xFF667085))
                         }
                     }
+                }
+                item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⚙️", fontSize = 30.sp)
@@ -1302,20 +1287,16 @@ private fun AprenderApp() {
                         Text("¿Cómo quieres jugar?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("Al azar", "Mezcladas", "Elegir").forEach { option ->
-                                val optionLocked = option == "Elegir" && manualCategoryLimitReached
-                                Card(modifier = Modifier.weight(1f).clickable(enabled = !optionLocked) { mode = option }, shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = when { optionLocked -> Color(0xFFF0F0F0); mode == option -> Color(0xFFEAF2FF); else -> Color.White }), border = androidx.compose.foundation.BorderStroke(if (mode == option && !optionLocked) 2.dp else 1.dp, if (mode == option && !optionLocked) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
+                                Card(modifier = Modifier.weight(1f).clickable { mode = option }, shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = if (mode == option) Color(0xFFEAF2FF) else Color.White), border = androidx.compose.foundation.BorderStroke(if (mode == option) 2.dp else 1.dp, if (mode == option) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
                                     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(when(option) { "Al azar" -> "🎲"; "Mezcladas" -> "🧩"; else -> if (optionLocked) "🔒" else "📚" }, fontSize = 22.sp)
-                                        Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (optionLocked) Color(0xFF777777) else Color(0xFF253344))
-                                        Text(when(option) { "Al azar" -> "Una categoría sorpresa"; "Mezcladas" -> "Varias categorías"; else -> if (optionLocked) "Límite diario alcanzado" else "Escoge categoría" }, fontSize = 10.sp, color = if (optionLocked) Color(0xFF777777) else Color(0xFF667085))
+                                        Text(when(option) { "Al azar" -> "🎲"; "Mezcladas" -> "🧩"; else -> "📚" }, fontSize = 22.sp)
+                                        Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        Text(when(option) { "Al azar" -> "Una categoría sorpresa"; "Mezcladas" -> "Varias categorías"; else -> "Escoge categoría" }, fontSize = 10.sp, color = Color(0xFF667085))
                                     }
                                 }
                             }
                         }
-                        if (manualCategoryLimitReached) {
-                            Text("🔒 Has alcanzado el límite diario de elecciones manuales ($manualCategoryUsesToday/$dailyManualLimit). Puedes seguir jugando en «Al azar» o «Mezcladas»; la selección de categoría se desbloqueará mañana.", fontSize = 13.sp, color = Color(0xFF8A4B08), fontWeight = FontWeight.SemiBold)
-                        }
-                        if (mode == "Elegir" && !manualCategoryLimitReached) {
+                        if (mode == "Elegir") {
                             Spacer(Modifier.height(4.dp))
                             OutlinedButton(onClick = { exerciseCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
                                 Text("📚 Tema: $selectedExerciseCategory  ▾")
@@ -1358,13 +1339,7 @@ private fun AprenderApp() {
             }
             item {
                 Button(onClick = {
-                    if (availableExercisePairs.size >= questionCount && !(mode == "Elegir" && manualCategoryLimitReached)) {
-                        if (mode == "Elegir") {
-                            val updatedUses = manualCategoryUsesToday + 1
-                            manualCategoryUsesToday = updatedUses
-                            preferences.edit().putString("manual_category_day", manualSelectionDayKey).putInt("manual_category_uses", updatedUses).apply()
-                            if (updatedUses >= dailyManualLimit) mode = "Al azar"
-                        }
+                    if (availableExercisePairs.size >= questionCount) {
                         activeExercisePairs = chooseAdaptivePairs(availableExercisePairs, questionCount, learningStats, learningTurn)
                         activeExercisePairs.forEach { pair ->
                             learningTurn += 1
@@ -1375,7 +1350,7 @@ private fun AprenderApp() {
                         saveLearningStats(preferences, learningStats)
                         resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; screen = "exercise"
                     }
-                }, enabled = availableExercisePairs.size >= questionCount && !(mode == "Elegir" && manualCategoryLimitReached), modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
+                }, enabled = availableExercisePairs.size >= questionCount, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
                     Text("📚 Empezar ejercicio", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
