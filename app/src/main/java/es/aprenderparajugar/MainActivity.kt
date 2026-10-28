@@ -284,12 +284,12 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
         .any { info -> info.resolveInfo.serviceInfo.packageName == expected.packageName && info.resolveInfo.serviceInfo.name == expected.className }
 }
 
-@Composable
 private fun currentDayKey(): String {
     val calendar = Calendar.getInstance()
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
 }
 
+@Composable
 private fun AprenderApp() {
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
@@ -619,9 +619,9 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
-                Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
                 item {
@@ -665,6 +665,12 @@ private fun AprenderApp() {
                     }
                 }
                 item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "about" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("ℹ️ Acerca de esta app", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
+                            Text("Propósito, créditos, versión y repositorio compartido.", fontSize = 14.sp, color = Color(0xFF667085))
+                        }
+                    }
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⚙️", fontSize = 30.sp)
@@ -1049,6 +1055,22 @@ private fun AprenderApp() {
                         }, modifier = Modifier.fillMaxWidth()) { Text("4. Revisar otros permisos de Xiaomi") }
                         OutlinedButton(onClick = { xiaomiWindowPermissionDone = !xiaomiWindowPermissionDone; preferences.edit().putBoolean("xiaomi_window_permission_done", xiaomiWindowPermissionDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (xiaomiWindowPermissionDone) "✓ Permiso de ventanas completado" else "Marcar permiso de ventanas como completado") }
 
+                    }
+                    "about" -> item {
+                        Text("Acerca de esta app", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("Aprender para jugar", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3567A8))
+                        Text("Creado por Miguel Ponce Torres", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Desarrollado con ayuda de inteligencia artificial (IA), como herramienta de apoyo en el diseño, la programación y la resolución de problemas.", fontSize = 14.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text("Versión 0.3.9", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Fecha de versión: 28 de octubre de 2026", fontSize = 14.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text("Propósito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Aplicación educativa para que los niños practiquen vocabulario y asociación de palabras e imágenes mediante ejercicios breves. El aprendizaje se refuerza con recompensas de tiempo de juego y controles configurables por la familia.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("Repositorio compartido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("El código fuente está disponible en GitHub para consultar el desarrollo, revisar los cambios y colaborar.", fontSize = 14.sp, color = Color(0xFF667085))
+                        OutlinedButton(onClick = { uriHandler.openUri("https://github.com/Scorpyo82/Aprender-para-jugar") }, modifier = Modifier.fillMaxWidth()) { Text("Ver repositorio en GitHub ↗") }
+                        Text("La aplicación se encuentra en desarrollo. Las funciones y la interfaz pueden cambiar entre versiones.", fontSize = 13.sp, color = Color(0xFF667085))
                     }
                     "security" -> item {
                         Text("Cambiar PIN", fontSize = 23.sp, fontWeight = FontWeight.Bold)
