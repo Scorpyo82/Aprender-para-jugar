@@ -982,6 +982,17 @@ private fun AprenderApp() {
                             Text("Evitar que Xiaomi cierre la aplicación", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("Para que la protección siga funcionando en segundo plano, abre la información de la aplicación. Entra en «Ahorro de batería» o «Batería» y selecciona «Sin restricciones» si aparece. En esa misma ficha, desactiva «Pausar la actividad de la aplicación si no se utiliza». Los nombres pueden variar según MIUI/HyperOS.", fontSize = 14.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text("Paso 4 · Permitir ventanas en segundo plano (Xiaomi)", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("En tu móvil, esta autorización es necesaria para que la aplicación pueda volver a mostrarse cuando el servicio de accesibilidad tenga que intervenir. Pulsa el botón, entra en «Otros permisos» y activa «Abrir nuevas ventanas mientras se ejecuta en segundo plano». En la misma pantalla puedes comprobar los otros permisos, pero no actives «Accesos directos de la pantalla de inicio» ni «Mostrar en la pantalla de bloqueo» salvo que detectemos que también hacen falta.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Button(onClick = {
+                            preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
+                            try {
+                                context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                            } catch (_: Exception) {
+                                android.widget.Toast.makeText(context, "Abre Ajustes > Aplicaciones > Aprender para jugar > Otros permisos.", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("4. Revisar otros permisos de Xiaomi") }
                         Button(onClick = {
                             preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
                             try {
