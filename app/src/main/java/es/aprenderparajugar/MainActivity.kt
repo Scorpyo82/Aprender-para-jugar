@@ -421,7 +421,6 @@ private fun AprenderApp() {
     androidx.compose.runtime.LaunchedEffect(manualCategoryLimitReached) {
         if (manualCategoryLimitReached && mode == "Elegir") {
             mode = "Al azar"
-            exerciseCategoryMenuExpanded = false
         }
     }
     var questionCount by remember { mutableIntStateOf(preferences.getInt("question_count", 4).coerceIn(1, 10)) }
