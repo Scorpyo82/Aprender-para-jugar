@@ -430,6 +430,7 @@ private fun AprenderApp() {
     var libraryFilterCategoryExpanded by remember { mutableStateOf(false) }
 
     val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             packageMessage = try {
                 exportContentPackage(context, uri, pairs, categories)
@@ -438,6 +439,7 @@ private fun AprenderApp() {
         }
     }
     val importPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             packageMessage = try {
                 val imported = importContentPackage(context, uri)
@@ -546,7 +548,10 @@ private fun AprenderApp() {
     }
 
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
-        if (!preferences.getBoolean("device_setup_in_progress", false)) {
+        // External camera/document picker temporarily backgrounds the app; preserve
+        // the parental guard until its activity-result callback completes.
+        if (!preferences.getBoolean("device_setup_in_progress", false) &&
+            !preferences.getBoolean("content_picker_active", false)) {
             preferences.edit().putBoolean(
                 "parent_area_active",
                 appInForeground && (screen == "parent-pin" || screen == "parent" || screen == "exit-pin")
@@ -661,9 +666,20 @@ private fun AprenderApp() {
                             Spacer(Modifier.height(8.dp))
                             Text("Copia de seguridad y traslado", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text("Exporta categorías, palabras, dificultad, estado e imágenes en un ZIP. El PIN y el saldo no se incluyen.", fontSize = 13.sp, color = Color(0xFF667085))
-                            OutlinedButton(onClick = { exportPackageLauncher.launch("aprender-para-jugar-contenido.zip") }, modifier = Modifier.fillMaxWidth()) { Text("📦 Exportar contenido a ZIP") }
-                            OutlinedButton(onClick = { pendingImportMode = "replace"; importPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("♻️ Importar y sustituir biblioteca") }
-                            OutlinedButton(onClick = { pendingImportMode = "merge"; importPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar contenido") }
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                exportPackageLauncher.launch("aprender-para-jugar-contenido.zip")
+                            }, modifier = Modifier.fillMaxWidth()) { Text("📦 Exportar contenido a ZIP") }
+                            OutlinedButton(onClick = {
+                                pendingImportMode = "replace"
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                importPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("♻️ Importar y sustituir biblioteca") }
+                            OutlinedButton(onClick = {
+                                pendingImportMode = "merge"
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                importPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar contenido") }
                             if (packageMessage.isNotBlank()) Text(packageMessage, fontSize = 14.sp, color = if (packageMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontWeight = FontWeight.SemiBold)
 
                             Text("Filtrar contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
