@@ -986,6 +986,18 @@ private fun AprenderApp() {
                             Text("Evitar que Xiaomi cierre la aplicación", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("Para que la protección siga funcionando en segundo plano, abre la información de la aplicación. Entra en «Ahorro de batería» o «Batería» y selecciona «Sin restricciones» si aparece. En esa misma ficha, desactiva «Pausar la actividad de la aplicación si no se utiliza». Los nombres pueden variar según MIUI/HyperOS.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Button(onClick = {
+                            preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
+                            try {
+                                context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                            } catch (_: Exception) {
+                                try {
+                                    context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                                } catch (_: Exception) {
+                                    android.widget.Toast.makeText(context, "Abre manualmente Ajustes > Aplicaciones > Aprender para jugar > Batería.", android.widget.Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("3. Revisar ajustes de batería") }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         OutlinedButton(onClick = { batterySettingsDone = !batterySettingsDone; preferences.edit().putBoolean("battery_setup_done", batterySettingsDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (batterySettingsDone) "✓ Ajustes de batería completados" else "Marcar ajustes de batería como completados") }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -1003,18 +1015,7 @@ private fun AprenderApp() {
                             }
                         }, modifier = Modifier.fillMaxWidth()) { Text("4. Revisar otros permisos de Xiaomi") }
                         OutlinedButton(onClick = { xiaomiWindowPermissionDone = !xiaomiWindowPermissionDone; preferences.edit().putBoolean("xiaomi_window_permission_done", xiaomiWindowPermissionDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (xiaomiWindowPermissionDone) "✓ Permiso de ventanas completado" else "Marcar permiso de ventanas como completado") }
-                        Button(onClick = {
-                            preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
-                            try {
-                                context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
-                            } catch (_: Exception) {
-                                try {
-                                    context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
-                                } catch (_: Exception) {
-                                    android.widget.Toast.makeText(context, "Abre manualmente Ajustes > Aplicaciones > Aprender para jugar > Batería.", android.widget.Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        }, modifier = Modifier.fillMaxWidth()) { Text("3. Revisar ajustes de batería") }
+
                     }
                     "security" -> item {
                         Text("Cambiar PIN", fontSize = 23.sp, fontWeight = FontWeight.Bold)
