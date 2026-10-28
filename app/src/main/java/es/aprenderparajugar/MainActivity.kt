@@ -338,6 +338,9 @@ private fun AprenderApp() {
     var musicMessage by remember { mutableStateOf("") }
     var appInForeground by remember { mutableStateOf(true) }
     var setupAccessibilityEnabled by remember { mutableStateOf(false) }
+    var restrictedSettingsDone by remember { mutableStateOf(preferences.getBoolean("restricted_settings_done", false)) }
+    var batterySettingsDone by remember { mutableStateOf(preferences.getBoolean("battery_setup_done", false)) }
+    var xiaomiWindowPermissionDone by remember { mutableStateOf(preferences.getBoolean("xiaomi_window_permission_done", false)) }
     val lifecycleOwner = remember(context) { context as? ComponentActivity }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -948,7 +951,7 @@ private fun AprenderApp() {
                         Text("Para que la protección de la aplicación funcione, Android requiere que una persona autorice manualmente el servicio de accesibilidad. Esta guía te llevará a los ajustes necesarios.", fontSize = 15.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(if (setupAccessibilityEnabled) "✓" else "1", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF667085))
+                            Text(if (restrictedSettingsDone) "✓" else "1", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (restrictedSettingsDone) Color(0xFF24733B) else Color(0xFF667085))
                             Text("Permitir ajustes restringidos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("Al instalar la aplicación desde un APK, Android puede bloquear la activación del servicio. Abre la información de la aplicación y busca el menú de tres puntos (⋮). Si aparece «Permitir ajustes restringidos», selecciónalo y confirma.", fontSize = 14.sp, color = Color(0xFF667085))
@@ -961,6 +964,7 @@ private fun AprenderApp() {
                                 android.widget.Toast.makeText(context, "No se pudieron abrir los ajustes de la aplicación.", android.widget.Toast.LENGTH_LONG).show()
                             }
                         }, modifier = Modifier.fillMaxWidth()) { Text("1. Abrir información de la aplicación") }
+                        OutlinedButton(onClick = { restrictedSettingsDone = !restrictedSettingsDone; preferences.edit().putBoolean("restricted_settings_done", restrictedSettingsDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (restrictedSettingsDone) "✓ Paso 1 completado" else "Marcar paso 1 como completado") }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (setupAccessibilityEnabled) "✓" else "2", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF667085))
@@ -978,12 +982,17 @@ private fun AprenderApp() {
                         Text("Nota: la aplicación no puede activar estos permisos por sí sola. Si «Permitir ajustes restringidos» no aparece, intenta primero activar el servicio desde Accesibilidad y vuelve después a la información de la aplicación.", fontSize = 13.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(if (preferences.getBoolean("battery_setup_done", false)) "✓" else "3", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (preferences.getBoolean("battery_setup_done", false)) Color(0xFF24733B) else Color(0xFF667085))
+                            Text(if (batterySettingsDone) "✓" else "3", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (batterySettingsDone) Color(0xFF24733B) else Color(0xFF667085))
                             Text("Evitar que Xiaomi cierre la aplicación", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("Para que la protección siga funcionando en segundo plano, abre la información de la aplicación. Entra en «Ahorro de batería» o «Batería» y selecciona «Sin restricciones» si aparece. En esa misma ficha, desactiva «Pausar la actividad de la aplicación si no se utiliza». Los nombres pueden variar según MIUI/HyperOS.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Paso 4 · Permitir ventanas en segundo plano (Xiaomi)", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        OutlinedButton(onClick = { batterySettingsDone = !batterySettingsDone; preferences.edit().putBoolean("battery_setup_done", batterySettingsDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (batterySettingsDone) "✓ Ajustes de batería completados" else "Marcar ajustes de batería como completados") }
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(if (xiaomiWindowPermissionDone) "✓" else "4", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (xiaomiWindowPermissionDone) Color(0xFF24733B) else Color(0xFF667085))
+                            Text("Permitir ventanas en segundo plano (Xiaomi)", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                         Text("En tu móvil, esta autorización es necesaria para que la aplicación pueda volver a mostrarse cuando el servicio de accesibilidad tenga que intervenir. Pulsa el botón, entra en «Otros permisos» y activa «Abrir nuevas ventanas mientras se ejecuta en segundo plano». En la misma pantalla puedes comprobar los otros permisos, pero no actives «Accesos directos de la pantalla de inicio» ni «Mostrar en la pantalla de bloqueo» salvo que detectemos que también hacen falta.", fontSize = 14.sp, color = Color(0xFF667085))
                         Button(onClick = {
                             preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
@@ -993,6 +1002,7 @@ private fun AprenderApp() {
                                 android.widget.Toast.makeText(context, "Abre Ajustes > Aplicaciones > Aprender para jugar > Otros permisos.", android.widget.Toast.LENGTH_LONG).show()
                             }
                         }, modifier = Modifier.fillMaxWidth()) { Text("4. Revisar otros permisos de Xiaomi") }
+                        OutlinedButton(onClick = { xiaomiWindowPermissionDone = !xiaomiWindowPermissionDone; preferences.edit().putBoolean("xiaomi_window_permission_done", xiaomiWindowPermissionDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (xiaomiWindowPermissionDone) "✓ Permiso de ventanas completado" else "Marcar permiso de ventanas como completado") }
                         Button(onClick = {
                             preferences.edit().putBoolean("device_setup_in_progress", true).putBoolean("parent_area_active", true).commit()
                             try {
