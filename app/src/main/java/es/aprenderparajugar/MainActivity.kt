@@ -424,6 +424,9 @@ private fun AprenderApp() {
         preferences.edit().putString("manual_category_day", manualSelectionDayKey).putInt("manual_category_uses", 0).apply()
     }
     val manualCategoryLimitReached = manualCategoryUsesToday >= dailyManualLimit
+    androidx.compose.runtime.LaunchedEffect(manualCategoryLimitReached) {
+        if (manualCategoryLimitReached && mode == "Elegir") mode = "Al azar"
+    }
     var easyRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_easy_minutes", 2).coerceIn(0, 120)) }
     var normalRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_normal_minutes", 5).coerceIn(0, 120)) }
     var hardRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_hard_minutes", 7).coerceIn(0, 120)) }
@@ -1287,7 +1290,6 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        if (manualCategoryLimitReached && mode == "Elegir") mode = "Al azar"
                         if (manualCategoryLimitReached) {
                             Text("🔒 Has alcanzado el límite diario de elecciones manuales ($manualCategoryUsesToday/$dailyManualLimit). Puedes seguir jugando en «Al azar» o «Mezcladas»; la selección de categoría se desbloqueará mañana.", fontSize = 13.sp, color = Color(0xFF8A4B08), fontWeight = FontWeight.SemiBold)
                         }
