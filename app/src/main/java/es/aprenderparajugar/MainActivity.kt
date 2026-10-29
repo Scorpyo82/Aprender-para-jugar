@@ -552,6 +552,8 @@ private fun AprenderApp() {
     var sequenceCardsDraft by remember { mutableStateOf(listOf("", "")) }
     var sequenceCardPicturesDraft by remember { mutableStateOf(listOf("🌱", "🌿")) }
     var pendingSequencePictureIndex by remember { mutableIntStateOf(-1) }
+    var pendingCameraTarget by remember { mutableStateOf("pair") }
+    var pendingCameraSequenceIndex by remember { mutableIntStateOf(-1) }
     var sequenceAlternativeDraft by remember { mutableStateOf("") }
     var sequenceEditorMessage by remember { mutableStateOf("") }
     var sequencePlayingExercise by remember { mutableStateOf<SequenceExercise?>(null) }
@@ -604,8 +606,18 @@ private fun AprenderApp() {
                 FileOutputStream(imageFile).use { output ->
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 60, output)
                 }
-                pictureDraft = Uri.fromFile(imageFile).toString()
-                libraryMessage = "Foto añadida y comprimida para ocupar poco espacio."
+                val savedPicture = Uri.fromFile(imageFile).toString()
+                when (pendingCameraTarget) {
+                    "word" -> { wordLibraryPictureDraft = savedPicture; wordLibraryMessage = "Foto añadida." }
+                    "sequence" -> {
+                        val index = pendingCameraSequenceIndex
+                        if (index >= 0) sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
+                            while (it.size <= index) it.add("")
+                            it[index] = savedPicture
+                        }
+                    }
+                    else -> { pictureDraft = savedPicture; libraryMessage = "Foto añadida y comprimida para ocupar poco espacio." }
+                }
             } catch (_: Exception) {
                 libraryMessage = "No se ha podido guardar la foto."
             } finally {
@@ -1551,7 +1563,13 @@ private fun AprenderApp() {
                                                 pendingSequencePictureIndex = index
                                                 preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                                 sequenceImagePicker.launch(arrayOf("image/*"))
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen") }
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
+                                            OutlinedButton(onClick = {
+                                                pendingCameraTarget = "sequence"
+                                                pendingCameraSequenceIndex = index
+                                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                                cameraLauncher.launch(null)
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto con la cámara") }
                                             if (picture.isNotBlank()) {
                                                 OutlinedButton(onClick = {
                                                     sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
@@ -1728,8 +1746,26 @@ private fun AprenderApp() {
                             item {
                                 Text("Imagen de pista", fontWeight = FontWeight.Bold)
                                 Text("Puedes escribir un emoji o seleccionar una imagen del dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
-                                OutlinedTextField(value = wordLibraryPictureDraft, onValueChange = { wordLibraryPictureDraft = it }, label = { Text("Emoji o referencia de imagen") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                                OutlinedButton(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); wordImagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text("🖼️ Seleccionar imagen") }
+                                if (wordLibraryPictureDraft.startsWith("content://") || wordLibraryPictureDraft.startsWith("file://")) {
+                                    AndroidView(
+                                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) } },
+                                        update = { view -> try { view.setImageURI(Uri.parse(wordLibraryPictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                                        modifier = Modifier.fillMaxWidth().height(180.dp)
+                                    )
+                                } else if (wordLibraryPictureDraft.isNotBlank()) {
+                                    Text(wordLibraryPictureDraft, fontSize = 64.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                                } else {
+                                    Text("Todavía no hay ninguna imagen seleccionada.", color = Color(0xFF667085))
+                                }
+                                OutlinedButton(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); wordImagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text("🖼️ Elegir imagen de la galería") }
+                                OutlinedButton(onClick = {
+                                    pendingCameraTarget = "word"
+                                    preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                    cameraLauncher.launch(null)
+                                }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto con la cámara") }
+                                if (wordLibraryPictureDraft.isNotBlank()) {
+                                    OutlinedButton(onClick = { wordLibraryPictureDraft = ""; wordLibraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Quitar imagen") }
+                                }
                             }
                             item {
                                 Text("Categoría", fontWeight = FontWeight.Bold)
@@ -1954,6 +1990,7 @@ private fun AprenderApp() {
                                     .putBoolean("content_picker_active", true)
                                     .putBoolean("parent_area_active", true)
                                     .commit()
+                                pendingCameraTarget = "pair"
                                 cameraLauncher.launch(null)
                             }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
                             Button(onClick = {
