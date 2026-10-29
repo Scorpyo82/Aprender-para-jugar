@@ -2257,7 +2257,7 @@ private fun AprenderApp() {
                         if (candidates.isNotEmpty()) {
                             val exercise = candidates.random()
                             sequencePlayingExercise = exercise
-                            val indexes = exercise.cards.indices.toList()
+                            val indexes = if (exercise.type == "Letras") exercise.cards.firstOrNull().orEmpty().indices.toList() else exercise.cards.indices.toList()
                             val shuffled = indexes.shuffled()
                             sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
                             sequenceSelectedOrder = emptyList()
@@ -2292,7 +2292,9 @@ private fun AprenderApp() {
             }
         } else {
             val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
-            val finished = sequenceSelectedOrder.size == exercise.cards.size
+            val targetLetterWord = exercise.cards.firstOrNull().orEmpty()
+            val isLettersExercise = exercise.type == "Letras"
+            val finished = if (isLettersExercise) sequenceSelectedOrder.size == targetLetterWord.length else sequenceSelectedOrder.size == exercise.cards.size
             LazyColumn(
                 Modifier.fillMaxSize().padding(if (isTabletLayout) 28.dp else 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -2301,32 +2303,35 @@ private fun AprenderApp() {
                     OutlinedButton(onClick = { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }) { Text("← Volver a ejercicios") }
                     Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
                     Text(
-                        if (finished) "¡Muy bien! Has completado la secuencia." else "Toca las tarjetas en el orden en que ocurren.",
+                        if (finished) { if (isLettersExercise) "¡Has formado la palabra!" else "¡Muy bien! Has completado la secuencia." } else if (isLettersExercise) "Toca las letras en el orden correcto para formar la palabra." else "Toca las tarjetas en el orden en que ocurren.",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (finished) Color(0xFF24733B) else Color(0xFF667085)
                     )
-                    Text("Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
+                    Text(if (isLettersExercise) "Letras colocadas: ${sequenceSelectedOrder.size}/${targetLetterWord.length}" else "Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
                 }
                 items(sequencePlayOrder.size) { displayPosition ->
                     val cardIndex = sequencePlayOrder[displayPosition]
                     val alreadySelected = cardIndex in sequenceSelectedOrder
-                    val picture = exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
+                    val picture = if (isLettersExercise) exercise.pictures.firstOrNull()?.takeIf { it.isNotBlank() }.orEmpty() else exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
                         ?: if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else ""
                     Card(
                         Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
                             val expectedIndex = sequenceSelectedOrder.size
-                            if (cardIndex == expectedIndex) {
+                            val isCorrectChoice = if (isLettersExercise) targetLetterWord.getOrNull(expectedIndex)?.equals(targetLetterWord.getOrNull(cardIndex), ignoreCase = true) == true else cardIndex == expectedIndex
+                            if (isCorrectChoice) {
                                 val nextOrder = sequenceSelectedOrder + cardIndex
                                 sequenceSelectedOrder = nextOrder
-                                if (nextOrder.size == exercise.cards.size) {
+                                val targetSize = if (isLettersExercise) targetLetterWord.length else exercise.cards.size
+                                if (nextOrder.size == targetSize) {
                                     sequencePlayMessage = "¡Secuencia completada!"
                                     val baseRewardSeconds = (when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60
                                     val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
                                     val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(20)
                                     addEarnedTime(baseRewardSeconds * rewardPercent / 100)
-                                    resultCorrectCount = (exercise.cards.size - sequenceWrongAnswers).coerceIn(0, exercise.cards.size)
-                                    resultTotalCount = exercise.cards.size
+                                    val resultSize = if (isLettersExercise) targetLetterWord.length else exercise.cards.size
+                                    resultCorrectCount = (resultSize - sequenceWrongAnswers).coerceIn(0, resultSize)
+                                    resultTotalCount = resultSize
                                     screen = "result"
                                 } else {
                                     sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
@@ -2353,7 +2358,9 @@ private fun AprenderApp() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            if (exercise.format != "Solo texto") {
+                            if (isLettersExercise) {
+                                Text(targetLetterWord.getOrNull(cardIndex)?.uppercase() ?: "", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                            } else if (exercise.format != "Solo texto") {
                                 if (picture.startsWith("content://") || picture.startsWith("file://")) {
                                     AndroidView(
                                         factory = { ctx -> ImageView(ctx).apply {
@@ -2376,7 +2383,9 @@ private fun AprenderApp() {
                                     }
                                 }
                             }
-                            if (exercise.format != "Solo imágenes") {
+                            if (isLettersExercise) {
+                                Spacer(Modifier.weight(1f))
+                            } else if (exercise.format != "Solo imágenes") {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     if (alreadySelected) Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
                                     Text(exercise.cards[cardIndex], fontSize = if (isTabletLayout) 22.sp else 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF253344))
