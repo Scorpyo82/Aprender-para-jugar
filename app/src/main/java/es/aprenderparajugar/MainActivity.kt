@@ -1556,7 +1556,13 @@ private fun AprenderApp() {
 private fun ModeCardImage(index: Int, description: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val image = remember(context, index) {
-        val encoded = context.resources.openRawResource(R.raw.cards_sprite_b64).bufferedReader().use { it.readText() }
+        val encoded = listOf(
+            R.raw.cards_sprite_b64, R.raw.cards_sprite_b64_1, R.raw.cards_sprite_b64_2,
+            R.raw.cards_sprite_b64_3, R.raw.cards_sprite_b64_4, R.raw.cards_sprite_b64_5,
+            R.raw.cards_sprite_b64_6
+        ).joinToString("") { resource ->
+            context.resources.openRawResource(resource).bufferedReader().use { it.readText() }
+        }
         val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
         val sheet = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         val tileHeight = sheet.height / 3
