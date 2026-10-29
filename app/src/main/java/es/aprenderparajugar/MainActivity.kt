@@ -213,7 +213,7 @@ private fun saveSequenceExercises(preferences: android.content.SharedPreferences
         })
     }
     preferences.edit().putString("sequence_exercises_temporal_v1", array.toString()).apply()
-)
+}
 
 private data class WordLearning(
     val streak: Int = 0,
