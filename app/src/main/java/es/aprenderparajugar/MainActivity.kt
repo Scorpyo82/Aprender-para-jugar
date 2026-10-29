@@ -1008,10 +1008,10 @@ private fun AprenderApp() {
                         }
                         Spacer(Modifier.height(12.dp))
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        Text("Tiempo mínimo para iniciar una sesión de juego", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Después de agotar todo el saldo, deberá acumular este tiempo para volver a empezar. Si la sesión se interrumpe antes de agotarse el saldo, podrá continuar aunque le quede menos.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("Cada bloque agrupa una opción concreta. Los cambios se guardan automáticamente.", fontSize = 14.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text("1. Acceso al tiempo de juego", fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text("Tiempo mínimo de saldo necesario para iniciar una nueva sesión.", fontSize = 14.sp, color = Color(0xFF667085))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = {
                                 minimumPlayMinutes = (minimumPlayMinutes - 1).coerceAtLeast(0)
@@ -1023,11 +1023,9 @@ private fun AprenderApp() {
                                 preferences.edit().putInt("minimum_play_minutes", minimumPlayMinutes).apply()
                             }, enabled = minimumPlayMinutes < 60) { Text("+") }
                         }
-                        Text("Puedes configurar entre 0 y 60 minutos. Con 0, cualquier saldo positivo permite empezar.", fontSize = 13.sp, color = Color(0xFF667085))
+                        Text("Entre 0 y 60 minutos. Con 0, cualquier saldo positivo permite empezar.", fontSize = 13.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        Text("Minutos que se ganan al completar un ejercicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("El premio final se calcula proporcionalmente según los aciertos.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Text("Penalización por respuestas falladas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("2. Penalización por respuestas falladas", fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         Text("Elige cuánto descuentan los errores de la recompensa de esta partida. El saldo acumulado nunca se reduce.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.foundation.layout.Box {
                             OutlinedButton(onClick = { penaltyMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
@@ -1041,7 +1039,7 @@ private fun AprenderApp() {
                         }
                         Text(when (wrongAnswerPenalty) { "none" -> "Los errores no reducen la recompensa de esta partida."; "full" -> "Cada respuesta incorrecta resta el equivalente al tiempo que vale un acierto."; else -> "Cada respuesta incorrecta resta la mitad del tiempo que vale un acierto." }, fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        Text("Recompensas por dificultad", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("3. Recompensa por dificultad", fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         Text("Tiempo que se añade al saldo según la dificultad del ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
                         listOf("Fácil", "Normal", "Difícil").forEach { level ->
                             val minutes = when (level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
@@ -1068,8 +1066,6 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
                     }
@@ -1497,14 +1493,14 @@ private fun AprenderApp() {
                 Card(Modifier.fillMaxWidth().clickable { screen = "cards-options"; cardsStartMessage = "" }, shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF5D8)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B95D)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-                    ModeCardImage(0, "Tarjetas: aprender con imágenes", Modifier.fillMaxWidth().height(220.dp))
+                    ModeCardImage(0, "Tarjetas: aprender con imágenes", Modifier.fillMaxWidth().aspectRatio(1.5f))
                 }
             }
             item {
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F8E8)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB4DDA0))) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ModeCardImage(1, "Secuencias: ordenar y razonar", Modifier.fillMaxWidth().height(220.dp))
+                        ModeCardImage(1, "Secuencias: ordenar y razonar", Modifier.fillMaxWidth().aspectRatio(1.5f))
                         Text("PRÓXIMAMENTE", Modifier.padding(bottom = 12.dp), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
                     }
                 }
@@ -1513,7 +1509,7 @@ private fun AprenderApp() {
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CCCF4))) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ModeCardImage(2, "Palabras: ordenar letras y completar palabras", Modifier.fillMaxWidth().height(220.dp))
+                        ModeCardImage(2, "Palabras: ordenar letras y completar palabras", Modifier.fillMaxWidth().aspectRatio(1.5f))
                         Text("PRÓXIMAMENTE", Modifier.padding(bottom = 12.dp), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF285F94))
                     }
                 }
@@ -1598,11 +1594,9 @@ private fun ModeCardImage(index: Int, description: String, modifier: Modifier = 
             sheet.width,
             tileHeight
         )
-        // Enable filtered scaling so the small legacy artwork looks less jagged
-        // when displayed in the large home cards.
-        Bitmap.createScaledBitmap(tile, 762, 470, true).asImageBitmap()
+        tile.asImageBitmap()
     }
-    Image(bitmap = image, contentDescription = description, modifier = modifier, contentScale = ContentScale.FillBounds)
+    Image(bitmap = image, contentDescription = description, modifier = modifier, contentScale = ContentScale.Fit)
 }
 
 private fun loadPairs(preferences: android.content.SharedPreferences): List<PairItem> {
