@@ -1485,28 +1485,28 @@ private fun AprenderApp() {
                 }
             }
             item {
-                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF73C9F5)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text("🦊", fontSize = 64.sp)
-                        Column(Modifier.weight(1f)) {
-                            Text("¡Vamos a aprender!", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF143B66))
-                            Text("Cada acierto te acerca a ganar tiempo para jugar.", fontSize = 15.sp, color = Color(0xFF174B70))
-                        }
-                    }
-                }
-            }
-            item {
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD968)), border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFE8B95D)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text("⏱️", fontSize = 38.sp)
                         Column(Modifier.weight(1f)) {
-                            Text("TIEMPO PARA JUGAR", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF79501C))
+                            Text("Tiempo acumulado", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF79501C))
                             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("$balanceMinutes", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
                                 Text("minutos", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
                             }
                         }
-                        Text(if (balanceMinutes <= 0) "¡A jugar se gana!" else "¡A disfrutar!", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF79501C))
+                        
+                    }
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF73C9F5)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text("🦊", fontSize = 64.sp)
+                        Column(Modifier.weight(1f)) {
+                            Text("¡Aprender para jugar!", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF143B66))
+                            Text("Aprende, descubre y diviértete", fontSize = 15.sp, color = Color(0xFF174B70))
+                        }
                     }
                 }
             }
