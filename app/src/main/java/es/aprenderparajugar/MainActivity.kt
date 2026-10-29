@@ -597,7 +597,7 @@ private fun AprenderApp() {
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
-    BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result" || screen == "cards-options" || screen == "category-select" || screen == "sequences" || screen == "sequence-game") {
+    BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result" || screen == "cards-options" || screen == "category-select" || screen == "sequences" || screen == "sequence-difficulty" || screen == "sequence-game") {
         when (screen) {
             "parent" -> when (parentSection) {
                 "words", "categories" -> parentSection = "cards-settings"
@@ -614,7 +614,8 @@ private fun AprenderApp() {
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
             "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
             "sequences" -> { screen = "home" }
-            "sequence-game" -> { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
+            "sequence-difficulty" -> { screen = "sequences" }
+            "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "parent-pin", "exit-pin", "exercise", "result" -> { screen = "home"; pinEntry = ""; pinError = false }
         }
     }
