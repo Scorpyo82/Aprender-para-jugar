@@ -719,6 +719,11 @@ private fun AprenderApp() {
     var libraryCategoryFilter by remember { mutableStateOf("Todas") }
     var libraryDifficultyFilter by remember { mutableStateOf("Todas") }
     var libraryFilterCategoryExpanded by remember { mutableStateOf(false) }
+    var wordExerciseTarget by remember { mutableStateOf<PairItem?>(null) }
+    var wordExerciseLetterOrder by remember { mutableStateOf(emptyList<Int>()) }
+    var wordExercisePlaced by remember { mutableStateOf(emptyList<Int>()) }
+    var wordExerciseWrongAnswers by remember { mutableIntStateOf(0) }
+    var wordExerciseMessage by remember { mutableStateOf("") }
 
     val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -1577,7 +1582,7 @@ private fun AprenderApp() {
                     "words-settings" -> {
                         item { Text("Configurar Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "words"; libraryPage = "list" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🖼️", fontSize = 26.sp)
                                     Column { Text("Biblioteca de palabras", fontWeight = FontWeight.Bold); Text("Palabras e imágenes que servirán como pistas", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -1585,7 +1590,7 @@ private fun AprenderApp() {
                             }
                         }
                         item {
-                            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "categories" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🗂️", fontSize = 26.sp)
                                     Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organización del vocabulario por temas", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -1594,10 +1599,10 @@ private fun AprenderApp() {
                         }
                         item {
                             androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Mecánica prevista", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("El niño verá una imagen, tocará letras y las colocará en las posiciones de la palabra. La dificultad y el contenido se configurarán aquí cuando se implemente el juego.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("Dificultad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("La dificultad de cada ejercicio se configura en la ficha de cada palabra.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("La biblioteca y las categorías de Palabras son independientes de Tarjetas y Secuencias.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
-                        item { Text("Configuración en fase beta: la biblioteca y los controles aún no están conectados.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "cards-settings" -> {
                         item { Text("Configurar Tarjetas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -2606,7 +2611,19 @@ private fun AprenderApp() {
             }
             item {
                 Card(
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().clickable {
+                        val candidates = pairs.filter { it.active && it.category !in disabledCategories }
+                        val chosen = candidates.randomOrNull()
+                        if (chosen != null) {
+                            wordExerciseTarget = chosen
+                            wordExerciseLetterOrder = chosen.word.indices.toList().shuffled()
+                            if (chosen.word.length > 1 && wordExerciseLetterOrder == chosen.word.indices.toList()) wordExerciseLetterOrder = wordExerciseLetterOrder.drop(1) + wordExerciseLetterOrder.first()
+                            wordExercisePlaced = emptyList()
+                            wordExerciseWrongAnswers = 0
+                            wordExerciseMessage = ""
+                            screen = "word-exercise"
+                        }
+                    },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFD8EEFF)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CCCF4))
@@ -2620,7 +2637,7 @@ private fun AprenderApp() {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Palabras", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
                             Text("Ordenar letras y completar palabras", fontSize = modeDescriptionSize, color = Color(0xFF42647D))
-                            Text("PRÓXIMAMENTE  🔒", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF285F94))
+                            Text("¡JUGAR!", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF285F94))
                         }
                     }
                 }
