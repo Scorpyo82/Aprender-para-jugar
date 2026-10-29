@@ -687,43 +687,16 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
                 Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
+                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
-                item { Text("AJUSTES POR MODALIDAD", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF667085)) }
-                item { Text("Tarjetas", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)) }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "words" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "game-modes" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🖼️", fontSize = 30.sp)
-                            Column { Text("Biblioteca de palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Palabras, dibujos y dificultad", color = Color(0xFF667085)) }
-                        }
-                    }
-                }
-                item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "categories" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🗂️", fontSize = 30.sp)
-                            Column { Text("Categorías", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Organiza el vocabulario por temas", color = Color(0xFF667085)) }
-                        }
-                    }
-                }
-                item { Text("Otras modalidades", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344)) }
-                item {
-                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🌱", fontSize = 30.sp)
-                            Column { Text("Configurar Secuencias", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Próximamente", color = Color(0xFF667085)) }
-                        }
-                    }
-                }
-                item {
-                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🔤", fontSize = 30.sp)
-                            Column { Text("Configurar Palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Próximamente", color = Color(0xFF667085)) }
+                            Text("🎮", fontSize = 30.sp)
+                            Column { Text("Configurar modos de juego", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Opciones específicas de cada modalidad", color = Color(0xFF667085)) }
                         }
                     }
                 }
@@ -732,7 +705,7 @@ private fun AprenderApp() {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "rewards" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⏱️", fontSize = 30.sp)
-                            Column { Text("Recompensas y límites", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Minutos por dificultad y elecciones diarias", color = Color(0xFF667085)) }
+                            Column { Text("Recompensas y límites", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Minutos de recompensa por dificultad", color = Color(0xFF667085)) }
                         }
                     }
                 }
@@ -769,8 +742,74 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = "menu" }) { Text("← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings" -> "game-modes"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings") "← Volver a los modos de juego" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
                 when (parentSection) {
+                    "game-modes" -> {
+                        item { Text("Modos de juego", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "cards-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🖼️", fontSize = 30.sp)
+                                    Column { Text("Tarjetas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Biblioteca, categorías y parejas por partida", color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item {
+                            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🌱", fontSize = 30.sp)
+                                    Column { Text("Secuencias", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Próximamente", color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item {
+                            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🔤", fontSize = 30.sp)
+                                    Column { Text("Palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Próximamente", color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                    }
+                    "cards-settings" -> {
+                        item { Text("Configurar Tarjetas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "words" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🖼️", fontSize = 28.sp)
+                                    Column { Text("Biblioteca de palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Palabras, imágenes, dificultad y estado", color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "categories" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🗂️", fontSize = 28.sp)
+                                    Column { Text("Categorías", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Organiza el vocabulario por temas", color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item {
+                            Text("Parejas por partida", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("Número de parejas de palabras e imágenes que tendrá cada ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
+                                Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
+                            }
+                        }
+                        item {
+                            androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            Text("Límite diario para elegir categoría", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Número máximo de veces al día que el menor puede elegir la categoría. Al alcanzar el límite, podrá seguir practicando con las demás opciones.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedButton(onClick = { if (dailyManualLimit > 0) { dailyManualLimit--; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("−") }
+                                Text("$dailyManualLimit", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                OutlinedButton(onClick = { if (dailyManualLimit < 10) { dailyManualLimit++; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("+") }
+                            }
+                        }
+                        item { Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                    }
                     "words" -> item {
                         if (libraryPage == "list") {
                             Text("Biblioteca de palabras", fontSize = 23.sp, fontWeight = FontWeight.Bold)
@@ -1030,21 +1069,7 @@ private fun AprenderApp() {
                             }
                         }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        Text("Preguntas por partida", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text("Configura cuántas preguntas tendrá cada ejercicio. Esta cantidad no se puede cambiar desde la pantalla de inicio.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
-                            Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
-                        }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        Text("Límite diario para elegir categoría", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Número máximo de veces al día que el menor puede elegir por sí mismo la categoría de los ejercicios. Al alcanzar el límite, podrá seguir practicando, pero tendrá que esperar al día siguiente para volver a elegir categoría.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedButton(onClick = { if (dailyManualLimit > 0) { dailyManualLimit--; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("−") }
-                            Text("$dailyManualLimit", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            OutlinedButton(onClick = { if (dailyManualLimit < 10) { dailyManualLimit++; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("+") }
-                        }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
                     }
