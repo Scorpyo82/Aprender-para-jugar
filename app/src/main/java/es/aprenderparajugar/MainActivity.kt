@@ -379,6 +379,10 @@ private fun AprenderApp() {
     var pendingSequencePictureIndex by remember { mutableIntStateOf(-1) }
     var sequenceAlternativeDraft by remember { mutableStateOf("") }
     var sequenceEditorMessage by remember { mutableStateOf("") }
+    var sequencePlayingExercise by remember { mutableStateOf<SequenceExercise?>(null) }
+    var sequencePlayOrder by remember { mutableStateOf(emptyList<Int>()) }
+    var sequenceSelectedOrder by remember { mutableStateOf(emptyList<Int>()) }
+    var sequencePlayMessage by remember { mutableStateOf("") }
 
     var packageMessage by remember { mutableStateOf("") }
     var pendingImportMode by remember { mutableStateOf("replace") }
@@ -590,11 +594,24 @@ private fun AprenderApp() {
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
-    BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result" || screen == "cards-options" || screen == "category-select") {
+    BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result" || screen == "cards-options" || screen == "category-select" || screen == "sequences" || screen == "sequence-game") {
         when (screen) {
-            "parent" -> when (parentSection) { "words", "categories" -> parentSection = "cards-settings"; "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"; "game-modes" -> parentSection = "menu"; else -> { screen = "home"; parentSection = "menu" } }
+            "parent" -> when (parentSection) {
+                "words", "categories" -> parentSection = "cards-settings"
+                "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
+                "game-modes" -> parentSection = "menu"
+                "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
+                "sequence-library-temporal", "sequence-categories-temporal" -> parentSection = "sequence-type-temporal"
+                "sequence-editor-temporal" -> parentSection = "sequence-library-temporal"
+                "sequence-library-procesos", "sequence-categories-procesos" -> parentSection = "sequence-type-procesos"
+                "sequence-library-causa", "sequence-categories-causa" -> parentSection = "sequence-type-causa"
+                "sequence-library-ciclos", "sequence-categories-ciclos" -> parentSection = "sequence-type-ciclos"
+                else -> { screen = "home"; parentSection = "menu" }
+            }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
             "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
+            "sequences" -> { screen = "home" }
+            "sequence-game" -> { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "parent-pin", "exit-pin", "exercise", "result" -> { screen = "home"; pinEntry = ""; pinError = false }
         }
     }
@@ -1948,7 +1965,7 @@ private fun AprenderApp() {
             }
             item {
                 Card(
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().clickable { screen = "sequences" },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFDDF3D3)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
@@ -1962,7 +1979,7 @@ private fun AprenderApp() {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Secuencias", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
                             Text("Ordenar y razonar", fontSize = modeDescriptionSize, color = Color(0xFF476C51))
-                            Text("PRÓXIMAMENTE  🔒", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
+                            Text("EMPEZAR  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
                         }
                     }
                 }
