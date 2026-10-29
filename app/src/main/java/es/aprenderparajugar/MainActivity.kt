@@ -1596,7 +1596,7 @@ private fun AprenderApp() {
                     "words-settings" -> {
                         item { Text("Configurar Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "words"; libraryPage = "list" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "word-library"; wordLibraryPage = "list" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🖼️", fontSize = 26.sp)
                                     Column { Text("Biblioteca de palabras", fontWeight = FontWeight.Bold); Text("Palabras e imágenes que servirán como pistas", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -1604,7 +1604,7 @@ private fun AprenderApp() {
                             }
                         }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "categories" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "word-categories" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🗂️", fontSize = 26.sp)
                                     Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organización del vocabulario por temas", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -1616,6 +1616,108 @@ private fun AprenderApp() {
                             Text("Dificultad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text("La dificultad de cada ejercicio se configura en la ficha de cada palabra.", fontSize = 14.sp, color = Color(0xFF667085))
                             Text("La biblioteca y las categorías de Palabras son independientes de Tarjetas y Secuencias.", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
+                    }
+                    "word-library" -> {
+                        item { Text(if (wordLibraryPage == "list") "Ejercicios de Palabras" else if (wordLibraryEditingIndex < 0) "Nuevo ejercicio de Palabras" else "Editar ejercicio de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        if (wordLibraryPage == "list") {
+                            item { Text("Esta biblioteca es independiente de Tarjetas y Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                            item { Button(onClick = { wordLibraryEditingIndex = -1; wordLibraryWordDraft = ""; wordLibraryPictureDraft = "🐱"; wordLibraryCategoryDraft = wordExerciseCategories.firstOrNull() ?: ""; wordLibraryDifficultyDraft = "Fácil"; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ejercicio") } }
+                            if (wordExercises.isEmpty()) item { Text("Todavía no hay ejercicios de Palabras. Añade uno con su palabra, imagen y categoría para probarlo.", color = Color(0xFF667085)) }
+                            wordExercises.forEachIndexed { index, exercise ->
+                                item {
+                                    Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(exercise.word, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                            Text("${exercise.picture} · ${exercise.category} · ${exercise.difficulty} · ${if (exercise.active) "Activo" else "Inactivo"}", color = Color(0xFF667085))
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                OutlinedButton(onClick = { wordLibraryEditingIndex = index; wordLibraryWordDraft = exercise.word; wordLibraryPictureDraft = exercise.picture; wordLibraryCategoryDraft = exercise.category; wordLibraryDifficultyDraft = exercise.difficulty; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar") }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; saveWordExercises(preferences, wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.filterIndexed { i, _ -> i != index }; saveWordExercises(preferences, wordExercises) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            item { OutlinedTextField(value = wordLibraryWordDraft, onValueChange = { wordLibraryWordDraft = it }, label = { Text("Palabra que formará") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                            item { OutlinedTextField(value = wordLibraryPictureDraft, onValueChange = { wordLibraryPictureDraft = it }, label = { Text("Imagen o emoji de pista") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                            item {
+                                Text("Categoría", fontWeight = FontWeight.Bold)
+                                androidx.compose.foundation.layout.Box {
+                                    OutlinedButton(onClick = { sequenceCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) { Text(if (wordLibraryCategoryDraft.isBlank()) "Seleccionar categoría" else wordLibraryCategoryDraft) }
+                                    DropdownMenu(expanded = sequenceCategoryMenuExpanded, onDismissRequest = { sequenceCategoryMenuExpanded = false }) {
+                                        wordExerciseCategories.forEach { name -> DropdownMenuItem(text = { Text(name) }, onClick = { wordLibraryCategoryDraft = name; sequenceCategoryMenuExpanded = false }) }
+                                    }
+                                }
+                            }
+                            item {
+                                Text("Dificultad", fontWeight = FontWeight.Bold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("Fácil", "Normal", "Difícil").forEach { level -> FilterChip(selected = wordLibraryDifficultyDraft == level, onClick = { wordLibraryDifficultyDraft = level }, label = { Text(level) }) }
+                                }
+                            }
+                            item {
+                                if (wordLibraryMessage.isNotBlank()) Text(wordLibraryMessage, color = Color(0xFFB3261E))
+                                Button(onClick = {
+                                    val cleanWord = wordLibraryWordDraft.trim()
+                                    when {
+                                        cleanWord.isBlank() -> wordLibraryMessage = "Escribe una palabra."
+                                        cleanWord.any { it.isWhitespace() } -> wordLibraryMessage = "Para empezar, introduce una sola palabra sin espacios."
+                                        wordLibraryPictureDraft.isBlank() -> wordLibraryMessage = "Añade una imagen o emoji de pista."
+                                        wordLibraryCategoryDraft.isBlank() || wordLibraryCategoryDraft !in wordExerciseCategories -> wordLibraryMessage = "Selecciona una categoría creada en el menú Categorías."
+                                        wordExercises.withIndex().any { (i, e) -> i != wordLibraryEditingIndex && e.word.equals(cleanWord, true) } -> wordLibraryMessage = "Ya existe un ejercicio con esa palabra."
+                                        else -> {
+                                            val entry = PairItem(cleanWord, wordLibraryPictureDraft.trim(), wordLibraryCategoryDraft, wordLibraryDifficultyDraft, true)
+                                            wordExercises = if (wordLibraryEditingIndex < 0) wordExercises + entry else wordExercises.toMutableList().also { it[wordLibraryEditingIndex] = entry }
+                                            saveWordExercises(preferences, wordExercises)
+                                            wordLibraryPage = "list"; wordLibraryMessage = ""
+                                        }
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()) { Text("Guardar ejercicio") }
+                            }
+                            item { OutlinedButton(onClick = { wordLibraryPage = "list"; wordLibraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
+                        }
+                    }
+                    "word-categories" -> {
+                        item { Text("Categorías de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Estas categorías solo afectan a los ejercicios de Palabras; no modifican Tarjetas ni Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { OutlinedTextField(value = wordNewCategoryDraft, onValueChange = { wordNewCategoryDraft = it; wordLibraryMessage = "" }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item { Button(onClick = {
+                            val name = wordNewCategoryDraft.trim()
+                            when {
+                                name.isBlank() -> wordLibraryMessage = "Escribe un nombre."
+                                wordExerciseCategories.any { it.equals(name, true) } -> wordLibraryMessage = "Esa categoría ya existe."
+                                else -> { wordExerciseCategories = wordExerciseCategories + name; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordNewCategoryDraft = ""; wordLibraryMessage = "Categoría creada." }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear categoría") } }
+                        if (wordLibraryMessage.isNotBlank()) item { Text(wordLibraryMessage, color = Color(0xFF24733B)) }
+                        wordExerciseCategories.forEach { category ->
+                            item {
+                                Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Column(Modifier.weight(1f)) { Text(category, fontWeight = FontWeight.Bold); Text("${wordExercises.count { it.category == category }} ejercicios", color = Color(0xFF667085)) }
+                                            Switch(checked = category !in disabledWordExerciseCategories, onCheckedChange = { enabled ->
+                                                disabledWordExerciseCategories = if (enabled) disabledWordExerciseCategories - category else disabledWordExerciseCategories + category
+                                                preferences.edit().putStringSet("disabled_letter_word_categories_v1", disabledWordExerciseCategories).apply()
+                                            })
+                                        }
+                                        if (wordCategoryToDelete == category) {
+                                            Text("Borrar categoría y contenido", fontWeight = FontWeight.Bold)
+                                            Text("Se eliminarán también los ${wordExercises.count { it.category == category }} ejercicios asignados.", color = Color(0xFFB3261E))
+                                            Button(onClick = { wordExercises = wordExercises.filterNot { it.category == category }; saveWordExercises(preferences, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
+                                            Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.Bold)
+                                            wordExerciseCategories.filterNot { it == category }.forEach { destination ->
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.map { if (it.category == category) it.copy(category = destination) else it }; saveWordExercises(preferences, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                            }
+                                            OutlinedButton(onClick = { wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                        } else {
+                                            OutlinedButton(onClick = { wordCategoryToDelete = category }, modifier = Modifier.fillMaxWidth(), enabled = wordExerciseCategories.size > 1) { Text("Eliminar / reasignar") }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     "cards-settings" -> {
