@@ -2269,6 +2269,83 @@ private fun AprenderApp() {
             if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
             OutlinedButton(onClick = { screen = "home" }) { Text("Salir del ejercicio") }
         }
+    } else if (screen == "word-exercise") {
+        val target = wordExerciseTarget
+        if (target == null) {
+            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Palabras", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+                Spacer(Modifier.height(16.dp))
+                Text(wordExerciseMessage, fontSize = 17.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(Modifier.height(20.dp))
+                OutlinedButton(onClick = { screen = "home" }, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
+            }
+        } else {
+            val targetWord = target.word
+            val complete = wordExercisePlaced.size == targetWord.length
+            Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Palabras", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+                    OutlinedButton(onClick = { wordExerciseTarget = null; screen = "home" }) { Text("Salir") }
+                }
+                Text("Forma la palabra", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                if (target.picture.startsWith("content://") || target.picture.startsWith("file://")) {
+                    AndroidView(
+                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) } },
+                        update = { view -> try { view.setImageURI(Uri.parse(target.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                        modifier = Modifier.fillMaxWidth().height(170.dp)
+                    )
+                } else {
+                    Text(target.picture, fontSize = 76.sp)
+                }
+                Text("Toca las letras en el orden correcto.", fontSize = 15.sp, color = Color(0xFF667085))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    targetWord.indices.forEach { position ->
+                        Card(
+                            modifier = Modifier.weight(1f).height(54.dp),
+                            colors = CardDefaults.cardColors(containerColor = if (position < wordExercisePlaced.size) Color(0xFFE2F4DF) else Color.White),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB7C8B2))
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(wordExercisePlaced.getOrNull(position)?.let { targetWord[it].uppercase() } ?: "·", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), maxItemsInEachRow = 5) {
+                    wordExerciseLetterOrder.forEach { letterIndex ->
+                        val alreadyPlaced = letterIndex in wordExercisePlaced
+                        OutlinedButton(
+                            onClick = {
+                                val expected = targetWord.getOrNull(wordExercisePlaced.size)
+                                val chosenLetter = targetWord.getOrNull(letterIndex)
+                                if (expected != null && chosenLetter != null && expected.equals(chosenLetter, ignoreCase = true)) {
+                                    val next = wordExercisePlaced + letterIndex
+                                    wordExercisePlaced = next
+                                    wordExerciseMessage = if (next.size == targetWord.length) "¡Palabra completada!" else "¡Bien! Sigue con la siguiente letra."
+                                    if (next.size == targetWord.length) {
+                                        val baseReward = when (target.difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
+                                        val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
+                                        val rewardPercent = (100 - wordExerciseWrongAnswers * penaltyPercent).coerceAtLeast(20)
+                                        addEarnedTime(baseReward * rewardPercent / 100)
+                                        resultCorrectCount = (targetWord.length - wordExerciseWrongAnswers).coerceIn(0, targetWord.length)
+                                        resultTotalCount = targetWord.length
+                                        correct = if (wordExerciseWrongAnswers == 0) targetWord.length else resultCorrectCount
+                                        screen = "result"
+                                    }
+                                } else {
+                                    wordExerciseWrongAnswers += 1
+                                    wordExerciseMessage = "Prueba con otra letra."
+                                }
+                            },
+                            enabled = !complete && !alreadyPlaced,
+                            modifier = Modifier.height(58.dp)
+                        ) { Text(targetWord.getOrNull(letterIndex)?.uppercase() ?: "", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
+                Text(wordExerciseMessage, fontSize = 16.sp, color = if (wordExerciseMessage.startsWith("¡")) Color(0xFF24733B) else Color(0xFF667085))
+                Text("Dificultad: ${target.difficulty}", fontSize = 13.sp, color = Color(0xFF667085))
+            }
+        }
     } else if (screen == "play-time") {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -2728,17 +2805,19 @@ private fun AprenderApp() {
             item {
                 Card(
                     Modifier.fillMaxWidth().clickable {
-                        val candidates = pairs.filter { it.active && it.category !in disabledCategories }
+                        val candidates = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories }
                         val chosen = candidates.randomOrNull()
+                        wordExerciseTarget = chosen
                         if (chosen != null) {
-                            wordExerciseTarget = chosen
                             wordExerciseLetterOrder = chosen.word.indices.toList().shuffled()
                             if (chosen.word.length > 1 && wordExerciseLetterOrder == chosen.word.indices.toList()) wordExerciseLetterOrder = wordExerciseLetterOrder.drop(1) + wordExerciseLetterOrder.first()
                             wordExercisePlaced = emptyList()
                             wordExerciseWrongAnswers = 0
                             wordExerciseMessage = ""
-                            screen = "word-exercise"
+                        } else {
+                            wordExerciseMessage = "Todavía no hay ejercicios activos de Palabras. Entra en Control parental > Configurar modos de juego > Palabras para crearlos."
                         }
+                        screen = "word-exercise"
                     },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFD8EEFF)),
