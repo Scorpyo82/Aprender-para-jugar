@@ -765,6 +765,9 @@ private fun AprenderApp() {
     var wordExercisePlaced by remember { mutableStateOf(emptyList<Int>()) }
     var wordExerciseWrongAnswers by remember { mutableIntStateOf(0) }
     var wordExerciseMessage by remember { mutableStateOf("") }
+    var wordSelectedDifficulty by remember { mutableStateOf("Fácil") }
+    var wordStartMessage by remember { mutableStateOf("") }
+    var wordCategoryCandidates by remember { mutableStateOf(emptyList<String>()) }
 
     val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -892,6 +895,9 @@ private fun AprenderApp() {
             }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
             "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
+            "word-options" -> { screen = "home"; wordStartMessage = "" }
+            "word-category-select" -> { screen = "word-options"; wordStartMessage = "" }
+            "word-exercise" -> { screen = "word-options"; wordExerciseTarget = null; wordExercisePlaced = emptyList(); wordStartMessage = "" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
             "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
@@ -2944,19 +2950,9 @@ private fun AprenderApp() {
             item {
                 Card(
                     Modifier.fillMaxWidth().clickable {
-                        val candidates = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories }
-                        val chosen = candidates.randomOrNull()
-                        wordExerciseTarget = chosen
-                        if (chosen != null) {
-                            wordExerciseLetterOrder = chosen.word.indices.toList().shuffled()
-                            if (chosen.word.length > 1 && wordExerciseLetterOrder == chosen.word.indices.toList()) wordExerciseLetterOrder = wordExerciseLetterOrder.drop(1) + wordExerciseLetterOrder.first()
-                            wordExercisePlaced = emptyList()
-                            wordExerciseWrongAnswers = 0
-                            wordExerciseMessage = ""
-                        } else {
-                            wordExerciseMessage = "Todavía no hay ejercicios activos de Palabras. Entra en Control parental > Configurar modos de juego > Palabras para crearlos."
-                        }
-                        screen = "word-exercise"
+                        wordSelectedDifficulty = "Fácil"
+                        wordStartMessage = ""
+                        screen = "word-options"
                     },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFD8EEFF)),
