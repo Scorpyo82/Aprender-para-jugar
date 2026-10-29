@@ -512,6 +512,9 @@ private fun AprenderApp() {
     var wordLibraryDifficultyDraft by remember { mutableStateOf("Fácil") }
     var wordLibraryMessage by remember { mutableStateOf("") }
     var wordLibraryCategoryMenuExpanded by remember { mutableStateOf(false) }
+    var wordFilterCategory by remember { mutableStateOf("Todas") }
+    var wordFilterDifficulty by remember { mutableStateOf("Todas") }
+    var wordFilterStatus by remember { mutableStateOf("Todos") }
     var wordPackageMessage by remember { mutableStateOf("") }
     var wordPendingImportMode by remember { mutableStateOf("replace") }
     var wordNewCategoryDraft by remember { mutableStateOf("") }
@@ -1680,7 +1683,32 @@ private fun AprenderApp() {
                             }
                             item { Button(onClick = { wordLibraryEditingIndex = -1; wordLibraryWordDraft = ""; wordLibraryPictureDraft = "🐱"; wordLibraryCategoryDraft = wordExerciseCategories.firstOrNull() ?: ""; wordLibraryDifficultyDraft = "Fácil"; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ejercicio") } }
                             if (wordExercises.isEmpty()) item { Text("Todavía no hay ejercicios de Palabras. Añade uno con su palabra, imagen y categoría para probarlo.", color = Color(0xFF667085)) }
-                            wordExercises.forEachIndexed { index, exercise ->
+                            item {
+                                Text("Filtrar ejercicios", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Categoría", fontWeight = FontWeight.SemiBold)
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    (listOf("Todas") + wordExerciseCategories).forEach { category ->
+                                        FilterChip(selected = wordFilterCategory == category, onClick = { wordFilterCategory = category }, label = { Text(category) })
+                                    }
+                                }
+                                Text("Dificultad", fontWeight = FontWeight.SemiBold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("Todas", "Fácil", "Normal", "Difícil").forEach { level -> FilterChip(selected = wordFilterDifficulty == level, onClick = { wordFilterDifficulty = level }, label = { Text(level) }) }
+                                }
+                                Text("Estado", fontWeight = FontWeight.SemiBold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("Todos", "Activos", "Inactivos").forEach { status -> FilterChip(selected = wordFilterStatus == status, onClick = { wordFilterStatus = status }, label = { Text(status) }) }
+                                }
+                            }
+                            val visibleWordExercises = wordExercises.withIndex().filter { (_, exercise) ->
+                                (wordFilterCategory == "Todas" || exercise.category == wordFilterCategory) &&
+                                (wordFilterDifficulty == "Todas" || exercise.difficulty == wordFilterDifficulty) &&
+                                (wordFilterStatus == "Todos" || if (wordFilterStatus == "Activos") exercise.active else !exercise.active)
+                            }
+                            if (visibleWordExercises.isEmpty() && wordExercises.isNotEmpty()) item { Text("No hay ejercicios que coincidan con estos filtros.", color = Color(0xFF667085)) }
+                            visibleWordExercises.forEach { indexed ->
+                                val index = indexed.index
+                                val exercise = indexed.value
                                 item {
                                     Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
