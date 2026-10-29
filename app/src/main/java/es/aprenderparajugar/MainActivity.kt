@@ -516,6 +516,9 @@ private fun AprenderApp() {
     var libraryMessage by remember { mutableStateOf("") }
     var libraryPage by remember { mutableStateOf("list") }
     var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(preferences)) }
+    var sequenceMaxCards by remember {
+        mutableIntStateOf(runCatching { preferences.getInt("sequence_max_cards_v1", 6) }.getOrDefault(6).coerceIn(2, 6))
+    }
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
@@ -1280,7 +1283,29 @@ private fun AprenderApp() {
                         item {
                             androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             Text("Máximo de tarjetas por secuencia", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("6 tarjetas como máximo. La distribución se adaptará a la orientación y al espacio disponible.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("Limita el número de tarjetas de las secuencias que se ofrecerán al menor.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (sequenceMaxCards > 2) {
+                                            sequenceMaxCards--
+                                            preferences.edit().putInt("sequence_max_cards_v1", sequenceMaxCards).apply()
+                                        }
+                                    },
+                                    enabled = sequenceMaxCards > 2
+                                ) { Text("−") }
+                                Text("$sequenceMaxCards tarjetas", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                OutlinedButton(
+                                    onClick = {
+                                        if (sequenceMaxCards < 6) {
+                                            sequenceMaxCards++
+                                            preferences.edit().putInt("sequence_max_cards_v1", sequenceMaxCards).apply()
+                                        }
+                                    },
+                                    enabled = sequenceMaxCards < 6
+                                ) { Text("+") }
+                            }
+                            Text("El valor se guarda en este dispositivo y quedará disponible para filtrar los ejercicios por número de tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         item { Text("Configuración en fase beta: todavía no modifica ejercicios reales.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
