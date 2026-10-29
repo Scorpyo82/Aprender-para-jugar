@@ -2302,6 +2302,25 @@ private fun AprenderApp() {
                 item {
                     OutlinedButton(onClick = { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }) { Text("← Volver a ejercicios") }
                     Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
+                    if (isLettersExercise) {
+                        val wordPicture = exercise.pictures.firstOrNull().orEmpty()
+                        if (wordPicture.startsWith("content://") || wordPicture.startsWith("file://")) {
+                            AndroidView(
+                                factory = { ctx -> ImageView(ctx).apply {
+                                    scaleType = ImageView.ScaleType.FIT_CENTER
+                                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 280)
+                                } },
+                                update = { view ->
+                                    try { view.setImageURI(Uri.parse(wordPicture)) }
+                                    catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(180.dp)
+                            )
+                        } else if (wordPicture.isNotBlank()) {
+                            Text(wordPicture, fontSize = 64.sp)
+                        }
+                        Text("Forma la palabra tocando sus letras en orden.", fontSize = 14.sp, color = Color(0xFF667085))
+                    }
                     Text(
                         if (finished) { if (isLettersExercise) "¡Has formado la palabra!" else "¡Muy bien! Has completado la secuencia." } else if (isLettersExercise) "Toca las letras en el orden correcto para formar la palabra." else "Toca las tarjetas en el orden en que ocurren.",
                         fontSize = 16.sp,
