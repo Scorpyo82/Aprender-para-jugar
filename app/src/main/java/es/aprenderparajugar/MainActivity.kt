@@ -886,7 +886,8 @@ private fun AprenderApp() {
                     else parentSection = "words-settings"
                 }
                 "words", "categories" -> parentSection = "cards-settings"
-                "cards-settings", "sequences-settings", "words-settings", "active-games" -> parentSection = "game-modes"
+                "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
+                "active-games", "music", "rewards", "security", "device-setup", "about" -> parentSection = "menu"
                 "game-modes" -> parentSection = "menu"
                 "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
                 "sequence-library", "sequence-categories" -> parentSection = "sequences-settings"
