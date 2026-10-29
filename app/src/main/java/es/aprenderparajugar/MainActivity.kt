@@ -36,6 +36,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
@@ -54,6 +58,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -169,20 +174,10 @@ private data class SequenceExercise(
     val active: Boolean = true
 )
 
-private fun defaultSequencePicture(index: Int): String =
-    listOf("🌱", "🌿", "🌳", "🌸", "🦋", "🍎")[index.coerceIn(0, 5)]
-
-private val sampleTemporalSequences = listOf(
-    SequenceExercise("Plantar una semilla", listOf("Poner la semilla", "Sale el brote", "Crece la planta", "Aparece la flor"), "Solo imágenes", "Naturaleza", type = "Procesos", difficulty = "Normal"),
-    SequenceExercise("Lavarse las manos", listOf("Mojar las manos", "Enjabonarse", "Aclarar", "Secar"), "Imagen y texto", "Rutinas", type = "Orden temporal", difficulty = "Fácil"),
-    SequenceExercise("Cepillarse los dientes", listOf("Poner pasta", "Cepillarse", "Aclarar la boca", "Secar y guardar"), "Imagen y texto", "Rutinas", type = "Orden temporal", difficulty = "Normal"),
-    SequenceExercise("Vestirse", listOf("Ponerse los pantalones", "Ponerse la camiseta", "Ponerse los zapatos"), "Solo imágenes", "Rutinas", listOf("Ponerse la camiseta|Ponerse los pantalones|Ponerse los zapatos"), type = "Orden temporal", difficulty = "Fácil"),
-    SequenceExercise("Preparar un bocadillo", listOf("Preparar el pan", "Añadir ingredientes", "Cerrar el bocadillo", "Bocadillo listo"), "Imagen y texto", "Cocina", type = "Procesos", difficulty = "Difícil"),
-    SequenceExercise("El ciclo de una mariposa", listOf("Huevos", "Oruga", "Crisálida", "Mariposa"), "Solo imágenes", "Naturaleza", type = "Ciclos", difficulty = "Normal")
-)
+private fun defaultSequencePicture(index: Int): String = ""
 
 private fun loadSequenceExercises(preferences: android.content.SharedPreferences): List<SequenceExercise> {
-    val saved = preferences.getString("sequence_exercises_temporal_v1", null) ?: return sampleTemporalSequences
+    val saved = preferences.getString("sequence_exercises_temporal_v1", null) ?: return emptyList()
     return runCatching {
         val array = JSONArray(saved)
         (0 until array.length()).mapNotNull { index ->
@@ -205,8 +200,8 @@ private fun loadSequenceExercises(preferences: android.content.SharedPreferences
                 item.optString("difficulty", "Normal"),
                 item.optBoolean("active", true)
             )
-        }.ifEmpty { sampleTemporalSequences }
-    }.getOrDefault(sampleTemporalSequences)
+        }
+    }.getOrDefault(emptyList())
 }
 
 private fun saveSequenceExercises(preferences: android.content.SharedPreferences, exercises: List<SequenceExercise>) {
@@ -270,11 +265,11 @@ private fun chooseAdaptivePairs(
 }
 
 
-private fun exportContentPackage(context: Context, target: Uri, pairs: List<PairItem>, categories: List<String>) {
+private fun exportContentPackage(context: Context, target: Uri, pairs: List<PairItem>, categories: List<String>, format: String = "aprender-para-jugar-content") {
     val resolver = context.contentResolver
     ZipOutputStream(resolver.openOutputStream(target)?.buffered() ?: throw IllegalArgumentException("No se puede escribir en el destino.")).use { zip ->
         val root = JSONObject()
-        root.put("format", "aprender-para-jugar-content")
+        root.put("format", format)
         root.put("version", 1)
         root.put("categories", JSONArray(categories))
         val words = JSONArray()
@@ -313,7 +308,7 @@ private fun exportContentPackage(context: Context, target: Uri, pairs: List<Pair
 
 private data class ImportedContent(val categories: List<String>, val pairs: List<PairItem>)
 
-private fun importContentPackage(context: Context, source: Uri): ImportedContent {
+private fun importContentPackage(context: Context, source: Uri, expectedFormat: String = "aprender-para-jugar-content"): ImportedContent {
     val entries = mutableMapOf<String, ByteArray>()
     ZipInputStream(context.contentResolver.openInputStream(source)?.buffered() ?: throw IllegalArgumentException("No se puede leer el archivo seleccionado.")).use { zip ->
         while (true) {
@@ -328,7 +323,7 @@ private fun importContentPackage(context: Context, source: Uri): ImportedContent
     }
     val jsonBytes = entries["content.json"] ?: throw IllegalArgumentException("El ZIP no contiene content.json.")
     val root = JSONObject(String(jsonBytes, Charsets.UTF_8))
-    require(root.optString("format") == "aprender-para-jugar-content") { "El archivo no es una exportación de Aprender para jugar." }
+    require(root.optString("format") == expectedFormat) { "El archivo no corresponde a esta biblioteca de ejercicios." }
     val categoriesJson = root.optJSONArray("categories") ?: JSONArray()
     val categories = (0 until categoriesJson.length()).map { categoriesJson.getString(it) }.filter { it.isNotBlank() }
     val words = root.optJSONArray("words") ?: JSONArray()
@@ -350,11 +345,125 @@ private fun importContentPackage(context: Context, source: Uri): ImportedContent
     return ImportedContent(categories, importedPairs)
 }
 
-private val samplePairs = listOf(
-    PairItem("mamá", "👩"), PairItem("sol", "☀️"),
-    PairItem("casa", "🏠"), PairItem("gato", "🐈"),
-    PairItem("luna", "🌙"), PairItem("pan", "🥖")
+private data class ImportedSequenceContent(
+    val categories: List<String>,
+    val disabledCategories: Set<String>,
+    val exercises: List<SequenceExercise>
 )
+
+private fun exportSequencePackage(
+    context: Context,
+    target: Uri,
+    exercises: List<SequenceExercise>,
+    categories: List<String>,
+    disabledCategories: Set<String>
+) {
+    val resolver = context.contentResolver
+    ZipOutputStream(resolver.openOutputStream(target)?.buffered() ?: throw IllegalArgumentException("No se puede escribir en el destino.")).use { zip ->
+        val root = JSONObject().apply {
+            put("format", "aprender-para-jugar-sequences")
+            put("version", 1)
+            put("categories", JSONArray(categories))
+            put("disabledCategories", JSONArray(disabledCategories.toList()))
+        }
+        val exerciseArray = JSONArray()
+        exercises.forEachIndexed { exerciseIndex, exercise ->
+            val item = JSONObject().apply {
+                put("title", exercise.title)
+                put("format", exercise.format)
+                put("category", exercise.category)
+                put("type", exercise.type)
+                put("difficulty", exercise.difficulty)
+                put("active", exercise.active)
+                put("cards", JSONArray(exercise.cards))
+                put("alternatives", JSONArray(exercise.alternatives))
+            }
+            val pictures = JSONArray()
+            exercise.pictures.forEachIndexed { pictureIndex, picture ->
+                val uri = Uri.parse(picture)
+                val imageName = if (picture.startsWith("content://") || picture.startsWith("file://")) {
+                    val extension = when (resolver.getType(uri)?.lowercase()) {
+                        "image/png" -> "png"
+                        "image/webp" -> "webp"
+                        "image/gif" -> "gif"
+                        else -> "jpg"
+                    }
+                    val name = "images/exercise_${exerciseIndex}_picture_${pictureIndex}.$extension"
+                    val bytes = runCatching { resolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                    if (bytes != null) {
+                        zip.putNextEntry(ZipEntry(name))
+                        zip.write(bytes)
+                        zip.closeEntry()
+                        name
+                    } else null
+                } else null
+                pictures.put(if (imageName != null) JSONObject().put("image", imageName) else JSONObject().put("picture", picture))
+            }
+            item.put("pictures", pictures)
+            exerciseArray.put(item)
+        }
+        root.put("exercises", exerciseArray)
+        zip.putNextEntry(ZipEntry("sequences.json"))
+        zip.write(root.toString(2).toByteArray(Charsets.UTF_8))
+        zip.closeEntry()
+    }
+}
+
+private fun importSequencePackage(context: Context, source: Uri): ImportedSequenceContent {
+    val entries = mutableMapOf<String, ByteArray>()
+    ZipInputStream(context.contentResolver.openInputStream(source)?.buffered() ?: throw IllegalArgumentException("No se puede leer el archivo seleccionado.")).use { zip ->
+        while (true) {
+            val entry = zip.nextEntry ?: break
+            if (!entry.isDirectory) {
+                val out = ByteArrayOutputStream()
+                zip.copyTo(out)
+                entries[entry.name] = out.toByteArray()
+            }
+            zip.closeEntry()
+        }
+    }
+    val jsonBytes = entries["sequences.json"] ?: throw IllegalArgumentException("El ZIP no contiene sequences.json.")
+    val root = JSONObject(String(jsonBytes, Charsets.UTF_8))
+    require(root.optString("format") == "aprender-para-jugar-sequences") { "El archivo no es una copia de seguridad de secuencias." }
+    val categoryJson = root.optJSONArray("categories") ?: JSONArray()
+    val categories = (0 until categoryJson.length()).map { categoryJson.getString(it) }.filter { it.isNotBlank() }
+    val disabledJson = root.optJSONArray("disabledCategories") ?: JSONArray()
+    val disabled = (0 until disabledJson.length()).map { disabledJson.getString(it) }.toSet()
+    val array = root.optJSONArray("exercises") ?: JSONArray()
+    val exercises = (0 until array.length()).mapNotNull { index ->
+        val item = array.optJSONObject(index) ?: return@mapNotNull null
+        val cardsJson = item.optJSONArray("cards") ?: JSONArray()
+        val cards = (0 until cardsJson.length()).map { cardsJson.getString(it) }
+        if (cards.size < 2) return@mapNotNull null
+        val alternativesJson = item.optJSONArray("alternatives") ?: JSONArray()
+        val alternatives = (0 until alternativesJson.length()).map { alternativesJson.getString(it) }
+        val picturesJson = item.optJSONArray("pictures") ?: JSONArray()
+        val pictures = (0 until picturesJson.length()).map { pictureIndex ->
+            val picture = picturesJson.optJSONObject(pictureIndex) ?: return@map (picturesJson.optString(pictureIndex))
+            val imageName = picture.optString("image")
+            if (imageName.isNotBlank()) {
+                val bytes = entries[imageName] ?: throw IllegalArgumentException("Falta una imagen de secuencia: $imageName.")
+                val extension = imageName.substringAfterLast('.', "jpg").filter { it.isLetterOrDigit() }.ifBlank { "jpg" }
+                val file = File(context.filesDir, "imported_sequence_${index}_${pictureIndex}.$extension")
+                file.writeBytes(bytes)
+                Uri.fromFile(file).toString()
+            } else picture.optString("picture", "❔")
+        }
+        SequenceExercise(
+            item.optString("title", "Ejercicio"),
+            cards,
+            item.optString("format", "Imagen y texto"),
+            item.optString("category", "Sin categoría"),
+            alternatives,
+            pictures,
+            item.optString("type", "Orden temporal"),
+            item.optString("difficulty", "Normal"),
+            item.optBoolean("active", true)
+        )
+    }
+    require(exercises.isNotEmpty()) { "El archivo no contiene ejercicios de secuencias válidos." }
+    return ImportedSequenceContent(categories, disabled, exercises)
+}
 
 private fun isAccessibilityServiceEnabled(context: Context): Boolean {
     val expected = android.content.ComponentName(context, PlayTimeAccessibilityService::class.java)
@@ -368,15 +477,40 @@ private fun currentDayKey(): String {
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AprenderApp() {
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
+    // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(loadPairs(preferences)) }
+    var wordExercises by remember { mutableStateOf(loadWordExercises(preferences)) }
+    var gameActiveCards by remember { mutableStateOf(preferences.getBoolean("game_active_cards", true)) }
+    var gameActiveSequences by remember { mutableStateOf(preferences.getBoolean("game_active_sequences", true)) }
+    var gameActiveWords by remember { mutableStateOf(preferences.getBoolean("game_active_words", true)) }
+    var wordExerciseCategories by remember {
+        mutableStateOf((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct())
+    }
+    var disabledWordExerciseCategories by remember { mutableStateOf(preferences.getStringSet("disabled_letter_word_categories_v1", emptySet())?.toSet() ?: emptySet()) }
+    var wordLibraryPage by remember { mutableStateOf("list") }
+    var wordLibraryEditingIndex by remember { mutableIntStateOf(-1) }
+    var wordLibraryWordDraft by remember { mutableStateOf("") }
+    var wordLibraryPictureDraft by remember { mutableStateOf("") }
+    var wordLibraryCategoryDraft by remember { mutableStateOf("") }
+    var wordLibraryDifficultyDraft by remember { mutableStateOf("Fácil") }
+    var wordLibraryMessage by remember { mutableStateOf("") }
+    var wordLibraryCategoryMenuExpanded by remember { mutableStateOf(false) }
+    var wordFilterCategory by remember { mutableStateOf("Todas") }
+    var wordFilterDifficulty by remember { mutableStateOf("Todas") }
+    var wordFilterStatus by remember { mutableStateOf("Todos") }
+    var wordPackageMessage by remember { mutableStateOf("") }
+    var wordPendingImportMode by remember { mutableStateOf("replace") }
+    var wordNewCategoryDraft by remember { mutableStateOf("") }
+    var wordCategoryToDelete by remember { mutableStateOf<String?>(null) }
     var wordDraft by remember { mutableStateOf("") }
-    var pictureDraft by remember { mutableStateOf("🐱") }
-    var categoryDraft by remember { mutableStateOf("Primeras palabras") }
+    var pictureDraft by remember { mutableStateOf("") }
+    var categoryDraft by remember { mutableStateOf("") }
     var difficultyDraft by remember { mutableStateOf("Fácil") }
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
@@ -385,7 +519,18 @@ private fun AprenderApp() {
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
-    var sequenceCategoryDraft by remember { mutableStateOf("Rutinas") }
+    var sequenceCategoryDraft by remember { mutableStateOf("") }
+    var sequenceNewCategoryDraft by remember { mutableStateOf("") }
+    var sequenceCategoryMenuExpanded by remember { mutableStateOf(false) }
+    var sequenceCategoryNames by remember {
+        mutableStateOf(
+            (preferences.getString("sequence_categories_v1", null)
+                ?: "")
+                .split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        )
+    }
+    var sequenceCategoryMessage by remember { mutableStateOf("") }
+    var sequenceCategoryToDelete by remember { mutableStateOf<String?>(null) }
     var sequenceTypeDraft by remember { mutableStateOf("Orden temporal") }
     var sequenceDifficultyDraft by remember { mutableStateOf("Normal") }
     var sequenceFilterType by remember { mutableStateOf("Todos") }
@@ -396,16 +541,22 @@ private fun AprenderApp() {
     var sequenceCardsDraft by remember { mutableStateOf(listOf("", "")) }
     var sequenceCardPicturesDraft by remember { mutableStateOf(listOf("🌱", "🌿")) }
     var pendingSequencePictureIndex by remember { mutableIntStateOf(-1) }
+    var pendingCameraTarget by remember { mutableStateOf("pair") }
+    var pendingCameraSequenceIndex by remember { mutableIntStateOf(-1) }
     var sequenceAlternativeDraft by remember { mutableStateOf("") }
     var sequenceEditorMessage by remember { mutableStateOf("") }
     var sequencePlayingExercise by remember { mutableStateOf<SequenceExercise?>(null) }
     var sequencePlayOrder by remember { mutableStateOf(emptyList<Int>()) }
     var sequenceSelectedOrder by remember { mutableStateOf(emptyList<Int>()) }
+    var sequenceWrongAnswers by remember { mutableIntStateOf(0) }
     var sequencePlayMessage by remember { mutableStateOf("") }
     var sequenceChosenCategory by remember { mutableStateOf("") }
     var sequenceChosenDifficulty by remember { mutableStateOf("") }
 
     var packageMessage by remember { mutableStateOf("") }
+    var sequencePackageMessage by remember { mutableStateOf("") }
+    var sequencePendingImportMode by remember { mutableStateOf("replace") }
+    var sequenceLibraryFilterCategoryExpanded by remember { mutableStateOf(false) }
     var pendingImportMode by remember { mutableStateOf("replace") }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -413,6 +564,14 @@ private fun AprenderApp() {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
             pictureDraft = uri.toString()
             libraryMessage = "Imagen seleccionada."
+        }
+    }
+    val wordImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+            wordLibraryPictureDraft = uri.toString()
+            wordLibraryMessage = "Imagen seleccionada."
         }
     }
     val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -436,8 +595,18 @@ private fun AprenderApp() {
                 FileOutputStream(imageFile).use { output ->
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 60, output)
                 }
-                pictureDraft = Uri.fromFile(imageFile).toString()
-                libraryMessage = "Foto añadida y comprimida para ocupar poco espacio."
+                val savedPicture = Uri.fromFile(imageFile).toString()
+                when (pendingCameraTarget) {
+                    "word" -> { wordLibraryPictureDraft = savedPicture; wordLibraryMessage = "Foto añadida." }
+                    "sequence" -> {
+                        val index = pendingCameraSequenceIndex
+                        if (index >= 0) sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
+                            while (it.size <= index) it.add("")
+                            it[index] = savedPicture
+                        }
+                    }
+                    else -> { pictureDraft = savedPicture; libraryMessage = "Foto añadida y comprimida para ocupar poco espacio." }
+                }
             } catch (_: Exception) {
                 libraryMessage = "No se ha podido guardar la foto."
             } finally {
@@ -484,6 +653,7 @@ private fun AprenderApp() {
         onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
     }
     val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
             musicUri = uri.toString()
@@ -556,6 +726,8 @@ private fun AprenderApp() {
     var evaluatedPictures by remember { mutableStateOf(mapOf<String, Boolean>()) }
     var resolved by remember { mutableStateOf(setOf<String>()) }
     var correct by remember { mutableIntStateOf(0) }
+    var resultCorrectCount by remember { mutableIntStateOf(0) }
+    var resultTotalCount by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
@@ -569,15 +741,23 @@ private fun AprenderApp() {
     var newPinDraft by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
-    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "Primeras palabras|Casa y familia|Naturaleza") ?: "").split("|").filter { it.isNotBlank() }) }
+    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
-    var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "Primeras palabras") ?: "Primeras palabras") }
+    var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "") ?: "") }
     var exerciseCategoryMenuExpanded by remember { mutableStateOf(false) }
     var libraryCategoryFilter by remember { mutableStateOf("Todas") }
     var libraryDifficultyFilter by remember { mutableStateOf("Todas") }
     var libraryFilterCategoryExpanded by remember { mutableStateOf(false) }
+    var wordExerciseTarget by remember { mutableStateOf<PairItem?>(null) }
+    var wordExerciseLetterOrder by remember { mutableStateOf(emptyList<Int>()) }
+    var wordExercisePlaced by remember { mutableStateOf(emptyList<Int>()) }
+    var wordExerciseWrongAnswers by remember { mutableIntStateOf(0) }
+    var wordExerciseMessage by remember { mutableStateOf("") }
+    var wordSelectedDifficulty by remember { mutableStateOf("Fácil") }
+    var wordStartMessage by remember { mutableStateOf("") }
+    var wordCategoryCandidates by remember { mutableStateOf(emptyList<String>()) }
 
     val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -611,6 +791,69 @@ private fun AprenderApp() {
         }
     }
 
+    val exportWordPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            wordPackageMessage = try {
+                exportContentPackage(context, uri, wordExercises, wordExerciseCategories, "aprender-para-jugar-words")
+                "Copia de Palabras creada: " + wordExercises.size + " ejercicios."
+            } catch (e: Exception) { "No se pudo exportar: " + (e.message ?: "error de archivo") }
+        }
+    }
+    val importWordPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            wordPackageMessage = try {
+                val imported = importContentPackage(context, uri, "aprender-para-jugar-words")
+                val nextExercises = if (wordPendingImportMode == "replace") imported.pairs else {
+                    val merged = wordExercises.toMutableList()
+                    imported.pairs.forEach { incoming ->
+                        val existingIndex = merged.indexOfFirst { it.word.equals(incoming.word, ignoreCase = true) }
+                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
+                    }
+                    merged
+                }
+                wordExercises = nextExercises
+                saveWordExercises(preferences, nextExercises)
+                val nextCategories = if (wordPendingImportMode == "replace") imported.categories else (wordExerciseCategories + imported.categories).distinctBy { it.lowercase() }
+                wordExerciseCategories = nextCategories
+                preferences.edit().putString("letter_word_categories_v1", nextCategories.joinToString("|")).apply()
+                "Importación de Palabras completada: " + imported.pairs.size + " ejercicios. " + if (wordPendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado."
+            } catch (e: Exception) { "No se pudo importar: " + (e.message ?: "archivo no válido") }
+        }
+    }
+    val exportSequencePackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            sequencePackageMessage = try {
+                exportSequencePackage(context, uri, sequenceExercises, (sequenceExercises.map { it.category } + emptyList()).filter { it.isNotBlank() }.distinct().sorted(), disabledSequenceCategories)
+                "Copia de seguridad creada: ${sequenceExercises.size} ejercicios."
+            } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
+        }
+    }
+    val importSequencePackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            sequencePackageMessage = try {
+                val imported = importSequencePackage(context, uri)
+                val nextExercises = if (sequencePendingImportMode == "replace") imported.exercises else {
+                    val merged = sequenceExercises.toMutableList()
+                    imported.exercises.forEach { incoming ->
+                        val existingIndex = merged.indexOfFirst { it.title.equals(incoming.title, ignoreCase = true) && it.type == incoming.type && it.category.equals(incoming.category, ignoreCase = true) }
+                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
+                    }
+                    merged
+                }
+                val nextDisabled = if (sequencePendingImportMode == "replace") imported.disabledCategories else disabledSequenceCategories + imported.disabledCategories
+                sequenceExercises = nextExercises
+                disabledSequenceCategories = nextDisabled
+                saveSequenceExercises(preferences, nextExercises)
+                preferences.edit().putStringSet("disabled_sequence_categories", nextDisabled).apply()
+                "Importación completada: ${imported.exercises.size} ejercicios. ${if (sequencePendingImportMode == "replace") "Biblioteca de secuencias sustituida." else "Contenido combinado."}"
+            } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
+        }
+    }
+
     val availableExercisePairs = pairs.filter {
         it.active && it.difficulty == difficulty &&
             (mode != "Elegir" || it.category.equals(selectedExerciseCategory, ignoreCase = true))
@@ -624,8 +867,13 @@ private fun AprenderApp() {
     BackHandler(enabled = screen != "home" && screen != "play-time") {
         when (screen) {
             "parent" -> when (parentSection) {
+                "word-library", "word-categories" -> {
+                    if (parentSection == "word-library" && wordLibraryPage == "edit") { wordLibraryPage = "list"; wordLibraryMessage = "" }
+                    else parentSection = "words-settings"
+                }
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
+                "active-games", "music", "rewards", "security", "device-setup", "about" -> parentSection = "menu"
                 "game-modes" -> parentSection = "menu"
                 "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
                 "sequence-library", "sequence-categories" -> parentSection = "sequences-settings"
@@ -637,7 +885,12 @@ private fun AprenderApp() {
                 else -> { screen = "home"; parentSection = "menu" }
             }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
+            "sequences" -> { screen = "home" }
+            "sequence-difficulty" -> { screen = "sequences" }
             "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
+            "word-options" -> { screen = "home"; wordStartMessage = "" }
+            "word-category-select" -> { screen = "word-options"; wordStartMessage = "" }
+            "word-exercise" -> { screen = "word-options"; wordExerciseTarget = null; wordExercisePlaced = emptyList(); wordStartMessage = "" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
             "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
@@ -646,6 +899,35 @@ private fun AprenderApp() {
             "result" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
             else -> { screen = "home"; parentSection = "menu" }
         }
+    }
+
+    fun startWordExercise(category: String?) {
+        val eligible = wordExercises.filter {
+            it.active &&
+            it.category !in disabledWordExerciseCategories &&
+            it.difficulty == wordSelectedDifficulty &&
+            (category == null || it.category == category)
+        }
+        if (eligible.isEmpty()) {
+            wordExerciseTarget = null
+            wordStartMessage = if (category == null) {
+                "No hay ejercicios activos de Palabras con dificultad $wordSelectedDifficulty. Prueba otra dificultad o crea/activa ejercicios en Configuración > Palabras."
+            } else {
+                "No hay ejercicios activos de la categoría $category con dificultad $wordSelectedDifficulty. Prueba otra dificultad o elige otra categoría."
+            }
+            return
+        }
+        val chosen = eligible.random()
+        wordExerciseTarget = chosen
+        wordExerciseLetterOrder = chosen.word.indices.toList().shuffled()
+        if (chosen.word.length > 1 && wordExerciseLetterOrder == chosen.word.indices.toList()) {
+            wordExerciseLetterOrder = wordExerciseLetterOrder.drop(1) + wordExerciseLetterOrder.first()
+        }
+        wordExercisePlaced = emptyList()
+        wordExerciseWrongAnswers = 0
+        wordExerciseMessage = ""
+        wordStartMessage = ""
+        screen = "word-exercise"
     }
 
     fun addEarnedTime(seconds: Int) {
@@ -821,9 +1103,9 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
-                Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de palabras"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
                 item {
@@ -835,6 +1117,14 @@ private fun AprenderApp() {
                     }
                 }
                 item { Text("CONFIGURACIÓN GENERAL", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF667085)) }
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "active-games" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🎮", fontSize = 30.sp)
+                            Column { Text("Juegos activos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Activa o bloquea modalidades durante las pruebas", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "rewards" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -876,8 +1166,39 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else "← Volver al menú de control") } }
                 when (parentSection) {
+                    "active-games" -> {
+                        item { Text("Juegos activos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Desactiva los modos que no quieras incluir en la versión de pruebas. Los modos bloqueados mostrarán un candado y no se podrán abrir.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Checkbox(checked = gameActiveCards, onCheckedChange = { gameActiveCards = it; preferences.edit().putBoolean("game_active_cards", it).apply() })
+                                    Column(Modifier.weight(1f)) { Text("Tarjetas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Parejas de imágenes y palabras", fontSize = 14.sp, color = Color(0xFF667085)) }
+                                    Text(if (gameActiveCards) "Activo" else "🔒", color = if (gameActiveCards) Color(0xFF24733B) else Color(0xFFB3261E))
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Checkbox(checked = gameActiveSequences, onCheckedChange = { gameActiveSequences = it; preferences.edit().putBoolean("game_active_sequences", it).apply() })
+                                    Column(Modifier.weight(1f)) { Text("Secuencias", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Ordenar secuencias y procesos", fontSize = 14.sp, color = Color(0xFF667085)) }
+                                    Text(if (gameActiveSequences) "Activo" else "🔒", color = if (gameActiveSequences) Color(0xFF24733B) else Color(0xFFB3261E))
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Checkbox(checked = gameActiveWords, onCheckedChange = { gameActiveWords = it; preferences.edit().putBoolean("game_active_words", it).apply() })
+                                    Column(Modifier.weight(1f)) { Text("Palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Formar palabras con letras", fontSize = 14.sp, color = Color(0xFF667085)) }
+                                    Text(if (gameActiveWords) "Activo" else "🔒", color = if (gameActiveWords) Color(0xFF24733B) else Color(0xFFB3261E))
+                                }
+                            }
+                        }
+                    }
                     "game-modes" -> {
                         item { Text("Modos de juego", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
@@ -938,7 +1259,7 @@ private fun AprenderApp() {
                             item {
                                 Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-type-$key" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
                                     Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Text("🌱", fontSize = 24.sp)
+                                        Text(when (key) { "temporal" -> "🕒"; "procesos" -> "⚙️"; "causa" -> "🔗"; else -> "🔄" }, fontSize = 24.sp)
                                         Column(Modifier.weight(1f)) { Text(name, fontWeight = FontWeight.Bold); Text(description, fontSize = 13.sp, color = Color(0xFF667085)) }
                                         Text("›", fontSize = 26.sp, color = Color(0xFF39713A))
                                     }
@@ -1004,37 +1325,67 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Biblioteca de ejemplo disponible inicialmente para Orden temporal.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                        item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Cada modalidad tendrá su propia biblioteca de ejercicios.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
                         val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
-                        val sequenceCategories = (sequenceExercises.map { it.category }.filter { it.isNotBlank() } + listOf("Rutinas", "Naturaleza", "Cocina")).distinct().sorted()
+                        val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
+                            exercise.type != "Letras" &&
                             (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
                             (sequenceFilterCategory == "Todas" || exercise.category == sequenceFilterCategory) &&
                             (sequenceFilterDifficulty == "Todas" || exercise.difficulty == sequenceFilterDifficulty) &&
                             (sequenceFilterStatus == "Todos" || if (sequenceFilterStatus == "Activos") exercise.active else !exercise.active)
                         }
-                        item { Text("Biblioteca de secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Biblioteca común para los cuatro tipos. Filtra los ejercicios y activa solo los que quieras ofrecer durante el juego.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Biblioteca de secuencias", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Control parental · Gestiona ejercicios, categorías y su disponibilidad.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
                             Button(onClick = {
                                 sequenceEditingIndex = -1; sequenceTitleDraft = ""; sequenceFormatDraft = "Imagen y texto"
-                                sequenceCategoryDraft = "Rutinas"; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
+                                sequenceCategoryDraft = ""; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
                                 sequenceCardsDraft = listOf("", "", ""); sequenceCardPicturesDraft = listOf("", "", "")
                                 sequenceAlternativeDraft = ""; sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
                             }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear ejercicio") }
                         }
                         item {
+                            Text("Copia de seguridad y traslado", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Exporta e importa únicamente ejercicios, categorías, dificultad, estado y las imágenes de secuencias. No modifica la biblioteca de palabras.", fontSize = 13.sp, color = Color(0xFF667085))
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                exportSequencePackageLauncher.launch("aprender-para-jugar-secuencias.zip")
+                            }, modifier = Modifier.fillMaxWidth()) { Text("📦 Exportar secuencias a ZIP") }
+                            OutlinedButton(onClick = {
+                                sequencePendingImportMode = "replace"
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                importSequencePackageLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("♻️ Importar y sustituir secuencias") }
+                            OutlinedButton(onClick = {
+                                sequencePendingImportMode = "merge"
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                importSequencePackageLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar secuencias") }
+                            if (sequencePackageMessage.isNotBlank()) Text(sequencePackageMessage, fontSize = 14.sp, color = if (sequencePackageMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontWeight = FontWeight.SemiBold)
+                            Text("Filtrar contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                        item {
                             Text("Tipo", fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                (listOf("Todos") + sequenceTypes).forEach { type -> FilterChip(selected = sequenceFilterType == type, onClick = { sequenceFilterType = type }, label = { Text(type, fontSize = 12.sp) }) }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                                (listOf("Todos") + sequenceTypes).forEach { type ->
+                                    FilterChip(selected = sequenceFilterType == type, onClick = { sequenceFilterType = type }, label = { Text(type, softWrap = false) })
+                                }
                             }
                         }
                         item {
                             Text("Categoría", fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                (listOf("Todas") + sequenceCategories).forEach { category -> FilterChip(selected = sequenceFilterCategory == category, onClick = { sequenceFilterCategory = category }, label = { Text(category, fontSize = 12.sp) }) }
+                            androidx.compose.foundation.layout.Box {
+                                OutlinedButton(onClick = { sequenceLibraryFilterCategoryExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("🗂️ Categoría: $sequenceFilterCategory  ▾", maxLines = 1)
+                                }
+                                DropdownMenu(expanded = sequenceLibraryFilterCategoryExpanded, onDismissRequest = { sequenceLibraryFilterCategoryExpanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+                                    (listOf("Todas") + sequenceCategories).forEach { category ->
+                                        DropdownMenuItem(text = { Text(category) }, onClick = { sequenceFilterCategory = category; sequenceLibraryFilterCategoryExpanded = false })
+                                    }
+                                }
                             }
                         }
                         item {
@@ -1072,6 +1423,11 @@ private fun AprenderApp() {
                                                 saveSequenceExercises(preferences, sequenceExercises)
                                             })
                                             Text(if (exercise.active) "Activo" else "Inactivo", fontSize = 11.sp)
+                                            OutlinedButton(onClick = {
+                                                sequenceExercises = sequenceExercises.filterIndexed { currentIndex, _ -> currentIndex != index }
+                                                saveSequenceExercises(preferences, sequenceExercises)
+                                                sequenceCategoryMessage = "Ejercicio eliminado."
+                                            }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text("Eliminar", fontSize = 12.sp) }
                                         }
                                     }
                                 }
@@ -1079,22 +1435,88 @@ private fun AprenderApp() {
                         }
                     }
                     "sequence-categories", "sequence-categories-temporal", "sequence-categories-procesos", "sequence-categories-causa", "sequence-categories-ciclos" -> {
-                        val sequenceCategories = (sequenceExercises.map { it.category }.filter { it.isNotBlank() } + listOf("Rutinas", "Naturaleza", "Cocina")).distinct().sorted()
+                        val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         item { Text("Categorías de secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Las categorías son comunes a todos los tipos. Al desactivar una, sus ejercicios no aparecerán en las partidas, aunque sigan guardados en la biblioteca.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Crea y organiza categorías temáticas compartidas por todos los tipos de secuencia. Desactivar una categoría mantiene sus ejercicios guardados, pero evita que aparezcan en las partidas.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            OutlinedTextField(
+                                value = sequenceNewCategoryDraft,
+                                onValueChange = { sequenceNewCategoryDraft = it; sequenceCategoryMessage = "" },
+                                label = { Text("Nueva categoría") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                            Button(onClick = {
+                                val name = sequenceNewCategoryDraft.trim()
+                                when {
+                                    name.isBlank() -> sequenceCategoryMessage = "Escribe un nombre para la categoría."
+                                    sequenceCategories.any { it.equals(name, ignoreCase = true) } -> sequenceCategoryMessage = "Ya existe una categoría con ese nombre."
+                                    else -> {
+                                        sequenceCategoryNames = (sequenceCategoryNames + name).distinct()
+                                        preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
+                                        sequenceNewCategoryDraft = ""
+                                        sequenceCategoryMessage = "Categoría creada."
+                                    }
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear categoría") }
+                            if (sequenceCategoryMessage.isNotBlank()) Text(sequenceCategoryMessage, color = if (sequenceCategoryMessage == "Categoría creada.") Color(0xFF24733B) else Color(0xFFB3261E), fontSize = 13.sp)
+                        }
                         sequenceCategories.forEach { category ->
                             item {
                                 val enabled = category !in disabledSequenceCategories
                                 Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = if (enabled) Color.White else Color(0xFFF2F4F7))) {
-                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(category, fontWeight = FontWeight.Bold)
-                                            Text("${sequenceExercises.count { it.category == category }} ejercicios · ${sequenceExercises.count { it.category == category && it.active }} activos", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(category, fontWeight = FontWeight.Bold)
+                                                Text("${sequenceExercises.count { it.category == category }} ejercicios · ${sequenceExercises.count { it.category == category && it.active }} activos", fontSize = 12.sp, color = Color(0xFF667085))
+                                            }
+                                            Switch(checked = enabled, onCheckedChange = { checked ->
+                                                disabledSequenceCategories = if (checked) disabledSequenceCategories - category else disabledSequenceCategories + category
+                                                preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
+                                            })
                                         }
-                                        Switch(checked = enabled, onCheckedChange = { checked ->
-                                            disabledSequenceCategories = if (checked) disabledSequenceCategories - category else disabledSequenceCategories + category
-                                            preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
-                                        })
+                                        if (sequenceCategoryToDelete.equals(category, ignoreCase = true)) {
+                                            val assignedCount = sequenceExercises.count { it.category.equals(category, ignoreCase = true) }
+                                            Text("Borrar categoría y contenido", fontWeight = FontWeight.SemiBold)
+                                            Text(
+                                                "Esta opción eliminará también los $assignedCount ejercicios de esta categoría.",
+                                                fontSize = 13.sp,
+                                                color = Color(0xFFB3261E)
+                                            )
+                                            Button(onClick = {
+                                                sequenceExercises = sequenceExercises.filterNot { it.category.equals(category, ignoreCase = true) }
+                                                saveSequenceExercises(preferences, sequenceExercises)
+                                                sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
+                                                preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
+                                                disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
+                                                preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
+                                                sequenceCategoryToDelete = null
+                                                sequenceCategoryMessage = "Categoría y ejercicios eliminados."
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
+                                            Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.SemiBold)
+                                            val destinations = sequenceCategories.filterNot { it.equals(category, ignoreCase = true) }
+                                            destinations.forEach { destination ->
+                                                OutlinedButton(onClick = {
+                                                    sequenceExercises = sequenceExercises.map {
+                                                        if (it.category.equals(category, ignoreCase = true)) it.copy(category = destination) else it
+                                                    }
+                                                    saveSequenceExercises(preferences, sequenceExercises)
+                                                    sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
+                                                    preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
+                                                    disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
+                                                    preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
+                                                    sequenceCategoryToDelete = null
+                                                    sequenceCategoryMessage = "Categoría eliminada; ejercicios movidos a $destination."
+                                                }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                            }
+                                            OutlinedButton(onClick = {
+                                                sequenceCategoryToDelete = null
+                                                sequenceCategoryMessage = "Operación cancelada. No se ha borrado nada."
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                        } else {
+                                            OutlinedButton(onClick = { sequenceCategoryToDelete = category; sequenceCategoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
+                                        }
                                     }
                                 }
                             }
@@ -1117,7 +1539,18 @@ private fun AprenderApp() {
                         item {
                             Text("Tipo de secuencia", fontWeight = FontWeight.Bold)
                             listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
-                                OutlinedButton(onClick = { sequenceTypeDraft = type }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceTypeDraft == type) "✓ $type" else type) }
+                                OutlinedButton(onClick = {
+                                    sequenceTypeDraft = type
+                                    if (type == "Letras") {
+                                        sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty())
+                                        sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty())
+                                        sequenceAlternativeDraft = ""
+                                        sequenceFormatDraft = "Imagen y texto"
+                                    } else if (sequenceCardsDraft.size < 2) {
+                                        sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty(), "", "")
+                                        sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty(), "", "")
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceTypeDraft == type) "✓ $type" else type) }
                             }
                         }
                         item {
@@ -1125,11 +1558,25 @@ private fun AprenderApp() {
                             listOf("Fácil", "Normal", "Difícil").forEach { level ->
                                 OutlinedButton(onClick = { sequenceDifficultyDraft = level }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceDifficultyDraft == level) "✓ $level" else level) }
                             }
+                            Text("Cada niño aprende a su ritmo. La dificultad indica la complejidad de la actividad y es orientativa. Elige el nivel que mejor se adapte a sus necesidades y experiencia.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
-                        item { OutlinedTextField(value = sequenceCategoryDraft, onValueChange = { sequenceCategoryDraft = it }, label = { Text("Categoría temática") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                         item {
-                            Text("Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
-                            Text("Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text("Categoría temática", fontWeight = FontWeight.Bold)
+                            androidx.compose.foundation.layout.Box {
+                                OutlinedButton(onClick = { sequenceCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("🗂️ $sequenceCategoryDraft  ▾", maxLines = 1)
+                                }
+                                DropdownMenu(expanded = sequenceCategoryMenuExpanded, onDismissRequest = { sequenceCategoryMenuExpanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+                                    (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted().forEach { category ->
+                                        DropdownMenuItem(text = { Text(category) }, onClick = { sequenceCategoryDraft = category; sequenceCategoryMenuExpanded = false })
+                                    }
+                                }
+                            }
+                            Text("Las categorías se crean y gestionan desde el menú Categorías de la biblioteca.", fontSize = 12.sp, color = Color(0xFF667085))
+                        }
+                        item {
+                            Text(if (sequenceTypeDraft == "Letras") "Palabra e imagen" else "Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
+                            Text(if (sequenceTypeDraft == "Letras") "Escribe la palabra que el niño tendrá que formar. Se utilizará una única imagen como pista." else "Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         sequenceCardsDraft.forEachIndexed { index, card ->
                             item {
@@ -1138,9 +1585,9 @@ private fun AprenderApp() {
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text("${index + 1}.", fontWeight = FontWeight.Bold)
-                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text("Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
-                                        OutlinedButton(onClick = {
+                                        if (sequenceTypeDraft != "Letras") Text("${index + 1}.", fontWeight = FontWeight.Bold)
+                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text(if (sequenceTypeDraft == "Letras") "Palabra objetivo" else "Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
+                                        if (sequenceTypeDraft != "Letras") OutlinedButton(onClick = {
                                             if (sequenceCardsDraft.size > 2) {
                                                 sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) }
                                                 sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also { if (index < it.size) it.removeAt(index) }
@@ -1177,7 +1624,7 @@ private fun AprenderApp() {
                                                         Text("Sin imagen", fontSize = 10.sp, color = Color(0xFF667085))
                                                     }
                                                 } else {
-                                                    Text(picture, fontSize = 38.sp)
+                                                    Text("Imagen no válida", fontSize = 10.sp, color = Color(0xFF667085))
                                                 }
                                             }
                                         }
@@ -1187,7 +1634,13 @@ private fun AprenderApp() {
                                                 pendingSequencePictureIndex = index
                                                 preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                                 sequenceImagePicker.launch(arrayOf("image/*"))
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen") }
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
+                                            OutlinedButton(onClick = {
+                                                pendingCameraTarget = "sequence"
+                                                pendingCameraSequenceIndex = index
+                                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                                cameraLauncher.launch(null)
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto con la cámara") }
                                             if (picture.isNotBlank()) {
                                                 OutlinedButton(onClick = {
                                                     sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
@@ -1203,11 +1656,11 @@ private fun AprenderApp() {
                         }
                         item {
                             OutlinedButton(onClick = {
-                                if (sequenceCardsDraft.size < 6) {
+                                if (sequenceCardsDraft.size < 6 && sequenceTypeDraft != "Letras") {
                                     sequenceCardsDraft = sequenceCardsDraft + ""
                                     sequenceCardPicturesDraft = sequenceCardPicturesDraft + ""
                                 }
-                            }, enabled = sequenceCardsDraft.size < 6, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
+                            }, enabled = sequenceCardsDraft.size < 6 && sequenceTypeDraft != "Letras", modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
                         }
                         item {
                             Text("Soluciones alternativas (opcional)", fontWeight = FontWeight.Bold)
@@ -1227,14 +1680,15 @@ private fun AprenderApp() {
                                 }
                                 when {
                                     sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
-                                    cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
+                                    sequenceCategoryDraft.isBlank() -> sequenceEditorMessage = "Crea o selecciona una categoría antes de guardar el ejercicio."
+                                    (if (sequenceTypeDraft == "Letras") cleanCards.size != 1 else cleanCards.size < 2) || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = if (sequenceTypeDraft == "Letras") "Escribe la palabra que se formará con las letras." else "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
-                                     sequenceFormatDraft == "Solo imágenes" && sequenceCardPicturesDraft.take(cleanCards.size).any { it.isBlank() } -> sequenceEditorMessage = "En el formato «Solo imágenes», selecciona una imagen para cada tarjeta."
-                                    alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
+                                     sequenceTypeDraft != "Letras" && sequenceCardPicturesDraft.take(cleanCards.size).any { it.isBlank() } -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta; todos los ejercicios deben tener texto e imagen."
+                                    sequenceTypeDraft != "Letras" && alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
                                         val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
                                         val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
-                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, sequenceExercises.getOrNull(sequenceEditingIndex)?.active ?: true)
+                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim(), alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, sequenceExercises.getOrNull(sequenceEditingIndex)?.active ?: true)
                                         val updatedExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
                                         }
@@ -1250,7 +1704,7 @@ private fun AprenderApp() {
                     "sequence-categories-temporal" -> {
                         item { Text("Categorías · Orden temporal", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Las categorías organizan los ejercicios de esta modalidad y no se comparten con Procesos, Causa y consecuencia ni Ciclos.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        listOf("Rutinas", "Naturaleza", "Cocina").forEach { category ->
+                        sequenceCategoryNames.forEach { category ->
                             item {
                                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1261,7 +1715,7 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        item { Text("En esta primera versión las categorías se muestran como ejemplo; su edición se añadirá después.", fontSize = 12.sp, color = Color(0xFF667085)) }
+                        item { Text("Crea tus propias categorías para organizar los ejercicios.", fontSize = 12.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
                         val typeName = when (parentSection) {
@@ -1284,7 +1738,7 @@ private fun AprenderApp() {
                     "words-settings" -> {
                         item { Text("Configurar Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "word-library"; wordLibraryPage = "list" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🖼️", fontSize = 26.sp)
                                     Column { Text("Biblioteca de palabras", fontWeight = FontWeight.Bold); Text("Palabras e imágenes que servirán como pistas", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -1292,7 +1746,7 @@ private fun AprenderApp() {
                             }
                         }
                         item {
-                            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "word-categories" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🗂️", fontSize = 26.sp)
                                     Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organización del vocabulario por temas", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -1301,10 +1755,181 @@ private fun AprenderApp() {
                         }
                         item {
                             androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Mecánica prevista", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("El niño verá una imagen, tocará letras y las colocará en las posiciones de la palabra. La dificultad y el contenido se configurarán aquí cuando se implemente el juego.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("Dificultad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("La dificultad de cada ejercicio se configura en la ficha de cada palabra.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("La biblioteca y las categorías de Palabras son independientes de Tarjetas y Secuencias.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
-                        item { Text("Configuración en fase beta: la biblioteca y los controles aún no están conectados.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                    }
+                    "word-library" -> {
+                        item { Text(if (wordLibraryPage == "list") "Ejercicios de Palabras" else if (wordLibraryEditingIndex < 0) "Nuevo ejercicio de Palabras" else "Editar ejercicio de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        if (wordLibraryPage == "list") {
+                            item { Text("Esta biblioteca es independiente de Parejas y Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                            item {
+                                Text("Copia de seguridad y traslado", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                OutlinedButton(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); exportWordPackageLauncher.launch("aprender-para-jugar-palabras.zip") }, modifier = Modifier.fillMaxWidth()) { Text("📦 Exportar palabras a ZIP") }
+                                OutlinedButton(onClick = { wordPendingImportMode = "replace"; preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); importWordPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("♻️ Importar y sustituir palabras") }
+                                OutlinedButton(onClick = { wordPendingImportMode = "merge"; preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); importWordPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar palabras") }
+                                if (wordPackageMessage.isNotBlank()) Text(wordPackageMessage, color = if (wordPackageMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 13.sp)
+                            }
+                            item { Button(onClick = { wordLibraryEditingIndex = -1; wordLibraryWordDraft = ""; wordLibraryPictureDraft = ""; wordLibraryCategoryDraft = wordExerciseCategories.firstOrNull() ?: ""; wordLibraryDifficultyDraft = "Fácil"; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ejercicio") } }
+                            if (wordExercises.isEmpty()) item { Text("Todavía no hay ejercicios de Palabras. Añade uno con su palabra, imagen y categoría para probarlo.", color = Color(0xFF667085)) }
+                            item {
+                                Text("Filtrar ejercicios", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Categoría", fontWeight = FontWeight.SemiBold)
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    (listOf("Todas") + wordExerciseCategories).forEach { category ->
+                                        FilterChip(selected = wordFilterCategory == category, onClick = { wordFilterCategory = category }, label = { Text(category) })
+                                    }
+                                }
+                                Text("Dificultad", fontWeight = FontWeight.SemiBold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("Todas", "Fácil", "Normal", "Difícil").forEach { level -> FilterChip(selected = wordFilterDifficulty == level, onClick = { wordFilterDifficulty = level }, label = { Text(level) }) }
+                                }
+                                Text("Estado", fontWeight = FontWeight.SemiBold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("Todos", "Activos", "Inactivos").forEach { status -> FilterChip(selected = wordFilterStatus == status, onClick = { wordFilterStatus = status }, label = { Text(status) }) }
+                                }
+                            }
+                            val visibleWordExercises = wordExercises.withIndex().filter { (_, exercise) ->
+                                (wordFilterCategory == "Todas" || exercise.category == wordFilterCategory) &&
+                                (wordFilterDifficulty == "Todas" || exercise.difficulty == wordFilterDifficulty) &&
+                                (wordFilterStatus == "Todos" || if (wordFilterStatus == "Activos") exercise.active else !exercise.active)
+                            }
+                            if (visibleWordExercises.isEmpty() && wordExercises.isNotEmpty()) item { Text("No hay ejercicios que coincidan con estos filtros.", color = Color(0xFF667085)) }
+                            visibleWordExercises.forEach { indexed ->
+                                val index = indexed.index
+                                val exercise = indexed.value
+                                item {
+                                    Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(exercise.word, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                if (exercise.picture.startsWith("content://") || exercise.picture.startsWith("file://")) {
+                                                    AndroidView(
+                                                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP; layoutParams = ViewGroup.LayoutParams(112, 112) } },
+                                                        update = { view -> try { view.setImageURI(Uri.parse(exercise.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                                                        modifier = Modifier.width(72.dp).height(72.dp).clipToBounds()
+                                                    )
+                                                } else {
+                                                    Box(Modifier.width(72.dp).height(72.dp).background(Color(0xFFF2F4F7), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                                                        Text("Sin imagen", fontSize = 11.sp, color = Color(0xFF667085))
+                                                    }
+                                                }
+                                                Column(Modifier.weight(1f)) {
+                                                    Text("${exercise.category} · ${exercise.difficulty}", color = Color(0xFF667085))
+                                                    Text(if (exercise.active) "Activo" else "Inactivo", color = if (exercise.active) Color(0xFF24733B) else Color(0xFF667085), fontSize = 12.sp)
+                                                }
+                                            }
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                OutlinedButton(onClick = { wordLibraryEditingIndex = index; wordLibraryWordDraft = exercise.word; wordLibraryPictureDraft = exercise.picture; wordLibraryCategoryDraft = exercise.category; wordLibraryDifficultyDraft = exercise.difficulty; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar") }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; saveWordExercises(preferences, wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.filterIndexed { i, _ -> i != index }; saveWordExercises(preferences, wordExercises) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            item { OutlinedTextField(value = wordLibraryWordDraft, onValueChange = { wordLibraryWordDraft = it }, label = { Text("Palabra que formará") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                            item {
+                                Text("Imagen de pista", fontWeight = FontWeight.Bold)
+                                Text("Selecciona una imagen de la galería o haz una foto con la cámara.", fontSize = 13.sp, color = Color(0xFF667085))
+                                if (wordLibraryPictureDraft.startsWith("content://") || wordLibraryPictureDraft.startsWith("file://")) {
+                                    AndroidView(
+                                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) } },
+                                        update = { view -> try { view.setImageURI(Uri.parse(wordLibraryPictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                                        modifier = Modifier.fillMaxWidth().height(180.dp)
+                                    )
+                                } else {
+                                    Text("Todavía no hay ninguna imagen seleccionada.", color = Color(0xFF667085))
+                                }
+                                OutlinedButton(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); wordImagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text("🖼️ Elegir imagen de la galería") }
+                                OutlinedButton(onClick = {
+                                    pendingCameraTarget = "word"
+                                    preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                    cameraLauncher.launch(null)
+                                }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto con la cámara") }
+                                if (wordLibraryPictureDraft.isNotBlank()) {
+                                    OutlinedButton(onClick = { wordLibraryPictureDraft = ""; wordLibraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Quitar imagen") }
+                                }
+                            }
+                            item {
+                                Text("Categoría", fontWeight = FontWeight.Bold)
+                                androidx.compose.foundation.layout.Box {
+                                    OutlinedButton(onClick = { wordLibraryCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) { Text(if (wordLibraryCategoryDraft.isBlank()) "Seleccionar categoría" else wordLibraryCategoryDraft) }
+                                    DropdownMenu(expanded = wordLibraryCategoryMenuExpanded, onDismissRequest = { wordLibraryCategoryMenuExpanded = false }) {
+                                        wordExerciseCategories.forEach { name -> DropdownMenuItem(text = { Text(name) }, onClick = { wordLibraryCategoryDraft = name; wordLibraryCategoryMenuExpanded = false }) }
+                                    }
+                                }
+                            }
+                            item {
+                                Text("Dificultad", fontWeight = FontWeight.Bold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("Fácil", "Normal", "Difícil").forEach { level -> FilterChip(selected = wordLibraryDifficultyDraft == level, onClick = { wordLibraryDifficultyDraft = level }, label = { Text(level) }) }
+                                }
+                            }
+                            item {
+                                if (wordLibraryMessage.isNotBlank()) Text(wordLibraryMessage, color = Color(0xFFB3261E))
+                                Button(onClick = {
+                                    val cleanWord = wordLibraryWordDraft.trim()
+                                    when {
+                                        cleanWord.isBlank() -> wordLibraryMessage = "Escribe una palabra."
+                                        cleanWord.any { it.isWhitespace() } -> wordLibraryMessage = "Para empezar, introduce una sola palabra sin espacios."
+                                        wordLibraryPictureDraft.isBlank() -> wordLibraryMessage = "Selecciona una imagen de pista."
+                                        wordLibraryCategoryDraft.isBlank() || wordLibraryCategoryDraft !in wordExerciseCategories -> wordLibraryMessage = "Selecciona una categoría creada en el menú Categorías."
+                                        wordExercises.withIndex().any { (i, e) -> i != wordLibraryEditingIndex && e.word.equals(cleanWord, true) } -> wordLibraryMessage = "Ya existe un ejercicio con esa palabra."
+                                        else -> {
+                                            val entry = PairItem(cleanWord, wordLibraryPictureDraft.trim(), wordLibraryCategoryDraft, wordLibraryDifficultyDraft, true)
+                                            wordExercises = if (wordLibraryEditingIndex < 0) wordExercises + entry else wordExercises.toMutableList().also { it[wordLibraryEditingIndex] = entry }
+                                            saveWordExercises(preferences, wordExercises)
+                                            wordLibraryPage = "list"; wordLibraryMessage = ""
+                                        }
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()) { Text("Guardar ejercicio") }
+                            }
+                            item { OutlinedButton(onClick = { wordLibraryPage = "list"; wordLibraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
+                        }
+                    }
+                    "word-categories" -> {
+                        item { Text("Categorías de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Estas categorías solo afectan a los ejercicios de Palabras; no modifican Tarjetas ni Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { OutlinedTextField(value = wordNewCategoryDraft, onValueChange = { wordNewCategoryDraft = it; wordLibraryMessage = "" }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item { Button(onClick = {
+                            val name = wordNewCategoryDraft.trim()
+                            when {
+                                name.isBlank() -> wordLibraryMessage = "Escribe un nombre."
+                                wordExerciseCategories.any { it.equals(name, true) } -> wordLibraryMessage = "Esa categoría ya existe."
+                                else -> { wordExerciseCategories = wordExerciseCategories + name; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordNewCategoryDraft = ""; wordLibraryMessage = "Categoría creada." }
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear categoría") } }
+                        if (wordLibraryMessage.isNotBlank()) item { Text(wordLibraryMessage, color = Color(0xFF24733B)) }
+                        wordExerciseCategories.forEach { category ->
+                            item {
+                                Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Column(Modifier.weight(1f)) { Text(category, fontWeight = FontWeight.Bold); Text("${wordExercises.count { it.category == category }} ejercicios", color = Color(0xFF667085)) }
+                                            Switch(checked = category !in disabledWordExerciseCategories, onCheckedChange = { enabled ->
+                                                disabledWordExerciseCategories = if (enabled) disabledWordExerciseCategories - category else disabledWordExerciseCategories + category
+                                                preferences.edit().putStringSet("disabled_letter_word_categories_v1", disabledWordExerciseCategories).apply()
+                                            })
+                                        }
+                                        if (wordCategoryToDelete == category) {
+                                            Text("Borrar categoría y contenido", fontWeight = FontWeight.Bold)
+                                            Text("Se eliminarán también los ${wordExercises.count { it.category == category }} ejercicios asignados.", color = Color(0xFFB3261E))
+                                            Button(onClick = { wordExercises = wordExercises.filterNot { it.category == category }; saveWordExercises(preferences, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
+                                            Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.Bold)
+                                            wordExerciseCategories.filterNot { it == category }.forEach { destination ->
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.map { if (it.category == category) it.copy(category = destination) else it }; saveWordExercises(preferences, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                            }
+                                            OutlinedButton(onClick = { wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                        } else {
+                                            OutlinedButton(onClick = { wordCategoryToDelete = category }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     "cards-settings" -> {
                         item { Text("Configurar Tarjetas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -1451,6 +2076,7 @@ private fun AprenderApp() {
                                     .putBoolean("content_picker_active", true)
                                     .putBoolean("parent_area_active", true)
                                     .commit()
+                                pendingCameraTarget = "pair"
                                 cameraLauncher.launch(null)
                             }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
                             Button(onClick = {
@@ -1514,7 +2140,7 @@ private fun AprenderApp() {
                                             }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
                                         }
                                         OutlinedButton(onClick = { categoryToRemove = ""; categoryMessage = "Operación cancelada. No se ha borrado nada." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-                                    } else if (name !in listOf("Primeras palabras", "Casa y familia", "Naturaleza")) {
+                                    } else {
                                         OutlinedButton(onClick = { categoryToRemove = name; categoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                     }
                                 }
@@ -1608,7 +2234,7 @@ private fun AprenderApp() {
                         Text("Música de fondo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("La música comienza al abrir la aplicación y se repite en bucle. Usa el altavoz de la pantalla principal para silenciar o activar todo el sonido.", fontSize = 14.sp, color = Color(0xFF667085))
                         Text(if (musicUri.isNullOrBlank()) "Música predeterminada: Música Infantil 2." else "Archivo de música personalizado seleccionado.", fontWeight = FontWeight.SemiBold)
-                        Button(onClick = { musicPicker.launch(arrayOf("audio/mpeg", "audio/mp3", "audio/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir archivo MP3") }
+                        Button(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); musicPicker.launch(arrayOf("audio/mpeg", "audio/mp3", "audio/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir archivo MP3") }
                         OutlinedButton(onClick = {
                             musicUri = null
                             preferences.edit().remove("background_music_uri").apply()
@@ -1836,6 +2462,8 @@ private fun AprenderApp() {
                                         else -> (correct * 2 - wrong).coerceAtLeast(0)
                                     }
                                     addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
+                                    resultCorrectCount = correct
+                                    resultTotalCount = pairCount
                                     screen = "result"
                                 }
                             }
@@ -1852,6 +2480,171 @@ private fun AprenderApp() {
             Text("Parejas resueltas: ${resolved.size}/$pairCount", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
             OutlinedButton(onClick = { screen = "home" }) { Text("Salir del ejercicio") }
+        }
+    } else if (screen == "word-options") {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            OutlinedButton(onClick = { screen = "home"; wordStartMessage = "" }) { Text("← Volver al inicio") }
+            Text("Palabras", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Elige dificultad y cómo seleccionar la categoría.", fontSize = 17.sp, color = Color(0xFF667085))
+            Text("Dificultad", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Fácil" to easyRewardMinutes, "Normal" to normalRewardMinutes, "Difícil" to hardRewardMinutes).forEach { (level, minutes) ->
+                    Card(
+                        Modifier.weight(1f).clickable { wordSelectedDifficulty = level; wordStartMessage = "" },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = if (wordSelectedDifficulty == level) Color(0xFFE8F0FE) else Color.White),
+                        border = androidx.compose.foundation.BorderStroke(if (wordSelectedDifficulty == level) 2.dp else 1.dp, if (wordSelectedDifficulty == level) Color(0xFF3E6FA8) else Color(0xFFE4E0D8))
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(level, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text("$minutes min", fontSize = 14.sp, color = Color(0xFF667085))
+                        }
+                    }
+                }
+            }
+            Card(
+                Modifier.fillMaxWidth().clickable { startWordExercise(null) },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0D9)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE4C07B))
+            ) {
+                Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("🎲", fontSize = 38.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Al azar", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7B4B16))
+                        Text("Elegir una categoría disponible al azar", fontSize = 15.sp, color = Color(0xFF795F43))
+                    }
+                    Text("›", fontSize = 30.sp, color = Color(0xFFB7791F))
+                }
+            }
+            Card(
+                Modifier.fillMaxWidth().clickable {
+                    wordCategoryCandidates = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
+                        .map { it.category }.distinct().sorted()
+                    wordStartMessage = ""
+                    screen = "word-category-select"
+                },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F4E9)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA4D3B2))
+            ) {
+                Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("🗂️", fontSize = 38.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Elegir categoría", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF286344))
+                        Text("Selecciona el tema que quieres practicar", fontSize = 15.sp, color = Color(0xFF52725F))
+                    }
+                    Text("›", fontSize = 30.sp, color = Color(0xFF27804D))
+                }
+            }
+            if (wordStartMessage.isNotBlank()) Text(wordStartMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
+        }
+    } else if (screen == "word-category-select") {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = { screen = "word-options"; wordStartMessage = "" }) { Text("← Volver a Palabras") }
+            Text("Elegir categoría", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Dificultad seleccionada: $wordSelectedDifficulty", fontSize = 16.sp, color = Color(0xFF667085))
+            val availableWordCategories = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
+                .map { it.category }.distinct().sorted()
+            if (availableWordCategories.isEmpty()) {
+                Text("No hay categorías con ejercicios activos de dificultad $wordSelectedDifficulty. Vuelve atrás y prueba otra dificultad o crea/activa ejercicios.", color = Color(0xFFB3261E), fontSize = 16.sp)
+            } else {
+                availableWordCategories.forEach { category ->
+                    val count = wordExercises.count { it.active && it.category == category && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
+                    Card(
+                        Modifier.fillMaxWidth().clickable { startWordExercise(category) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD8DDE5))
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(Modifier.weight(1f)) {
+                                Text(category, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                Text("$count ejercicios disponibles", color = Color(0xFF667085), fontSize = 14.sp)
+                            }
+                            Text("›", fontSize = 26.sp, color = Color(0xFF3973AC))
+                        }
+                    }
+                }
+            }
+            if (wordStartMessage.isNotBlank()) Text(wordStartMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
+        }
+    } else if (screen == "word-exercise") {
+        val target = wordExerciseTarget
+        if (target == null) {
+            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Palabras", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+                Spacer(Modifier.height(16.dp))
+                Text(wordExerciseMessage, fontSize = 17.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(Modifier.height(20.dp))
+                OutlinedButton(onClick = { screen = "home" }, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
+            }
+        } else {
+            val targetWord = target.word
+            val complete = wordExercisePlaced.size == targetWord.length
+            Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Palabras", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+                    OutlinedButton(onClick = { wordExerciseTarget = null; screen = "home" }) { Text("Salir") }
+                }
+                Text("Forma la palabra", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                if (target.picture.startsWith("content://") || target.picture.startsWith("file://")) {
+                    AndroidView(
+                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) } },
+                        update = { view -> try { view.setImageURI(Uri.parse(target.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                        modifier = Modifier.fillMaxWidth().height(170.dp)
+                    )
+                } else {
+                    Text(target.picture, fontSize = 76.sp)
+                }
+                Text("Toca las letras en el orden correcto.", fontSize = 15.sp, color = Color(0xFF667085))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    targetWord.indices.forEach { position ->
+                        Card(
+                            modifier = Modifier.weight(1f).height(54.dp),
+                            colors = CardDefaults.cardColors(containerColor = if (position < wordExercisePlaced.size) Color(0xFFE2F4DF) else Color.White),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB7C8B2))
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(wordExercisePlaced.getOrNull(position)?.let { targetWord[it].uppercase() } ?: "·", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), maxItemsInEachRow = 5) {
+                    wordExerciseLetterOrder.forEach { letterIndex ->
+                        val alreadyPlaced = letterIndex in wordExercisePlaced
+                        OutlinedButton(
+                            onClick = {
+                                val expected = targetWord.getOrNull(wordExercisePlaced.size)
+                                val chosenLetter = targetWord.getOrNull(letterIndex)
+                                if (expected != null && chosenLetter != null && expected.equals(chosenLetter, ignoreCase = true)) {
+                                    val next = wordExercisePlaced + letterIndex
+                                    wordExercisePlaced = next
+                                    wordExerciseMessage = if (next.size == targetWord.length) "¡Palabra completada!" else "¡Bien! Sigue con la siguiente letra."
+                                    if (next.size == targetWord.length) {
+                                        val baseReward = when (target.difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
+                                        val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
+                                        val rewardPercent = (100 - wordExerciseWrongAnswers * penaltyPercent).coerceAtLeast(20)
+                                        addEarnedTime(baseReward * rewardPercent / 100)
+                                        resultCorrectCount = (targetWord.length - wordExerciseWrongAnswers).coerceIn(0, targetWord.length)
+                                        resultTotalCount = targetWord.length
+                                        correct = if (wordExerciseWrongAnswers == 0) targetWord.length else resultCorrectCount
+                                        screen = "result"
+                                    }
+                                } else {
+                                    wordExerciseWrongAnswers += 1
+                                    wordExerciseMessage = "Prueba con otra letra."
+                                }
+                            },
+                            enabled = !complete && !alreadyPlaced,
+                            modifier = Modifier.height(58.dp)
+                        ) { Text(targetWord.getOrNull(letterIndex)?.uppercase() ?: "", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
+                Text(wordExerciseMessage, fontSize = 16.sp, color = if (wordExerciseMessage.startsWith("¡")) Color(0xFF24733B) else Color(0xFF667085))
+                Text("Dificultad: ${target.difficulty}", fontSize = 13.sp, color = Color(0xFF667085))
+            }
         }
     } else if (screen == "play-time") {
         Column(
@@ -1882,17 +2675,17 @@ private fun AprenderApp() {
         }
     } else if (screen == "result") {
         val rewardIcon = when {
-            correct == 0 -> "😢"
-            correct == pairCount -> "🏆"
-            correct * 2 < pairCount -> "⭐"
-            correct * 2 == pairCount -> "⭐⭐"
+            resultCorrectCount == 0 -> "😢"
+            resultCorrectCount == resultTotalCount -> "🏆"
+            resultCorrectCount * 2 < resultTotalCount -> "⭐"
+            resultCorrectCount * 2 == resultTotalCount -> "⭐⭐"
             else -> "⭐⭐⭐"
         }
         val rewardMessage = when {
-            correct == 0 -> "¡Vamos a intentarlo otra vez!"
-            correct == pairCount -> "¡PERFECTO! ¡Eres un campeón!"
-            correct * 2 < pairCount -> "¡Buen intento! Sigue practicando"
-            correct * 2 == pairCount -> "¡Bien hecho! Has conseguido la mitad"
+            resultCorrectCount == 0 -> "¡Vamos a intentarlo otra vez!"
+            resultCorrectCount == resultTotalCount -> "¡PERFECTO! ¡Eres un campeón!"
+            resultCorrectCount * 2 < resultTotalCount -> "¡Buen intento! Sigue practicando"
+            resultCorrectCount * 2 == resultTotalCount -> "¡Bien hecho! Has conseguido la mitad"
             else -> "¡Muy bien! Cada vez lo haces mejor"
         }
         val celebration = rememberInfiniteTransition(label = "celebracion")
@@ -1910,7 +2703,7 @@ private fun AprenderApp() {
             Text("+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
             Text("MINUTOS GANADOS", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
             Spacer(Modifier.height(14.dp))
-            Text("$correct de $pairCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
+            Text("$resultCorrectCount de $resultTotalCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
             Spacer(Modifier.height(24.dp))
             Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }, modifier = Modifier.fillMaxWidth()) {
                 Text("🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -1962,10 +2755,11 @@ private fun AprenderApp() {
                         if (candidates.isNotEmpty()) {
                             val exercise = candidates.random()
                             sequencePlayingExercise = exercise
-                            val indexes = exercise.cards.indices.toList()
+                            val indexes = if (exercise.type == "Letras") exercise.cards.firstOrNull().orEmpty().indices.toList() else exercise.cards.indices.toList()
                             val shuffled = indexes.shuffled()
                             sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
                             sequenceSelectedOrder = emptyList()
+                            sequenceWrongAnswers = 0
                             sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
                             screen = "sequence-game"
                         } else {
@@ -1996,7 +2790,9 @@ private fun AprenderApp() {
             }
         } else {
             val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
-            val finished = sequenceSelectedOrder.size == exercise.cards.size
+            val targetLetterWord = exercise.cards.firstOrNull().orEmpty()
+            val isLettersExercise = exercise.type == "Letras"
+            val finished = if (isLettersExercise) sequenceSelectedOrder.size == targetLetterWord.length else sequenceSelectedOrder.size == exercise.cards.size
             LazyColumn(
                 Modifier.fillMaxSize().padding(if (isTabletLayout) 28.dp else 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -2004,32 +2800,61 @@ private fun AprenderApp() {
                 item {
                     OutlinedButton(onClick = { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }) { Text("← Volver a ejercicios") }
                     Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
+                    if (isLettersExercise) {
+                        val wordPicture = exercise.pictures.firstOrNull().orEmpty()
+                        if (wordPicture.startsWith("content://") || wordPicture.startsWith("file://")) {
+                            AndroidView(
+                                factory = { ctx -> ImageView(ctx).apply {
+                                    scaleType = ImageView.ScaleType.FIT_CENTER
+                                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 280)
+                                } },
+                                update = { view ->
+                                    try { view.setImageURI(Uri.parse(wordPicture)) }
+                                    catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(180.dp)
+                            )
+                        } else if (wordPicture.isNotBlank()) {
+                            Text(wordPicture, fontSize = 64.sp)
+                        }
+                        Text("Forma la palabra tocando sus letras en orden.", fontSize = 14.sp, color = Color(0xFF667085))
+                    }
                     Text(
-                        if (finished) "¡Muy bien! Has completado la secuencia." else "Toca las tarjetas en el orden en que ocurren.",
+                        if (finished) { if (isLettersExercise) "¡Has formado la palabra!" else "¡Muy bien! Has completado la secuencia." } else if (isLettersExercise) "Toca las letras en el orden correcto para formar la palabra." else "Toca las tarjetas en el orden en que ocurren.",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (finished) Color(0xFF24733B) else Color(0xFF667085)
                     )
-                    Text("Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
+                    Text(if (isLettersExercise) "Letras colocadas: ${sequenceSelectedOrder.size}/${targetLetterWord.length}" else "Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
                 }
                 items(sequencePlayOrder.size) { displayPosition ->
                     val cardIndex = sequencePlayOrder[displayPosition]
                     val alreadySelected = cardIndex in sequenceSelectedOrder
-                    val picture = exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
+                    val picture = if (isLettersExercise) exercise.pictures.firstOrNull()?.takeIf { it.isNotBlank() }.orEmpty() else exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
                         ?: if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else ""
                     Card(
                         Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
                             val expectedIndex = sequenceSelectedOrder.size
-                            if (cardIndex == expectedIndex) {
+                            val isCorrectChoice = if (isLettersExercise) targetLetterWord.getOrNull(expectedIndex) != null && targetLetterWord.getOrNull(expectedIndex)?.uppercaseChar() == targetLetterWord.getOrNull(cardIndex)?.uppercaseChar() else cardIndex == expectedIndex
+                            if (isCorrectChoice) {
                                 val nextOrder = sequenceSelectedOrder + cardIndex
                                 sequenceSelectedOrder = nextOrder
-                                if (nextOrder.size == exercise.cards.size) {
+                                val targetSize = if (isLettersExercise) targetLetterWord.length else exercise.cards.size
+                                if (nextOrder.size == targetSize) {
                                     sequencePlayMessage = "¡Secuencia completada!"
-                                    addEarnedTime((when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60)
+                                    val baseRewardSeconds = (when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60
+                                    val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
+                                    val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(20)
+                                    addEarnedTime(baseRewardSeconds * rewardPercent / 100)
+                                    val resultSize = if (isLettersExercise) targetLetterWord.length else exercise.cards.size
+                                    resultCorrectCount = (resultSize - sequenceWrongAnswers).coerceIn(0, resultSize)
+                                    resultTotalCount = resultSize
+                                    screen = "result"
                                 } else {
                                     sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
                                 }
                             } else {
+                                sequenceWrongAnswers += 1
                                 sequencePlayMessage = "No es esa todavía. Busca el paso que ocurre antes."
                             }
                         },
@@ -2050,7 +2875,9 @@ private fun AprenderApp() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            if (exercise.format != "Solo texto") {
+                            if (isLettersExercise) {
+                                Text(targetLetterWord.getOrNull(cardIndex)?.uppercase() ?: "", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                            } else if (exercise.format != "Solo texto") {
                                 if (picture.startsWith("content://") || picture.startsWith("file://")) {
                                     AndroidView(
                                         factory = { ctx -> ImageView(ctx).apply {
@@ -2073,7 +2900,9 @@ private fun AprenderApp() {
                                     }
                                 }
                             }
-                            if (exercise.format != "Solo imágenes") {
+                            if (isLettersExercise) {
+                                Spacer(Modifier.weight(1f))
+                            } else if (exercise.format != "Solo imágenes") {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     if (alreadySelected) Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
                                     Text(exercise.cards[cardIndex], fontSize = if (isTabletLayout) 22.sp else 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF253344))
@@ -2232,7 +3061,7 @@ private fun AprenderApp() {
             item { Text("Elige cómo aprender", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)) }
             item {
                 Card(
-                    Modifier.fillMaxWidth().clickable { screen = "cards-options"; cardsStartMessage = "" },
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveCards) { screen = "cards-options"; cardsStartMessage = "" },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0B8)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B95D)),
@@ -2247,14 +3076,14 @@ private fun AprenderApp() {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Tarjetas", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
                             Text("Aprender con imágenes", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
-                            Text("EMPEZAR  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
+                            Text(if (gameActiveCards) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveCards) Color(0xFF754411) else Color(0xFFB3261E))
                         }
                     }
                 }
             }
             item {
                 Card(
-                    Modifier.fillMaxWidth().clickable { screen = "sequences" },
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveSequences) { if (gameActiveSequences) screen = "sequences" },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFDDF3D3)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
@@ -2268,14 +3097,18 @@ private fun AprenderApp() {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Secuencias", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
                             Text("Ordenar y razonar", fontSize = modeDescriptionSize, color = Color(0xFF476C51))
-                            Text("EMPEZAR  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
+                            Text(if (gameActiveSequences) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveSequences) Color(0xFF39713A) else Color(0xFFB3261E))
                         }
                     }
                 }
             }
             item {
                 Card(
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveWords) {
+                        wordSelectedDifficulty = "Fácil"
+                        wordStartMessage = ""
+                        screen = "word-options"
+                    },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFD8EEFF)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CCCF4))
@@ -2289,7 +3122,7 @@ private fun AprenderApp() {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Palabras", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
                             Text("Ordenar letras y completar palabras", fontSize = modeDescriptionSize, color = Color(0xFF42647D))
-                            Text("PRÓXIMAMENTE  🔒", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF285F94))
+                            Text(if (gameActiveWords) "¡JUGAR!" else "🔒 BLOQUEADO", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveWords) Color(0xFF285F94) else Color(0xFFB3261E))
                         }
                     }
                 }
@@ -2380,11 +3213,11 @@ private fun ModeCardImage(index: Int, description: String, modifier: Modifier = 
 }
 
 private fun loadPairs(preferences: android.content.SharedPreferences): List<PairItem> {
-    val saved = preferences.getString("pairs_v1", null) ?: return samplePairs
+    val saved = preferences.getString("pairs_v1", null) ?: return emptyList()
     return saved.split("\n").mapNotNull { line ->
         val fields = line.split("\t")
         if (fields.size < 5) null else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
-    }.ifEmpty { samplePairs }
+    }
 }
 
 private fun savePairs(preferences: android.content.SharedPreferences, pairs: List<PairItem>) {
@@ -2392,4 +3225,20 @@ private fun savePairs(preferences: android.content.SharedPreferences, pairs: Lis
         listOf(pair.word, pair.picture, pair.category, pair.difficulty, pair.active.toString()).joinToString("\t")
     }
     preferences.edit().putString("pairs_v1", saved).apply()
+}
+
+private fun loadWordExercises(preferences: android.content.SharedPreferences): List<PairItem> {
+    val saved = preferences.getString("letter_word_exercises_v1", null) ?: return emptyList()
+    return saved.split("\n").mapNotNull { line ->
+        val fields = line.split("\t")
+        if (fields.size < 5 || fields[0].isBlank()) null
+        else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
+    }
+}
+
+private fun saveWordExercises(preferences: android.content.SharedPreferences, exercises: List<PairItem>) {
+    val saved = exercises.joinToString("\n") { exercise ->
+        listOf(exercise.word, exercise.picture, exercise.category, exercise.difficulty, exercise.active.toString()).joinToString("\t")
+    }
+    preferences.edit().putString("letter_word_exercises_v1", saved).apply()
 }
