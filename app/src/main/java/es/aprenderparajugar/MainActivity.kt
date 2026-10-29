@@ -1123,7 +1123,7 @@ private fun AprenderApp() {
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "active-games" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🎮", fontSize = 30.sp)
+                            Image(painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_active_games), contentDescription = "Juegos activos", modifier = Modifier.width(48.dp).height(48.dp))
                             Column { Text("Juegos activos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Activa o bloquea modalidades durante las pruebas", color = Color(0xFF667085)) }
                         }
                     }
