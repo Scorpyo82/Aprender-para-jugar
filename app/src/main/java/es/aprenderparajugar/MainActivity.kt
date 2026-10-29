@@ -1553,7 +1553,7 @@ private fun AprenderApp() {
                                                         Text("Sin imagen", fontSize = 10.sp, color = Color(0xFF667085))
                                                     }
                                                 } else {
-                                                    Text(picture, fontSize = 38.sp)
+                                                    Text("Imagen no válida", fontSize = 10.sp, color = Color(0xFF667085))
                                                 }
                                             }
                                         }
@@ -1699,7 +1699,7 @@ private fun AprenderApp() {
                                 OutlinedButton(onClick = { wordPendingImportMode = "merge"; preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); importWordPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar palabras") }
                                 if (wordPackageMessage.isNotBlank()) Text(wordPackageMessage, color = if (wordPackageMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 13.sp)
                             }
-                            item { Button(onClick = { wordLibraryEditingIndex = -1; wordLibraryWordDraft = ""; wordLibraryPictureDraft = "🐱"; wordLibraryCategoryDraft = wordExerciseCategories.firstOrNull() ?: ""; wordLibraryDifficultyDraft = "Fácil"; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ejercicio") } }
+                            item { Button(onClick = { wordLibraryEditingIndex = -1; wordLibraryWordDraft = ""; wordLibraryPictureDraft = ""; wordLibraryCategoryDraft = wordExerciseCategories.firstOrNull() ?: ""; wordLibraryDifficultyDraft = "Fácil"; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ejercicio") } }
                             if (wordExercises.isEmpty()) item { Text("Todavía no hay ejercicios de Palabras. Añade uno con su palabra, imagen y categoría para probarlo.", color = Color(0xFF667085)) }
                             item {
                                 Text("Filtrar ejercicios", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -1731,7 +1731,23 @@ private fun AprenderApp() {
                                     Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Text(exercise.word, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                                            Text("${exercise.picture} · ${exercise.category} · ${exercise.difficulty} · ${if (exercise.active) "Activo" else "Inactivo"}", color = Color(0xFF667085))
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                if (exercise.picture.startsWith("content://") || exercise.picture.startsWith("file://")) {
+                                                    AndroidView(
+                                                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP; layoutParams = ViewGroup.LayoutParams(112, 112) } },
+                                                        update = { view -> try { view.setImageURI(Uri.parse(exercise.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                                                        modifier = Modifier.width(72.dp).height(72.dp).clipToBounds()
+                                                    )
+                                                } else {
+                                                    Box(Modifier.width(72.dp).height(72.dp).background(Color(0xFFF2F4F7), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                                                        Text("Sin imagen", fontSize = 11.sp, color = Color(0xFF667085))
+                                                    }
+                                                }
+                                                Column(Modifier.weight(1f)) {
+                                                    Text("${exercise.category} · ${exercise.difficulty}", color = Color(0xFF667085))
+                                                    Text(if (exercise.active) "Activo" else "Inactivo", color = if (exercise.active) Color(0xFF24733B) else Color(0xFF667085), fontSize = 12.sp)
+                                                }
+                                            }
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedButton(onClick = { wordLibraryEditingIndex = index; wordLibraryWordDraft = exercise.word; wordLibraryPictureDraft = exercise.picture; wordLibraryCategoryDraft = exercise.category; wordLibraryDifficultyDraft = exercise.difficulty; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar") }
                                                 OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; saveWordExercises(preferences, wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
@@ -1745,7 +1761,7 @@ private fun AprenderApp() {
                             item { OutlinedTextField(value = wordLibraryWordDraft, onValueChange = { wordLibraryWordDraft = it }, label = { Text("Palabra que formará") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                             item {
                                 Text("Imagen de pista", fontWeight = FontWeight.Bold)
-                                Text("Puedes escribir un emoji o seleccionar una imagen del dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
+                                Text("Selecciona una imagen de la galería o haz una foto con la cámara.", fontSize = 13.sp, color = Color(0xFF667085))
                                 if (wordLibraryPictureDraft.startsWith("content://") || wordLibraryPictureDraft.startsWith("file://")) {
                                     AndroidView(
                                         factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) } },
@@ -1789,7 +1805,7 @@ private fun AprenderApp() {
                                     when {
                                         cleanWord.isBlank() -> wordLibraryMessage = "Escribe una palabra."
                                         cleanWord.any { it.isWhitespace() } -> wordLibraryMessage = "Para empezar, introduce una sola palabra sin espacios."
-                                        wordLibraryPictureDraft.isBlank() -> wordLibraryMessage = "Añade una imagen o emoji de pista."
+                                        wordLibraryPictureDraft.isBlank() -> wordLibraryMessage = "Selecciona una imagen de pista."
                                         wordLibraryCategoryDraft.isBlank() || wordLibraryCategoryDraft !in wordExerciseCategories -> wordLibraryMessage = "Selecciona una categoría creada en el menú Categorías."
                                         wordExercises.withIndex().any { (i, e) -> i != wordLibraryEditingIndex && e.word.equals(cleanWord, true) } -> wordLibraryMessage = "Ya existe un ejercicio con esa palabra."
                                         else -> {
