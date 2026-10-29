@@ -1556,17 +1556,23 @@ private fun AprenderApp() {
 private fun ModeCardImage(index: Int, description: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val image = remember(context, index) {
-        val encoded = listOf(
-            R.raw.cards_sprite_b64, R.raw.cards_sprite_b64_1, R.raw.cards_sprite_b64_2,
-            R.raw.cards_sprite_b64_3, R.raw.cards_sprite_b64_4, R.raw.cards_sprite_b64_5,
-            R.raw.cards_sprite_b64_6
-        ).joinToString("") { resource ->
-            context.resources.openRawResource(resource).bufferedReader().use { it.readText() }
-        }
-        val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
-        val sheet = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        val tileHeight = sheet.height / 3
-        Bitmap.createBitmap(sheet, 0, index.coerceIn(0, 2) * tileHeight, sheet.width, tileHeight).asImageBitmap()
+        // The sprite is stored as one complete Base64 resource. Do not append the
+        // old temporary chunks: doing so corrupts the JPEG and crashes on the home screen.
+        val bitmap = runCatching {
+            val encoded = context.resources.openRawResource(R.raw.cards_sprite_b64)
+                .bufferedReader().use { it.readText().filterNot(Char::isWhitespace) }
+            val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        }.getOrNull()
+        val sheet = bitmap ?: Bitmap.createBitmap(1, 3, Bitmap.Config.ARGB_8888)
+        val tileHeight = (sheet.height / 3).coerceAtLeast(1)
+        Bitmap.createBitmap(
+            sheet,
+            0,
+            (index.coerceIn(0, 2) * tileHeight).coerceAtMost(sheet.height - tileHeight),
+            sheet.width,
+            tileHeight
+        ).asImageBitmap()
     }
     Image(bitmap = image, contentDescription = description, modifier = modifier, contentScale = ContentScale.FillBounds)
 }
