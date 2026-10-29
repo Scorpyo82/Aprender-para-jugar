@@ -949,7 +949,7 @@ private fun AprenderApp() {
                                 sequenceFormatDraft = "Imagen y texto"
                                 sequenceCategoryDraft = "Rutinas"
                                 sequenceCardsDraft = listOf("", "", "")
-                                sequenceCardPicturesDraft = listOf("🌱", "🌿", "🌳")
+                                sequenceCardPicturesDraft = listOf("", "", "")
                                 sequenceAlternativeDraft = ""
                                 sequenceEditorMessage = ""
                                 parentSection = "sequence-editor-temporal"
@@ -964,7 +964,10 @@ private fun AprenderApp() {
                                     sequenceCategoryDraft = exercise.category
                                     sequenceCardsDraft = exercise.cards
                                     sequenceCardPicturesDraft = exercise.cards.indices.map { cardIndex ->
-                                        exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() } ?: defaultSequencePicture(cardIndex)
+                                        exercise.pictures.getOrNull(cardIndex)?.let { savedPicture ->
+                                            if (savedPicture.isNotBlank()) savedPicture
+                                            else if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else ""
+                                        } ?: defaultSequencePicture(cardIndex)
                                     }
                                     sequenceAlternativeDraft = exercise.alternatives.joinToString("\n") { alternative -> alternative.split("|").mapNotNull { step -> exercise.cards.indexOf(step).takeIf { it >= 0 }?.plus(1) }.joinToString(",") }
                                     sequenceEditorMessage = ""
@@ -1046,9 +1049,18 @@ private fun AprenderApp() {
                                         } else {
                                             androidx.compose.foundation.layout.Box(
                                                 Modifier.width(88.dp).height(88.dp)
-                                                    .background(Color(0xFFEAF5E6), RoundedCornerShape(12.dp)),
+                                                    .background(Color(0xFFF2F4F7), RoundedCornerShape(12.dp)),
                                                 contentAlignment = Alignment.Center
-                                            ) { Text(picture.ifBlank { "🖼️" }, fontSize = 38.sp) }
+                                            ) {
+                                                if (picture.isBlank()) {
+                                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                        Text("▧", fontSize = 30.sp, color = Color(0xFF98A2B3))
+                                                        Text("Sin imagen", fontSize = 10.sp, color = Color(0xFF667085))
+                                                    }
+                                                } else {
+                                                    Text(picture, fontSize = 38.sp)
+                                                }
+                                            }
                                         }
                                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                             Text("Imagen de la tarjeta ${index + 1}", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
@@ -1057,12 +1069,14 @@ private fun AprenderApp() {
                                                 preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                                 sequenceImagePicker.launch(arrayOf("image/*"))
                                             }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen") }
-                                            OutlinedButton(onClick = {
-                                                sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
-                                                    while (it.size <= index) it.add(defaultSequencePicture(it.size))
-                                                    it[index] = defaultSequencePicture(index)
-                                                }
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Usar dibujo") }
+                                            if (picture.isNotBlank()) {
+                                                OutlinedButton(onClick = {
+                                                    sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
+                                                        while (it.size <= index) it.add("")
+                                                        it[index] = ""
+                                                    }
+                                                }, modifier = Modifier.fillMaxWidth()) { Text("Quitar imagen") }
+                                            }
                                         }
                                     }
                                 }
@@ -1072,7 +1086,7 @@ private fun AprenderApp() {
                             OutlinedButton(onClick = {
                                 if (sequenceCardsDraft.size < 6) {
                                     sequenceCardsDraft = sequenceCardsDraft + ""
-                                    sequenceCardPicturesDraft = sequenceCardPicturesDraft + defaultSequencePicture(sequenceCardPicturesDraft.size)
+                                    sequenceCardPicturesDraft = sequenceCardPicturesDraft + ""
                                 }
                             }, enabled = sequenceCardsDraft.size < 6, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
                         }
@@ -1099,7 +1113,7 @@ private fun AprenderApp() {
                                     alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
                                         val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
-                                        val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it)?.takeIf(String::isNotBlank) ?: defaultSequencePicture(it) }
+                                        val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
                                         val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives, cleanPictures)
                                         val updatedExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
