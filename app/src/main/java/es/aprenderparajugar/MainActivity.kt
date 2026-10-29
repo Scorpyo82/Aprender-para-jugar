@@ -1341,7 +1341,7 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Biblioteca de ejemplo disponible inicialmente para Orden temporal.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                        item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Cada modalidad tendrá su propia biblioteca de ejercicios.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
                         val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
@@ -1358,7 +1358,7 @@ private fun AprenderApp() {
                         item {
                             Button(onClick = {
                                 sequenceEditingIndex = -1; sequenceTitleDraft = ""; sequenceFormatDraft = "Imagen y texto"
-                                sequenceCategoryDraft = "Rutinas"; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
+                                sequenceCategoryDraft = ""; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
                                 sequenceCardsDraft = listOf("", "", ""); sequenceCardPicturesDraft = listOf("", "", "")
                                 sequenceAlternativeDraft = ""; sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
                             }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear ejercicio") }
@@ -1696,6 +1696,7 @@ private fun AprenderApp() {
                                 }
                                 when {
                                     sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
+                                    sequenceCategoryDraft.isBlank() -> sequenceEditorMessage = "Crea o selecciona una categoría antes de guardar el ejercicio."
                                     (if (sequenceTypeDraft == "Letras") cleanCards.size != 1 else cleanCards.size < 2) || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = if (sequenceTypeDraft == "Letras") "Escribe la palabra que se formará con las letras." else "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
                                      sequenceTypeDraft != "Letras" && sequenceCardPicturesDraft.take(cleanCards.size).any { it.isBlank() } -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta; todos los ejercicios deben tener texto e imagen."
