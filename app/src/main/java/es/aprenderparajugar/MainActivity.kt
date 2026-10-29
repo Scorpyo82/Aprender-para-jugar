@@ -1173,7 +1173,7 @@ private fun AprenderApp() {
                         Text("Creado por Miguel Ponce Torres", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Text("Desarrollado con ayuda de inteligencia artificial (IA), como herramienta de apoyo en el diseño, la programación y la resolución de problemas.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Versión 0.3.13", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Versión 0.3.14", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Text("Fecha de versión: 29 de octubre de 2026", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Propósito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
