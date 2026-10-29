@@ -498,6 +498,20 @@ private fun AprenderApp() {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
     var pairs by remember { mutableStateOf(loadPairs(preferences)) }
+    var wordExercises by remember { mutableStateOf(loadWordExercises(preferences)) }
+    var wordExerciseCategories by remember {
+        mutableStateOf((preferences.getString("letter_word_categories_v1", "Animales|Casa|Comida") ?: "Animales|Casa|Comida").split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct())
+    }
+    var disabledWordExerciseCategories by remember { mutableStateOf(preferences.getStringSet("disabled_letter_word_categories_v1", emptySet())?.toSet() ?: emptySet()) }
+    var wordLibraryPage by remember { mutableStateOf("list") }
+    var wordLibraryEditingIndex by remember { mutableIntStateOf(-1) }
+    var wordLibraryWordDraft by remember { mutableStateOf("") }
+    var wordLibraryPictureDraft by remember { mutableStateOf("🐱") }
+    var wordLibraryCategoryDraft by remember { mutableStateOf("Animales") }
+    var wordLibraryDifficultyDraft by remember { mutableStateOf("Fácil") }
+    var wordLibraryMessage by remember { mutableStateOf("") }
+    var wordNewCategoryDraft by remember { mutableStateOf("") }
+    var wordCategoryToDelete by remember { mutableStateOf<String?>(null) }
     var wordDraft by remember { mutableStateOf("") }
     var pictureDraft by remember { mutableStateOf("🐱") }
     var categoryDraft by remember { mutableStateOf("Primeras palabras") }
@@ -2740,4 +2754,20 @@ private fun savePairs(preferences: android.content.SharedPreferences, pairs: Lis
         listOf(pair.word, pair.picture, pair.category, pair.difficulty, pair.active.toString()).joinToString("\t")
     }
     preferences.edit().putString("pairs_v1", saved).apply()
+}
+
+private fun loadWordExercises(preferences: android.content.SharedPreferences): List<PairItem> {
+    val saved = preferences.getString("letter_word_exercises_v1", null) ?: return emptyList()
+    return saved.split("\\n").mapNotNull { line ->
+        val fields = line.split("\\t")
+        if (fields.size < 5 || fields[0].isBlank()) null
+        else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
+    }
+}
+
+private fun saveWordExercises(preferences: android.content.SharedPreferences, exercises: List<PairItem>) {
+    val saved = exercises.joinToString("\\n") { exercise ->
+        listOf(exercise.word, exercise.picture, exercise.category, exercise.difficulty, exercise.active.toString()).joinToString("\\t")
+    }
+    preferences.edit().putString("letter_word_exercises_v1", saved).apply()
 }
