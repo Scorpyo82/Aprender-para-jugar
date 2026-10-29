@@ -384,6 +384,8 @@ private fun AprenderApp() {
     var sequencePlayOrder by remember { mutableStateOf(emptyList<Int>()) }
     var sequenceSelectedOrder by remember { mutableStateOf(emptyList<Int>()) }
     var sequencePlayMessage by remember { mutableStateOf("") }
+    var sequenceChosenCategory by remember { mutableStateOf("") }
+    var sequenceChosenDifficulty by remember { mutableStateOf("") }
 
     var packageMessage by remember { mutableStateOf("") }
     var pendingImportMode by remember { mutableStateOf("replace") }
@@ -1816,19 +1818,55 @@ private fun AprenderApp() {
             }
         }
     } else if (screen == "sequences") {
+        val sequenceCategories = sequenceExercises.map { it.category }.filter { it.isNotBlank() }.distinct().ifEmpty { listOf("Rutinas", "Naturaleza", "Cocina") }
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 OutlinedButton(onClick = { screen = "home" }) { Text("← Volver al inicio") }
                 Text("Secuencias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text("Elige un ejercicio y toca las tarjetas en el orden correcto.", fontSize = 16.sp, color = Color(0xFF667085))
+                Text("Elige el tipo de actividad que quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
             }
-            if (sequenceExercises.isEmpty()) {
-                item { Text("Todavía no hay ejercicios. Entra en el control parental para crear uno.", color = Color(0xFF667085)) }
+            items(sequenceCategories) { category ->
+                Card(
+                    Modifier.fillMaxWidth().clickable {
+                        sequenceChosenCategory = category
+                        sequenceChosenDifficulty = ""
+                        screen = "sequence-difficulty"
+                    },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(when(category.lowercase()) { "rutinas" -> "🪥"; "naturaleza" -> "🌱"; "cocina" -> "🥣"; else -> "🧩" }, fontSize = 30.sp)
+                        Column(Modifier.weight(1f)) {
+                            Text(category, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF245C2A))
+                            Text("Practicar una secuencia", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
+                        Text("›", fontSize = 26.sp, color = Color(0xFF39713A))
+                    }
+                }
             }
-            sequenceExercises.forEachIndexed { exerciseIndex, exercise ->
-                item {
-                    Card(
-                        Modifier.fillMaxWidth().clickable {
+        }
+    } else if (screen == "sequence-difficulty") {
+        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                OutlinedButton(onClick = { screen = "sequences" }) { Text("← Volver a las actividades") }
+                Text(sequenceChosenCategory, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Elige la dificultad. El premio dependerá del nivel seleccionado.", fontSize = 16.sp, color = Color(0xFF667085))
+            }
+            items(listOf("Fácil", "Normal", "Difícil")) { level ->
+                val reward = when(level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
+                Card(
+                    Modifier.fillMaxWidth().clickable {
+                        sequenceChosenDifficulty = level
+                        val candidates = sequenceExercises.filter { it.category.equals(sequenceChosenCategory, ignoreCase = true) }
+                        if (candidates.isNotEmpty()) {
+                            val difficultyCandidates = when(level) {
+                                "Fácil" -> candidates.filter { it.cards.size <= 3 }
+                                "Normal" -> candidates.filter { it.cards.size in 3..4 }
+                                else -> candidates.filter { it.cards.size >= 4 }
+                            }.ifEmpty { candidates }
+                            val exercise = difficultyCandidates.random()
                             sequencePlayingExercise = exercise
                             val indexes = exercise.cards.indices.toList()
                             val shuffled = indexes.shuffled()
@@ -1836,25 +1874,20 @@ private fun AprenderApp() {
                             sequenceSelectedOrder = emptyList()
                             sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
                             screen = "sequence-game"
-                        },
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
-                    ) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(exercise.title, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF245C2A))
-                            Text("${exercise.cards.size} tarjetas · ${exercise.format} · ${exercise.category}", fontSize = 13.sp, color = Color(0xFF667085))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                exercise.cards.take(4).forEachIndexed { cardIndex, _ ->
-                                    Text(
-                                        if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() && !it.startsWith("content://") && !it.startsWith("file://") } ?: "▧",
-                                        fontSize = 24.sp
-                                    )
-                                }
-                                if (exercise.cards.size > 4) Text("…", fontSize = 24.sp)
-                            }
-                            Text("EMPEZAR  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
+                        } else {
+                            sequencePlayMessage = "Todavía no hay ejercicios en esta actividad."
                         }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E5EA))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(level, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                            Text("Premio: $reward min de juego", fontSize = 14.sp, color = Color(0xFF667085))
+                        }
+                        Text("EMPEZAR  ›", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF39713A))
                     }
                 }
             }
@@ -1897,7 +1930,7 @@ private fun AprenderApp() {
                                 sequenceSelectedOrder = nextOrder
                                 if (nextOrder.size == exercise.cards.size) {
                                     sequencePlayMessage = "¡Secuencia completada!"
-                                    addEarnedTime(rewardSeconds)
+                                    addEarnedTime((when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60)
                                 } else {
                                     sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
                                 }
