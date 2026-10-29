@@ -1435,6 +1435,11 @@ private fun AprenderApp() {
                                                 saveSequenceExercises(preferences, sequenceExercises)
                                             })
                                             Text(if (exercise.active) "Activo" else "Inactivo", fontSize = 11.sp)
+                                            OutlinedButton(onClick = {
+                                                sequenceExercises = sequenceExercises.filterIndexed { currentIndex, _ -> currentIndex != index }
+                                                saveSequenceExercises(preferences, sequenceExercises)
+                                                sequenceCategoryMessage = "Ejercicio eliminado."
+                                            }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text("Eliminar", fontSize = 12.sp) }
                                         }
                                     }
                                 }
@@ -1521,7 +1526,7 @@ private fun AprenderApp() {
                                                 sequenceCategoryToDelete = null
                                                 sequenceCategoryMessage = "Operación cancelada. No se ha borrado nada."
                                             }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-                                        } else if (category !in listOf("Rutinas", "Naturaleza", "Cocina")) {
+                                        } else {
                                             OutlinedButton(onClick = { sequenceCategoryToDelete = category; sequenceCategoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                         }
                                     }
