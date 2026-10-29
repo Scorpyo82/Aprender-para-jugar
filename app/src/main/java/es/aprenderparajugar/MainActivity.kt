@@ -508,7 +508,7 @@ private fun AprenderApp() {
 
     BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result" || screen == "cards-options" || screen == "category-select") {
         when (screen) {
-            "parent" -> if (parentSection != "menu") parentSection = "menu" else { screen = "home"; parentSection = "menu" }
+            "parent" -> when (parentSection) { "words", "categories" -> parentSection = "cards-settings"; "cards-settings" -> parentSection = "game-modes"; "game-modes" -> parentSection = "menu"; else -> { screen = "home"; parentSection = "menu" } }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
             "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
             "parent-pin", "exit-pin", "exercise", "result" -> { screen = "home"; pinEntry = ""; pinError = false }
