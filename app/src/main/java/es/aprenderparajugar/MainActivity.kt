@@ -1249,6 +1249,7 @@ private fun AprenderApp() {
                         val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
                         val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
+                            exercise.type != "Letras" &&
                             (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
                             (sequenceFilterCategory == "Todas" || exercise.category == sequenceFilterCategory) &&
                             (sequenceFilterDifficulty == "Todas" || exercise.difficulty == sequenceFilterDifficulty) &&
@@ -1450,7 +1451,7 @@ private fun AprenderApp() {
                         }
                         item {
                             Text("Tipo de secuencia", fontWeight = FontWeight.Bold)
-                            listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos", "Letras").forEach { type ->
+                            listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
                                 OutlinedButton(onClick = {
                                     sequenceTypeDraft = type
                                     if (type == "Letras") {
