@@ -154,6 +154,23 @@ class MainActivity : ComponentActivity() {
 
 private data class PairItem(val word: String, val picture: String, val category: String = "Primeras palabras", val difficulty: String = "Fácil", val active: Boolean = true)
 
+private data class SequenceExercise(
+    val title: String,
+    val cards: List<String>,
+    val format: String,
+    val category: String,
+    val alternatives: List<String> = emptyList()
+)
+
+private val sampleTemporalSequences = listOf(
+    SequenceExercise("Plantar una semilla", listOf("Poner la semilla", "Sale el brote", "Crece la planta", "Aparece la flor"), "Solo imágenes", "Naturaleza"),
+    SequenceExercise("Lavarse las manos", listOf("Mojar las manos", "Enjabonarse", "Aclarar", "Secar"), "Imagen y texto", "Rutinas"),
+    SequenceExercise("Cepillarse los dientes", listOf("Poner pasta", "Cepillarse", "Aclarar la boca", "Secar y guardar"), "Imagen y texto", "Rutinas"),
+    SequenceExercise("Vestirse", listOf("Ponerse los pantalones", "Ponerse la camiseta", "Ponerse los zapatos"), "Solo imágenes", "Rutinas", listOf("Ponerse la camiseta|Ponerse los pantalones|Ponerse los zapatos")),
+    SequenceExercise("Preparar un bocadillo", listOf("Preparar el pan", "Añadir ingredientes", "Cerrar el bocadillo", "Bocadillo listo"), "Imagen y texto", "Cocina"),
+    SequenceExercise("El ciclo de una mariposa", listOf("Huevos", "Oruga", "Crisálida", "Mariposa"), "Solo imágenes", "Naturaleza")
+)
+
 private data class WordLearning(
     val streak: Int = 0,
     val lastShownTurn: Int = 0,
@@ -308,6 +325,14 @@ private fun AprenderApp() {
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
     var libraryPage by remember { mutableStateOf("list") }
+    var sequenceExercises by remember { mutableStateOf(sampleTemporalSequences) }
+    var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
+    var sequenceTitleDraft by remember { mutableStateOf("") }
+    var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
+    var sequenceCategoryDraft by remember { mutableStateOf("Rutinas") }
+    var sequenceCardsDraft by remember { mutableStateOf(listOf("", "")) }
+    var sequenceAlternativeDraft by remember { mutableStateOf("") }
+    var sequenceEditorMessage by remember { mutableStateOf("") }
 
     var packageMessage by remember { mutableStateOf("") }
     var pendingImportMode by remember { mutableStateOf("replace") }
@@ -744,7 +769,7 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-library-temporal", "sequence-editor-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "game-modes" -> {
                         item { Text("Modos de juego", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -823,22 +848,141 @@ private fun AprenderApp() {
                         item { Text(sequenceType, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Configura el contenido específico de esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                            Card(Modifier.fillMaxWidth().clickable {
+                                parentSection = if (parentSection == "sequence-type-temporal") "sequence-library-temporal" else "sequence-library-temporal"
+                            }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🖼️", fontSize = 26.sp)
-                                    Column { Text("Biblioteca de secuencias", fontWeight = FontWeight.Bold); Text("Gestionar los ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
+                                    Column { Text("Biblioteca de secuencias", fontWeight = FontWeight.Bold); Text("Ver, crear y editar ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
                                 }
                             }
                         }
                         item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-categories-temporal" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🗂️", fontSize = 26.sp)
                                     Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organizar por temas los ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
                                 }
                             }
                         }
-                        item { Text("Vista beta: los apartados aún no gestionan contenido real.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                        item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Biblioteca de ejemplo disponible inicialmente para Orden temporal.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                    }
+                    "sequence-library-temporal" -> {
+                        item { Text("Biblioteca · Orden temporal", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Seis ejercicios de ejemplo. Abre cualquiera para editarlo o crea uno nuevo.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            Button(onClick = {
+                                sequenceEditingIndex = -1
+                                sequenceTitleDraft = ""
+                                sequenceFormatDraft = "Imagen y texto"
+                                sequenceCategoryDraft = "Rutinas"
+                                sequenceCardsDraft = listOf("", "", "")
+                                sequenceAlternativeDraft = ""
+                                sequenceEditorMessage = ""
+                                parentSection = "sequence-editor-temporal"
+                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear ejercicio") }
+                        }
+                        sequenceExercises.forEachIndexed { index, exercise ->
+                            item {
+                                Card(Modifier.fillMaxWidth().clickable {
+                                    sequenceEditingIndex = index
+                                    sequenceTitleDraft = exercise.title
+                                    sequenceFormatDraft = exercise.format
+                                    sequenceCategoryDraft = exercise.category
+                                    sequenceCardsDraft = exercise.cards
+                                    sequenceAlternativeDraft = exercise.alternatives.joinToString("\\n") { it.replace("|", " → ") }
+                                    sequenceEditorMessage = ""
+                                    parentSection = "sequence-editor-temporal"
+                                }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(exercise.title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                        Text("${exercise.cards.size} tarjetas · ${exercise.format} · ${exercise.category}", fontSize = 13.sp, color = Color(0xFF667085))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            exercise.cards.forEachIndexed { cardIndex, card ->
+                                                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5E6))) {
+                                                    Column(Modifier.width(64.dp).padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                                        Text(listOf("🌱", "💧", "🌿", "🌸", "🦋", "🥪")[cardIndex % 6], fontSize = 23.sp)
+                                                        Text(card, fontSize = 10.sp, maxLines = 2)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Text("Tocar para editar  ›", fontSize = 12.sp, color = Color(0xFF39713A))
+                                    }
+                                }
+                            }
+                        }
+                        item { Text("Los cambios de esta demostración se conservan mientras la app permanece abierta; aún no se guardan tras cerrarla.", fontSize = 12.sp, color = Color(0xFF667085)) }
+                    }
+                    "sequence-editor-temporal" -> {
+                        item { Text(if (sequenceEditingIndex < 0) "Nuevo ejercicio" else "Editar ejercicio", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = it }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item {
+                            Text("Formato de las tarjetas", fontWeight = FontWeight.Bold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf("Imagen y texto", "Solo imágenes", "Solo texto").forEach { format ->
+                                    OutlinedButton(onClick = { sequenceFormatDraft = format }) { Text(if (sequenceFormatDraft == format) "✓ $format" else format, fontSize = 11.sp) }
+                                }
+                            }
+                        }
+                        item { OutlinedTextField(value = sequenceCategoryDraft, onValueChange = { sequenceCategoryDraft = it }, label = { Text("Categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item {
+                            Text("Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
+                            Text("Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
+                        sequenceCardsDraft.forEachIndexed { index, card ->
+                            item {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("${index + 1}.", fontWeight = FontWeight.Bold)
+                                    OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text("Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
+                                    OutlinedButton(onClick = { if (sequenceCardsDraft.size > 2) sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) } }, enabled = sequenceCardsDraft.size > 2) { Text("−") }
+                                }
+                            }
+                        }
+                        item {
+                            OutlinedButton(onClick = { if (sequenceCardsDraft.size < 6) sequenceCardsDraft = sequenceCardsDraft + "" }, enabled = sequenceCardsDraft.size < 6, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
+                        }
+                        item {
+                            Text("Soluciones alternativas (opcional)", fontWeight = FontWeight.Bold)
+                            Text("Una alternativa por línea, usando los textos de las tarjetas separados por →.", fontSize = 13.sp, color = Color(0xFF667085))
+                            OutlinedTextField(value = sequenceAlternativeDraft, onValueChange = { sequenceAlternativeDraft = it }, label = { Text("Ej.: Paso B → Paso A → Paso C") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                        }
+                        item {
+                            if (sequenceEditorMessage.isNotBlank()) Text(sequenceEditorMessage, color = Color(0xFFB3261E), fontSize = 13.sp)
+                            Button(onClick = {
+                                val cleanCards = sequenceCardsDraft.map { it.trim() }
+                                when {
+                                    sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
+                                    cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
+                                    cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
+                                    else -> {
+                                        val alternatives = sequenceAlternativeDraft.lines().map { line -> line.split("→").map { it.trim() }.filter { it.isNotBlank() }.joinToString("|") }.filter { it.isNotBlank() }
+                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives)
+                                        sequenceExercises = sequenceExercises.toMutableList().also {
+                                            if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
+                                        }
+                                        parentSection = "sequence-library-temporal"
+                                    }
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar ejercicio") }
+                        }
+                        item { OutlinedButton(onClick = { parentSection = "sequence-library-temporal" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
+                    }
+                    "sequence-categories-temporal" -> {
+                        item { Text("Categorías · Orden temporal", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Las categorías organizan los ejercicios de esta modalidad y no se comparten con Procesos, Causa y consecuencia ni Ciclos.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        listOf("Rutinas", "Naturaleza", "Cocina").forEach { category ->
+                            item {
+                                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Text("🗂️", fontSize = 24.sp)
+                                        Text(category, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                                        Text("${sequenceExercises.count { it.category == category }} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                    }
+                                }
+                            }
+                        }
+                        item { Text("En esta primera versión las categorías se muestran como ejemplo; su edición se añadirá después.", fontSize = 12.sp, color = Color(0xFF667085)) }
                     }
                     "words-settings" -> {
                         item { Text("Configurar Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -1267,7 +1411,7 @@ private fun AprenderApp() {
                         Text("Creado por Miguel Ponce Torres", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Text("Desarrollado con ayuda de inteligencia artificial (IA), como herramienta de apoyo en el diseño, la programación y la resolución de problemas.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Versión 0.3.21", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Versión 0.3.22", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Text("Fecha de versión: 29 de octubre de 2026", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Propósito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
