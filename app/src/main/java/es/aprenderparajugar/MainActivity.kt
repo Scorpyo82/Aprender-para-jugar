@@ -1322,16 +1322,46 @@ private fun AprenderApp() {
                                                 preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
                                             })
                                         }
-                                        if (sequenceExercises.none { it.category == category }) {
-                                            OutlinedButton(onClick = {
+                                        if (sequenceCategoryToDelete.equals(category, ignoreCase = true)) {
+                                            val assignedCount = sequenceExercises.count { it.category.equals(category, ignoreCase = true) }
+                                            Text("Borrar categoría y contenido", fontWeight = FontWeight.SemiBold)
+                                            Text(
+                                                "Esta opción eliminará también los $assignedCount ejercicios de esta categoría.",
+                                                fontSize = 13.sp,
+                                                color = Color(0xFFB3261E)
+                                            )
+                                            Button(onClick = {
+                                                sequenceExercises = sequenceExercises.filterNot { it.category.equals(category, ignoreCase = true) }
+                                                saveSequenceExercises(preferences, sequenceExercises)
                                                 sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
                                                 preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
-                                                disabledSequenceCategories = disabledSequenceCategories - category
+                                                disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
                                                 preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
-                                                sequenceCategoryMessage = "Categoría eliminada."
-                                            }) { Text("Eliminar categoría") }
-                                        } else {
-                                            Text("No se puede eliminar mientras tenga ejercicios asignados.", fontSize = 12.sp, color = Color(0xFF667085))
+                                                sequenceCategoryToDelete = null
+                                                sequenceCategoryMessage = "Categoría y ejercicios eliminados."
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
+                                            Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.SemiBold)
+                                            val destinations = sequenceCategories.filterNot { it.equals(category, ignoreCase = true) }
+                                            destinations.forEach { destination ->
+                                                OutlinedButton(onClick = {
+                                                    sequenceExercises = sequenceExercises.map {
+                                                        if (it.category.equals(category, ignoreCase = true)) it.copy(category = destination) else it
+                                                    }
+                                                    saveSequenceExercises(preferences, sequenceExercises)
+                                                    sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
+                                                    preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
+                                                    disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
+                                                    preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
+                                                    sequenceCategoryToDelete = null
+                                                    sequenceCategoryMessage = "Categoría eliminada; ejercicios movidos a $destination."
+                                                }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                            }
+                                            OutlinedButton(onClick = {
+                                                sequenceCategoryToDelete = null
+                                                sequenceCategoryMessage = "Operación cancelada. No se ha borrado nada."
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                        } else if (category !in listOf("Rutinas", "Naturaleza", "Cocina")) {
+                                            OutlinedButton(onClick = { sequenceCategoryToDelete = category; sequenceCategoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                         }
                                     }
                                 }
