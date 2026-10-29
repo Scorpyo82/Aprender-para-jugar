@@ -176,17 +176,8 @@ private data class SequenceExercise(
 
 private fun defaultSequencePicture(index: Int): String = ""
 
-private val sampleTemporalSequences = listOf(
-    SequenceExercise("Plantar una semilla", listOf("Poner la semilla", "Sale el brote", "Crece la planta", "Aparece la flor"), "Solo imágenes", "Naturaleza", type = "Procesos", difficulty = "Normal"),
-    SequenceExercise("Lavarse las manos", listOf("Mojar las manos", "Enjabonarse", "Aclarar", "Secar"), "Imagen y texto", "Rutinas", type = "Orden temporal", difficulty = "Fácil"),
-    SequenceExercise("Cepillarse los dientes", listOf("Poner pasta", "Cepillarse", "Aclarar la boca", "Secar y guardar"), "Imagen y texto", "Rutinas", type = "Orden temporal", difficulty = "Normal"),
-    SequenceExercise("Vestirse", listOf("Ponerse los pantalones", "Ponerse la camiseta", "Ponerse los zapatos"), "Solo imágenes", "Rutinas", listOf("Ponerse la camiseta|Ponerse los pantalones|Ponerse los zapatos"), type = "Orden temporal", difficulty = "Fácil"),
-    SequenceExercise("Preparar un bocadillo", listOf("Preparar el pan", "Añadir ingredientes", "Cerrar el bocadillo", "Bocadillo listo"), "Imagen y texto", "Cocina", type = "Procesos", difficulty = "Difícil"),
-    SequenceExercise("El ciclo de una mariposa", listOf("Huevos", "Oruga", "Crisálida", "Mariposa"), "Solo imágenes", "Naturaleza", type = "Ciclos", difficulty = "Normal")
-)
-
 private fun loadSequenceExercises(preferences: android.content.SharedPreferences): List<SequenceExercise> {
-    val saved = preferences.getString("sequence_exercises_temporal_v1", null) ?: return sampleTemporalSequences
+    val saved = preferences.getString("sequence_exercises_temporal_v1", null) ?: return emptyList()
     return runCatching {
         val array = JSONArray(saved)
         (0 until array.length()).mapNotNull { index ->
@@ -209,8 +200,8 @@ private fun loadSequenceExercises(preferences: android.content.SharedPreferences
                 item.optString("difficulty", "Normal"),
                 item.optBoolean("active", true)
             )
-        }.ifEmpty { sampleTemporalSequences }
-    }.getOrDefault(sampleTemporalSequences)
+        }
+    }.getOrDefault(emptyList())
 }
 
 private fun saveSequenceExercises(preferences: android.content.SharedPreferences, exercises: List<SequenceExercise>) {
@@ -474,12 +465,6 @@ private fun importSequencePackage(context: Context, source: Uri): ImportedSequen
     return ImportedSequenceContent(categories, disabled, exercises)
 }
 
-private val samplePairs = listOf(
-    PairItem("mamá", "👩"), PairItem("sol", "☀️"),
-    PairItem("casa", "🏠"), PairItem("gato", "🐈"),
-    PairItem("luna", "🌙"), PairItem("pan", "🥖")
-)
-
 private fun isAccessibilityServiceEnabled(context: Context): Boolean {
     val expected = android.content.ComponentName(context, PlayTimeAccessibilityService::class.java)
     val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager ?: return false
@@ -498,20 +483,37 @@ private fun AprenderApp() {
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
+    // One-time reset for the content authoring phase: remove bundled/demo exercises
+    // and category presets from all game modes while preserving app settings and rewards.
+    remember {
+        if (!preferences.getBoolean("content_authoring_reset_v1", false)) {
+            preferences.edit()
+                .putString("pairs_v1", "")
+                .putString("categories", "")
+                .putString("sequence_exercises_temporal_v1", "[]")
+                .putString("sequence_categories_v1", "")
+                .putString("letter_word_exercises_v1", "")
+                .putString("letter_word_categories_v1", "")
+                .remove("disabled_sequence_categories")
+                .remove("disabled_letter_word_categories_v1")
+                .putBoolean("content_authoring_reset_v1", true)
+                .commit()
+        }
+    }
     var pairs by remember { mutableStateOf(loadPairs(preferences)) }
     var wordExercises by remember { mutableStateOf(loadWordExercises(preferences)) }
     var gameActiveCards by remember { mutableStateOf(preferences.getBoolean("game_active_cards", true)) }
     var gameActiveSequences by remember { mutableStateOf(preferences.getBoolean("game_active_sequences", true)) }
     var gameActiveWords by remember { mutableStateOf(preferences.getBoolean("game_active_words", true)) }
     var wordExerciseCategories by remember {
-        mutableStateOf((preferences.getString("letter_word_categories_v1", "Animales|Casa|Comida") ?: "Animales|Casa|Comida").split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct())
+        mutableStateOf((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct())
     }
     var disabledWordExerciseCategories by remember { mutableStateOf(preferences.getStringSet("disabled_letter_word_categories_v1", emptySet())?.toSet() ?: emptySet()) }
     var wordLibraryPage by remember { mutableStateOf("list") }
     var wordLibraryEditingIndex by remember { mutableIntStateOf(-1) }
     var wordLibraryWordDraft by remember { mutableStateOf("") }
-    var wordLibraryPictureDraft by remember { mutableStateOf("🐱") }
-    var wordLibraryCategoryDraft by remember { mutableStateOf("Animales") }
+    var wordLibraryPictureDraft by remember { mutableStateOf("") }
+    var wordLibraryCategoryDraft by remember { mutableStateOf("") }
     var wordLibraryDifficultyDraft by remember { mutableStateOf("Fácil") }
     var wordLibraryMessage by remember { mutableStateOf("") }
     var wordLibraryCategoryMenuExpanded by remember { mutableStateOf(false) }
@@ -524,7 +526,7 @@ private fun AprenderApp() {
     var wordCategoryToDelete by remember { mutableStateOf<String?>(null) }
     var wordDraft by remember { mutableStateOf("") }
     var pictureDraft by remember { mutableStateOf("🐱") }
-    var categoryDraft by remember { mutableStateOf("Primeras palabras") }
+    var categoryDraft by remember { mutableStateOf("") }
     var difficultyDraft by remember { mutableStateOf("Fácil") }
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
@@ -533,13 +535,13 @@ private fun AprenderApp() {
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
-    var sequenceCategoryDraft by remember { mutableStateOf("Rutinas") }
+    var sequenceCategoryDraft by remember { mutableStateOf("") }
     var sequenceNewCategoryDraft by remember { mutableStateOf("") }
     var sequenceCategoryMenuExpanded by remember { mutableStateOf(false) }
     var sequenceCategoryNames by remember {
         mutableStateOf(
             (preferences.getString("sequence_categories_v1", null)
-                ?: "Rutinas|Naturaleza|Cocina")
+                ?: "")
                 .split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct()
         )
     }
@@ -755,7 +757,7 @@ private fun AprenderApp() {
     var newPinDraft by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
-    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "Primeras palabras|Casa y familia|Naturaleza") ?: "").split("|").filter { it.isNotBlank() }) }
+    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
@@ -840,7 +842,7 @@ private fun AprenderApp() {
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             sequencePackageMessage = try {
-                exportSequencePackage(context, uri, sequenceExercises, (sequenceExercises.map { it.category } + listOf("Rutinas", "Naturaleza", "Cocina")).filter { it.isNotBlank() }.distinct().sorted(), disabledSequenceCategories)
+                exportSequencePackage(context, uri, sequenceExercises, (sequenceExercises.map { it.category } + emptyList()).filter { it.isNotBlank() }.distinct().sorted(), disabledSequenceCategories)
                 "Copia de seguridad creada: ${sequenceExercises.size} ejercicios."
             } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
         }
@@ -1717,7 +1719,7 @@ private fun AprenderApp() {
                     "sequence-categories-temporal" -> {
                         item { Text("Categorías · Orden temporal", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Las categorías organizan los ejercicios de esta modalidad y no se comparten con Procesos, Causa y consecuencia ni Ciclos.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        listOf("Rutinas", "Naturaleza", "Cocina").forEach { category ->
+                        sequenceCategoryNames.forEach { category ->
                             item {
                                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1728,7 +1730,7 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                        item { Text("En esta primera versión las categorías se muestran como ejemplo; su edición se añadirá después.", fontSize = 12.sp, color = Color(0xFF667085)) }
+                        item { Text("Crea tus propias categorías para organizar los ejercicios.", fontSize = 12.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
                         val typeName = when (parentSection) {
@@ -3226,11 +3228,11 @@ private fun ModeCardImage(index: Int, description: String, modifier: Modifier = 
 }
 
 private fun loadPairs(preferences: android.content.SharedPreferences): List<PairItem> {
-    val saved = preferences.getString("pairs_v1", null) ?: return samplePairs
+    val saved = preferences.getString("pairs_v1", null) ?: return emptyList()
     return saved.split("\n").mapNotNull { line ->
         val fields = line.split("\t")
         if (fields.size < 5) null else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
-    }.ifEmpty { samplePairs }
+    }
 }
 
 private fun savePairs(preferences: android.content.SharedPreferences, pairs: List<PairItem>) {
