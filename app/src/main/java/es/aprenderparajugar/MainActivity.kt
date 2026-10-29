@@ -159,8 +159,12 @@ private data class SequenceExercise(
     val cards: List<String>,
     val format: String,
     val category: String,
-    val alternatives: List<String> = emptyList()
+    val alternatives: List<String> = emptyList(),
+    val pictures: List<String> = emptyList()
 )
+
+private fun defaultSequencePicture(index: Int): String =
+    listOf("🌱", "🌿", "🌳", "🌸", "🦋", "🍎")[index.coerceIn(0, 5)]
 
 private val sampleTemporalSequences = listOf(
     SequenceExercise("Plantar una semilla", listOf("Poner la semilla", "Sale el brote", "Crece la planta", "Aparece la flor"), "Solo imágenes", "Naturaleza"),
@@ -331,6 +335,8 @@ private fun AprenderApp() {
     var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
     var sequenceCategoryDraft by remember { mutableStateOf("Rutinas") }
     var sequenceCardsDraft by remember { mutableStateOf(listOf("", "")) }
+    var sequenceCardPicturesDraft by remember { mutableStateOf(listOf("🌱", "🌿")) }
+    var pendingSequencePictureIndex by remember { mutableIntStateOf(-1) }
     var sequenceAlternativeDraft by remember { mutableStateOf("") }
     var sequenceEditorMessage by remember { mutableStateOf("") }
 
@@ -343,6 +349,18 @@ private fun AprenderApp() {
             pictureDraft = uri.toString()
             libraryMessage = "Imagen seleccionada."
         }
+    }
+    val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        val index = pendingSequencePictureIndex
+        if (uri != null && index >= 0) {
+            try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+            sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
+                while (it.size <= index) it.add(defaultSequencePicture(it.size))
+                it[index] = uri.toString()
+            }
+        }
+        pendingSequencePictureIndex = -1
     }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -891,6 +909,7 @@ private fun AprenderApp() {
                                 sequenceFormatDraft = "Imagen y texto"
                                 sequenceCategoryDraft = "Rutinas"
                                 sequenceCardsDraft = listOf("", "", "")
+                                sequenceCardPicturesDraft = listOf("🌱", "🌿", "🌳")
                                 sequenceAlternativeDraft = ""
                                 sequenceEditorMessage = ""
                                 parentSection = "sequence-editor-temporal"
@@ -904,6 +923,9 @@ private fun AprenderApp() {
                                     sequenceFormatDraft = exercise.format
                                     sequenceCategoryDraft = exercise.category
                                     sequenceCardsDraft = exercise.cards
+                                    sequenceCardPicturesDraft = exercise.cards.indices.map { cardIndex ->
+                                        exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() } ?: defaultSequencePicture(cardIndex)
+                                    }
                                     sequenceAlternativeDraft = exercise.alternatives.joinToString("\n") { alternative -> alternative.split("|").mapNotNull { step -> exercise.cards.indexOf(step).takeIf { it >= 0 }?.plus(1) }.joinToString(",") }
                                     sequenceEditorMessage = ""
                                     parentSection = "sequence-editor-temporal"
@@ -949,15 +971,70 @@ private fun AprenderApp() {
                         }
                         sequenceCardsDraft.forEachIndexed { index, card ->
                             item {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("${index + 1}.", fontWeight = FontWeight.Bold)
-                                    OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text("Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
-                                    OutlinedButton(onClick = { if (sequenceCardsDraft.size > 2) sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) } }, enabled = sequenceCardsDraft.size > 2) { Text("−") }
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("${index + 1}.", fontWeight = FontWeight.Bold)
+                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text("Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
+                                        OutlinedButton(onClick = {
+                                            if (sequenceCardsDraft.size > 2) {
+                                                sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) }
+                                                sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also { if (index < it.size) it.removeAt(index) }
+                                            }
+                                        }, enabled = sequenceCardsDraft.size > 2) { Text("−") }
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        val picture = sequenceCardPicturesDraft.getOrNull(index).orEmpty()
+                                        if (picture.startsWith("content://") || picture.startsWith("file://")) {
+                                            AndroidView(
+                                                factory = { ctx -> ImageView(ctx).apply {
+                                                    scaleType = ImageView.ScaleType.CENTER_CROP
+                                                    layoutParams = ViewGroup.LayoutParams(120, 120)
+                                                } },
+                                                update = { view ->
+                                                    try { view.setImageURI(Uri.parse(picture)) }
+                                                    catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) }
+                                                },
+                                                modifier = Modifier.width(88.dp).height(88.dp).clipToBounds()
+                                            )
+                                        } else {
+                                            androidx.compose.foundation.layout.Box(
+                                                Modifier.width(88.dp).height(88.dp)
+                                                    .background(Color(0xFFEAF5E6), RoundedCornerShape(12.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) { Text(picture.ifBlank { "🖼️" }, fontSize = 38.sp) }
+                                        }
+                                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text("Imagen de la tarjeta ${index + 1}", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                            OutlinedButton(onClick = {
+                                                pendingSequencePictureIndex = index
+                                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                                sequenceImagePicker.launch(arrayOf("image/*"))
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen") }
+                                            OutlinedButton(onClick = {
+                                                sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
+                                                    while (it.size <= index) it.add(defaultSequencePicture(it.size))
+                                                    it[index] = defaultSequencePicture(index)
+                                                }
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Usar dibujo") }
+                                        }
+                                    }
                                 }
                             }
                         }
                         item {
-                            OutlinedButton(onClick = { if (sequenceCardsDraft.size < 6) sequenceCardsDraft = sequenceCardsDraft + "" }, enabled = sequenceCardsDraft.size < 6, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
+                            OutlinedButton(onClick = {
+                                if (sequenceCardsDraft.size < 6) {
+                                    sequenceCardsDraft = sequenceCardsDraft + ""
+                                    sequenceCardPicturesDraft = sequenceCardPicturesDraft + defaultSequencePicture(sequenceCardPicturesDraft.size)
+                                }
+                            }, enabled = sequenceCardsDraft.size < 6, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
                         }
                         item {
                             Text("Soluciones alternativas (opcional)", fontWeight = FontWeight.Bold)
@@ -982,7 +1059,8 @@ private fun AprenderApp() {
                                     alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
                                         val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
-                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives)
+                                        val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it)?.takeIf(String::isNotBlank) ?: defaultSequencePicture(it) }
+                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives, cleanPictures)
                                         sequenceExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
                                         }
