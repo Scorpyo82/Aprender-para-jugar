@@ -274,11 +274,11 @@ private fun chooseAdaptivePairs(
 }
 
 
-private fun exportContentPackage(context: Context, target: Uri, pairs: List<PairItem>, categories: List<String>) {
+private fun exportContentPackage(context: Context, target: Uri, pairs: List<PairItem>, categories: List<String>, format: String = "aprender-para-jugar-content") {
     val resolver = context.contentResolver
     ZipOutputStream(resolver.openOutputStream(target)?.buffered() ?: throw IllegalArgumentException("No se puede escribir en el destino.")).use { zip ->
         val root = JSONObject()
-        root.put("format", "aprender-para-jugar-content")
+        root.put("format", format)
         root.put("version", 1)
         root.put("categories", JSONArray(categories))
         val words = JSONArray()
@@ -317,7 +317,7 @@ private fun exportContentPackage(context: Context, target: Uri, pairs: List<Pair
 
 private data class ImportedContent(val categories: List<String>, val pairs: List<PairItem>)
 
-private fun importContentPackage(context: Context, source: Uri): ImportedContent {
+private fun importContentPackage(context: Context, source: Uri, expectedFormat: String = "aprender-para-jugar-content"): ImportedContent {
     val entries = mutableMapOf<String, ByteArray>()
     ZipInputStream(context.contentResolver.openInputStream(source)?.buffered() ?: throw IllegalArgumentException("No se puede leer el archivo seleccionado.")).use { zip ->
         while (true) {
@@ -332,7 +332,7 @@ private fun importContentPackage(context: Context, source: Uri): ImportedContent
     }
     val jsonBytes = entries["content.json"] ?: throw IllegalArgumentException("El ZIP no contiene content.json.")
     val root = JSONObject(String(jsonBytes, Charsets.UTF_8))
-    require(root.optString("format") == "aprender-para-jugar-content") { "El archivo no es una exportación de Aprender para jugar." }
+    require(root.optString("format") == expectedFormat) { "El archivo no corresponde a esta biblioteca de ejercicios." }
     val categoriesJson = root.optJSONArray("categories") ?: JSONArray()
     val categories = (0 until categoriesJson.length()).map { categoriesJson.getString(it) }.filter { it.isNotBlank() }
     val words = root.optJSONArray("words") ?: JSONArray()
@@ -791,7 +791,7 @@ private fun AprenderApp() {
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             wordPackageMessage = try {
-                exportContentPackage(context, uri, wordExercises, wordExerciseCategories)
+                exportContentPackage(context, uri, wordExercises, wordExerciseCategories, "aprender-para-jugar-words")
                 "Copia de Palabras creada: " + wordExercises.size + " ejercicios."
             } catch (e: Exception) { "No se pudo exportar: " + (e.message ?: "error de archivo") }
         }
@@ -800,7 +800,7 @@ private fun AprenderApp() {
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             wordPackageMessage = try {
-                val imported = importContentPackage(context, uri)
+                val imported = importContentPackage(context, uri, "aprender-para-jugar-words")
                 val nextExercises = if (wordPendingImportMode == "replace") imported.pairs else {
                     val merged = wordExercises.toMutableList()
                     imported.pairs.forEach { incoming ->
