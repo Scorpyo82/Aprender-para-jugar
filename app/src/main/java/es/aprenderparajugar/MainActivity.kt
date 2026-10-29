@@ -483,23 +483,7 @@ private fun AprenderApp() {
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
-    // One-time reset for the content authoring phase: remove bundled/demo exercises
-    // and category presets from all game modes while preserving app settings and rewards.
-    remember {
-        if (!preferences.getBoolean("content_authoring_reset_v1", false)) {
-            preferences.edit()
-                .putString("pairs_v1", "")
-                .putString("categories", "")
-                .putString("sequence_exercises_temporal_v1", "[]")
-                .putString("sequence_categories_v1", "")
-                .putString("letter_word_exercises_v1", "")
-                .putString("letter_word_categories_v1", "")
-                .remove("disabled_sequence_categories")
-                .remove("disabled_letter_word_categories_v1")
-                .putBoolean("content_authoring_reset_v1", true)
-                .commit()
-        }
-    }
+    // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(loadPairs(preferences)) }
     var wordExercises by remember { mutableStateOf(loadWordExercises(preferences)) }
     var gameActiveCards by remember { mutableStateOf(preferences.getBoolean("game_active_cards", true)) }
@@ -535,6 +519,8 @@ private fun AprenderApp() {
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
+    var sequenceContentFormat by remember { mutableStateOf(preferences.getString("sequence_content_format_v1", "Imagen y texto") ?: "Imagen y texto") }
+    var sequenceMaxCards by remember { mutableIntStateOf(preferences.getInt("sequence_max_cards_v1", 6).coerceIn(2, 6)) }
     var sequenceCategoryDraft by remember { mutableStateOf("") }
     var sequenceNewCategoryDraft by remember { mutableStateOf("") }
     var sequenceCategoryMenuExpanded by remember { mutableStateOf(false) }
@@ -1285,20 +1271,34 @@ private fun AprenderApp() {
                         item {
                             androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             Text("Formato del contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("Se podrá elegir entre los tres formatos acordados. Estos controles son una vista previa; el juego aún no está implementado.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("Elige cómo se mostrarán las tarjetas al niño. Cada ejercicio seguirá guardando texto e imagen.", fontSize = 14.sp, color = Color(0xFF667085))
                             listOf("Imagen y texto", "Solo imágenes", "Solo texto").forEach { format ->
-                                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(format, modifier = Modifier.weight(1f))
-                                    Text("Próximamente", fontSize = 12.sp, color = Color(0xFF667085))
-                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        sequenceContentFormat = format
+                                        preferences.edit().putString("sequence_content_format_v1", format).apply()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(if (sequenceContentFormat == format) "✓ $format" else format) }
                             }
                         }
                         item {
                             androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             Text("Máximo de tarjetas por secuencia", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("6 tarjetas como máximo. La distribución se adaptará a la orientación y al espacio disponible.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("El niño solo verá ejercicios que no superen el límite seleccionado.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                (2..6).forEach { limit ->
+                                    OutlinedButton(
+                                        onClick = {
+                                            sequenceMaxCards = limit
+                                            preferences.edit().putInt("sequence_max_cards_v1", limit).apply()
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                    ) { Text(if (sequenceMaxCards == limit) "✓ $limit" else "$limit") }
+                                }
+                            }
                         }
-                        item { Text("Configuración en fase beta: todavía no modifica ejercicios reales.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> {
                         val sequenceType = when (parentSection) {
@@ -1541,17 +1541,6 @@ private fun AprenderApp() {
                     "sequence-editor-temporal" -> {
                         item { Text(if (sequenceEditingIndex < 0) "Nuevo ejercicio" else "Editar ejercicio", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = it }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                        item {
-                            Text("Formato de las tarjetas", fontWeight = FontWeight.Bold)
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                listOf("Imagen y texto", "Solo imágenes", "Solo texto").forEach { format ->
-                                    OutlinedButton(
-                                        onClick = { sequenceFormatDraft = format },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { Text(if (sequenceFormatDraft == format) "✓ $format" else format, fontSize = 14.sp) }
-                                }
-                            }
-                        }
                         item {
                             Text("Tipo de secuencia", fontWeight = FontWeight.Bold)
                             listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
@@ -2767,7 +2756,7 @@ private fun AprenderApp() {
                 Card(
                     Modifier.fillMaxWidth().clickable {
                         sequenceChosenDifficulty = level
-                        val candidates = sequenceExercises.filter { it.active && it.category !in disabledSequenceCategories && it.type.equals(sequenceChosenCategory, ignoreCase = true) && it.difficulty.equals(level, ignoreCase = true) }
+                        val candidates = sequenceExercises.filter { it.active && it.cards.size <= sequenceMaxCards && it.category !in disabledSequenceCategories && it.type.equals(sequenceChosenCategory, ignoreCase = true) && it.difficulty.equals(level, ignoreCase = true) }
                         if (candidates.isNotEmpty()) {
                             val exercise = candidates.random()
                             sequencePlayingExercise = exercise
@@ -2893,7 +2882,7 @@ private fun AprenderApp() {
                         ) {
                             if (isLettersExercise) {
                                 Text(targetLetterWord.getOrNull(cardIndex)?.uppercase() ?: "", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                            } else if (exercise.format != "Solo texto") {
+                            } else if (sequenceContentFormat != "Solo texto") {
                                 if (picture.startsWith("content://") || picture.startsWith("file://")) {
                                     AndroidView(
                                         factory = { ctx -> ImageView(ctx).apply {
@@ -2918,7 +2907,7 @@ private fun AprenderApp() {
                             }
                             if (isLettersExercise) {
                                 Spacer(Modifier.weight(1f))
-                            } else if (exercise.format != "Solo imágenes") {
+                            } else if (sequenceContentFormat != "Solo imágenes") {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     if (alreadySelected) Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
                                     Text(exercise.cards[cardIndex], fontSize = if (isTabletLayout) 22.sp else 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF253344))
