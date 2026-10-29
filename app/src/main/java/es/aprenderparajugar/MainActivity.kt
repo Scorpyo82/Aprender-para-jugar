@@ -173,8 +173,7 @@ private data class SequenceExercise(
     val active: Boolean = true
 )
 
-private fun defaultSequencePicture(index: Int): String =
-    listOf("🌱", "🌿", "🌳", "🌸", "🦋", "🍎")[index.coerceIn(0, 5)]
+private fun defaultSequencePicture(index: Int): String = ""
 
 private val sampleTemporalSequences = listOf(
     SequenceExercise("Plantar una semilla", listOf("Poner la semilla", "Sale el brote", "Crece la planta", "Aparece la flor"), "Solo imágenes", "Naturaleza", type = "Procesos", difficulty = "Normal"),
@@ -1768,8 +1767,6 @@ private fun AprenderApp() {
                                         update = { view -> try { view.setImageURI(Uri.parse(wordLibraryPictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
                                         modifier = Modifier.fillMaxWidth().height(180.dp)
                                     )
-                                } else if (wordLibraryPictureDraft.isNotBlank()) {
-                                    Text(wordLibraryPictureDraft, fontSize = 64.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
                                 } else {
                                     Text("Todavía no hay ninguna imagen seleccionada.", color = Color(0xFF667085))
                                 }
