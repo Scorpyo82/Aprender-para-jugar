@@ -744,7 +744,7 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "game-modes" -> {
                         item { Text("Modos de juego", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -776,31 +776,21 @@ private fun AprenderApp() {
                     "sequences-settings" -> {
                         item { Text("Configurar Secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🖼️", fontSize = 26.sp)
-                                    Column { Text("Biblioteca de secuencias", fontWeight = FontWeight.Bold); Text("Gestionar las secuencias, imágenes y textos de cada ejercicio", fontSize = 13.sp, color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🗂️", fontSize = 26.sp)
-                                    Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organizar las secuencias por temas", fontSize = 13.sp, color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
                             Text("Tipos de ejercicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text("Estos son los cuatro tipos previstos para esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085))
                         }
-                        listOf("Orden temporal" to "Primero, después y al final", "Procesos" to "Ordenar los pasos de una actividad", "Causa y consecuencia" to "Relacionar una situación con su resultado", "Ciclos" to "Comprender procesos que se repiten").forEach { (name, description) ->
+                        listOf(
+                            Triple("Orden temporal", "Primero, después y al final", "temporal"),
+                            Triple("Procesos", "Ordenar los pasos de una actividad", "procesos"),
+                            Triple("Causa y consecuencia", "Relacionar una situación con su resultado", "causa"),
+                            Triple("Ciclos", "Comprender procesos que se repiten", "ciclos")
+                        ).forEach { (name, description, key) ->
                             item {
-                                Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                                Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-type-$key" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
                                     Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                         Text("🌱", fontSize = 24.sp)
-                                        Column { Text(name, fontWeight = FontWeight.Bold); Text(description, fontSize = 13.sp, color = Color(0xFF667085)) }
+                                        Column(Modifier.weight(1f)) { Text(name, fontWeight = FontWeight.Bold); Text(description, fontSize = 13.sp, color = Color(0xFF667085)) }
+                                        Text("›", fontSize = 26.sp, color = Color(0xFF39713A))
                                     }
                                 }
                             }
@@ -822,6 +812,33 @@ private fun AprenderApp() {
                             Text("6 tarjetas como máximo. La distribución se adaptará a la orientación y al espacio disponible.", fontSize = 14.sp, color = Color(0xFF667085))
                         }
                         item { Text("Configuración en fase beta: todavía no modifica ejercicios reales.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                    }
+                    "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> {
+                        val sequenceType = when (parentSection) {
+                            "sequence-type-temporal" -> "Orden temporal"
+                            "sequence-type-procesos" -> "Procesos"
+                            "sequence-type-causa" -> "Causa y consecuencia"
+                            else -> "Ciclos"
+                        }
+                        item { Text(sequenceType, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Configura el contenido específico de esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🖼️", fontSize = 26.sp)
+                                    Column { Text("Biblioteca de secuencias", fontWeight = FontWeight.Bold); Text("Gestionar los ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🗂️", fontSize = 26.sp)
+                                    Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organizar por temas los ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item { Text("Vista beta: los apartados aún no gestionan contenido real.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "words-settings" -> {
                         item { Text("Configurar Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -1250,7 +1267,7 @@ private fun AprenderApp() {
                         Text("Creado por Miguel Ponce Torres", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Text("Desarrollado con ayuda de inteligencia artificial (IA), como herramienta de apoyo en el diseño, la programación y la resolución de problemas.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Versión 0.3.20", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Versión 0.3.21", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Text("Fecha de versión: 29 de octubre de 2026", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Propósito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
