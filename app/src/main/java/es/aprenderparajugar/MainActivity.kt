@@ -175,6 +175,46 @@ private val sampleTemporalSequences = listOf(
     SequenceExercise("El ciclo de una mariposa", listOf("Huevos", "Oruga", "Crisálida", "Mariposa"), "Solo imágenes", "Naturaleza")
 )
 
+private fun loadSequenceExercises(preferences: android.content.SharedPreferences): List<SequenceExercise> {
+    val saved = preferences.getString("sequence_exercises_temporal_v1", null) ?: return sampleTemporalSequences
+    return runCatching {
+        val array = JSONArray(saved)
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val cardsJson = item.optJSONArray("cards") ?: JSONArray()
+            val cards = (0 until cardsJson.length()).map { cardsJson.getString(it) }
+            if (cards.size < 2) return@mapNotNull null
+            val alternativesJson = item.optJSONArray("alternatives") ?: JSONArray()
+            val alternatives = (0 until alternativesJson.length()).map { alternativesJson.getString(it) }
+            val picturesJson = item.optJSONArray("pictures") ?: JSONArray()
+            val pictures = (0 until picturesJson.length()).map { picturesJson.getString(it) }
+            SequenceExercise(
+                item.optString("title", "Ejercicio"),
+                cards,
+                item.optString("format", "Imagen y texto"),
+                item.optString("category", "Sin categoría"),
+                alternatives,
+                pictures
+            )
+        }.ifEmpty { sampleTemporalSequences }
+    }.getOrDefault(sampleTemporalSequences)
+}
+
+private fun saveSequenceExercises(preferences: android.content.SharedPreferences, exercises: List<SequenceExercise>) {
+    val array = JSONArray()
+    exercises.forEach { exercise ->
+        array.put(JSONObject().apply {
+            put("title", exercise.title)
+            put("cards", JSONArray(exercise.cards))
+            put("format", exercise.format)
+            put("category", exercise.category)
+            put("alternatives", JSONArray(exercise.alternatives))
+            put("pictures", JSONArray(exercise.pictures))
+        })
+    }
+    preferences.edit().putString("sequence_exercises_temporal_v1", array.toString()).apply()
+)
+
 private data class WordLearning(
     val streak: Int = 0,
     val lastShownTurn: Int = 0,
@@ -329,7 +369,7 @@ private fun AprenderApp() {
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
     var libraryPage by remember { mutableStateOf("list") }
-    var sequenceExercises by remember { mutableStateOf(sampleTemporalSequences) }
+    var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(preferences)) }
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
@@ -1061,9 +1101,11 @@ private fun AprenderApp() {
                                         val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
                                         val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it)?.takeIf(String::isNotBlank) ?: defaultSequencePicture(it) }
                                         val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives, cleanPictures)
-                                        sequenceExercises = sequenceExercises.toMutableList().also {
+                                        val updatedExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
                                         }
+                                        sequenceExercises = updatedExercises
+                                        saveSequenceExercises(preferences, updatedExercises)
                                         parentSection = "sequence-library-temporal"
                                     }
                                 }
