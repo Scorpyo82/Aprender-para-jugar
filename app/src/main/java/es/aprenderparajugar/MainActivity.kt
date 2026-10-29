@@ -1813,6 +1813,165 @@ private fun AprenderApp() {
                 Text("🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
+    } else if (screen == "sequences") {
+        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                OutlinedButton(onClick = { screen = "home" }) { Text("← Volver al inicio") }
+                Text("Secuencias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Elige un ejercicio y toca las tarjetas en el orden correcto.", fontSize = 16.sp, color = Color(0xFF667085))
+            }
+            if (sequenceExercises.isEmpty()) {
+                item { Text("Todavía no hay ejercicios. Entra en el control parental para crear uno.", color = Color(0xFF667085)) }
+            }
+            sequenceExercises.forEachIndexed { exerciseIndex, exercise ->
+                item {
+                    Card(
+                        Modifier.fillMaxWidth().clickable {
+                            sequencePlayingExercise = exercise
+                            val indexes = exercise.cards.indices.toList()
+                            val shuffled = indexes.shuffled()
+                            sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
+                            sequenceSelectedOrder = emptyList()
+                            sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
+                            screen = "sequence-game"
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(exercise.title, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF245C2A))
+                            Text("${exercise.cards.size} tarjetas · ${exercise.format} · ${exercise.category}", fontSize = 13.sp, color = Color(0xFF667085))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                exercise.cards.take(4).forEachIndexed { cardIndex, _ ->
+                                    Text(
+                                        if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() && !it.startsWith("content://") && !it.startsWith("file://") } ?: "▧",
+                                        fontSize = 24.sp
+                                    )
+                                }
+                                if (exercise.cards.size > 4) Text("…", fontSize = 24.sp)
+                            }
+                            Text("EMPEZAR  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
+                        }
+                    }
+                }
+            }
+        }
+    } else if (screen == "sequence-game") {
+        val exercise = sequencePlayingExercise
+        if (exercise == null) {
+            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("No hay ningún ejercicio seleccionado.")
+                Button(onClick = { screen = "sequences" }) { Text("Volver a ejercicios") }
+            }
+        } else {
+            val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
+            val finished = sequenceSelectedOrder.size == exercise.cards.size
+            LazyColumn(
+                Modifier.fillMaxSize().padding(if (isTabletLayout) 28.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    OutlinedButton(onClick = { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }) { Text("← Volver a ejercicios") }
+                    Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
+                    Text(
+                        if (finished) "¡Muy bien! Has completado la secuencia." else "Toca las tarjetas en el orden en que ocurren.",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (finished) Color(0xFF24733B) else Color(0xFF667085)
+                    )
+                    Text("Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
+                }
+                items(sequencePlayOrder.size) { displayPosition ->
+                    val cardIndex = sequencePlayOrder[displayPosition]
+                    val alreadySelected = cardIndex in sequenceSelectedOrder
+                    val picture = exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
+                        ?: if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else ""
+                    Card(
+                        Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
+                            val expectedIndex = sequenceSelectedOrder.size
+                            if (cardIndex == expectedIndex) {
+                                val nextOrder = sequenceSelectedOrder + cardIndex
+                                sequenceSelectedOrder = nextOrder
+                                if (nextOrder.size == exercise.cards.size) {
+                                    sequencePlayMessage = "¡Secuencia completada!"
+                                    addEarnedTime(rewardSeconds)
+                                } else {
+                                    sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
+                                }
+                            } else {
+                                sequencePlayMessage = "No es esa todavía. Busca el paso que ocurre antes."
+                            }
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = when {
+                                alreadySelected -> Color(0xFFD9F2D9)
+                                else -> Color.White
+                            }
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            if (alreadySelected) 2.dp else 1.dp,
+                            if (alreadySelected) Color(0xFF24733B) else Color(0xFFE0E5EA)
+                        )
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (exercise.format != "Solo texto") {
+                                if (picture.startsWith("content://") || picture.startsWith("file://")) {
+                                    AndroidView(
+                                        factory = { ctx -> ImageView(ctx).apply {
+                                            scaleType = ImageView.ScaleType.CENTER_CROP
+                                            layoutParams = ViewGroup.LayoutParams(160, 120)
+                                        } },
+                                        update = { view ->
+                                            try { view.setImageURI(Uri.parse(picture)) }
+                                            catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) }
+                                        },
+                                        modifier = Modifier.width(if (isTabletLayout) 140.dp else 96.dp).height(if (isTabletLayout) 110.dp else 82.dp).clipToBounds()
+                                    )
+                                } else {
+                                    androidx.compose.foundation.layout.Box(
+                                        Modifier.width(if (isTabletLayout) 140.dp else 96.dp).height(if (isTabletLayout) 110.dp else 82.dp)
+                                            .background(if (picture.isBlank()) Color(0xFFF2F4F7) else Color(0xFFEAF5E6), RoundedCornerShape(12.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(picture.ifBlank { "▧" }, fontSize = if (picture.isBlank()) 34.sp else 42.sp, color = Color(0xFF98A2B3))
+                                    }
+                                }
+                            }
+                            if (exercise.format != "Solo imágenes") {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    if (alreadySelected) Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
+                                    Text(exercise.cards[cardIndex], fontSize = if (isTabletLayout) 22.sp else 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF253344))
+                                }
+                            } else if (alreadySelected) {
+                                Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
+                            }
+                        }
+                    }
+                }
+                if (sequencePlayMessage.isNotBlank()) {
+                    item { Text(sequencePlayMessage, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = if (finished) Color(0xFF24733B) else Color(0xFF72521B)) }
+                }
+                if (finished) {
+                    item {
+                        Button(
+                            onClick = {
+                                screen = "sequences"
+                                sequenceSelectedOrder = emptyList()
+                                sequencePlayMessage = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Elegir otro ejercicio") }
+                    }
+                    item { Text("Has ganado tiempo para jugar por completar el ejercicio.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                }
+            }
+        }
     } else if (screen == "cards-options") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
