@@ -1122,7 +1122,7 @@ private fun AprenderApp() {
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "active-games" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🎮", fontSize = 30.sp)
+                            Text("🟢", fontSize = 30.sp)
                             Column { Text("Juegos activos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Activa o bloquea modalidades durante las pruebas", color = Color(0xFF667085)) }
                         }
                     }
