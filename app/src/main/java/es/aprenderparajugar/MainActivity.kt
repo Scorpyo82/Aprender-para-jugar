@@ -170,12 +170,12 @@ private fun defaultSequencePicture(index: Int): String =
     listOf("🌱", "🌿", "🌳", "🌸", "🦋", "🍎")[index.coerceIn(0, 5)]
 
 private val sampleTemporalSequences = listOf(
-    SequenceExercise("Plantar una semilla", listOf("Poner la semilla", "Sale el brote", "Crece la planta", "Aparece la flor"), "Solo imágenes", "Naturaleza"),
-    SequenceExercise("Lavarse las manos", listOf("Mojar las manos", "Enjabonarse", "Aclarar", "Secar"), "Imagen y texto", "Rutinas"),
-    SequenceExercise("Cepillarse los dientes", listOf("Poner pasta", "Cepillarse", "Aclarar la boca", "Secar y guardar"), "Imagen y texto", "Rutinas"),
-    SequenceExercise("Vestirse", listOf("Ponerse los pantalones", "Ponerse la camiseta", "Ponerse los zapatos"), "Solo imágenes", "Rutinas", listOf("Ponerse la camiseta|Ponerse los pantalones|Ponerse los zapatos")),
-    SequenceExercise("Preparar un bocadillo", listOf("Preparar el pan", "Añadir ingredientes", "Cerrar el bocadillo", "Bocadillo listo"), "Imagen y texto", "Cocina"),
-    SequenceExercise("El ciclo de una mariposa", listOf("Huevos", "Oruga", "Crisálida", "Mariposa"), "Solo imágenes", "Naturaleza")
+    SequenceExercise("Plantar una semilla", listOf("Poner la semilla", "Sale el brote", "Crece la planta", "Aparece la flor"), "Solo imágenes", "Naturaleza", type = "Procesos", difficulty = "Normal"),
+    SequenceExercise("Lavarse las manos", listOf("Mojar las manos", "Enjabonarse", "Aclarar", "Secar"), "Imagen y texto", "Rutinas", type = "Orden temporal", difficulty = "Fácil"),
+    SequenceExercise("Cepillarse los dientes", listOf("Poner pasta", "Cepillarse", "Aclarar la boca", "Secar y guardar"), "Imagen y texto", "Rutinas", type = "Orden temporal", difficulty = "Normal"),
+    SequenceExercise("Vestirse", listOf("Ponerse los pantalones", "Ponerse la camiseta", "Ponerse los zapatos"), "Solo imágenes", "Rutinas", listOf("Ponerse la camiseta|Ponerse los pantalones|Ponerse los zapatos"), type = "Orden temporal", difficulty = "Fácil"),
+    SequenceExercise("Preparar un bocadillo", listOf("Preparar el pan", "Añadir ingredientes", "Cerrar el bocadillo", "Bocadillo listo"), "Imagen y texto", "Cocina", type = "Procesos", difficulty = "Difícil"),
+    SequenceExercise("El ciclo de una mariposa", listOf("Huevos", "Oruga", "Crisálida", "Mariposa"), "Solo imágenes", "Naturaleza", type = "Ciclos", difficulty = "Normal")
 )
 
 private fun loadSequenceExercises(preferences: android.content.SharedPreferences): List<SequenceExercise> {
