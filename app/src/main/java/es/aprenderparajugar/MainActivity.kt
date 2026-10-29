@@ -36,6 +36,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
@@ -368,6 +371,7 @@ private fun currentDayKey(): String {
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AprenderApp() {
     val context = LocalContext.current
@@ -556,6 +560,8 @@ private fun AprenderApp() {
     var evaluatedPictures by remember { mutableStateOf(mapOf<String, Boolean>()) }
     var resolved by remember { mutableStateOf(setOf<String>()) }
     var correct by remember { mutableIntStateOf(0) }
+    var resultCorrectCount by remember { mutableIntStateOf(0) }
+    var resultTotalCount by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
@@ -1027,14 +1033,23 @@ private fun AprenderApp() {
                         }
                         item {
                             Text("Tipo", fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                (listOf("Todos") + sequenceTypes).forEach { type -> FilterChip(selected = sequenceFilterType == type, onClick = { sequenceFilterType = type }, label = { Text(type, fontSize = 12.sp) }) }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                                (listOf("Todos") + sequenceTypes).forEach { type ->
+                                    FilterChip(selected = sequenceFilterType == type, onClick = { sequenceFilterType = type }, label = { Text(type, softWrap = false) })
+                                }
                             }
                         }
                         item {
                             Text("Categoría", fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                (listOf("Todas") + sequenceCategories).forEach { category -> FilterChip(selected = sequenceFilterCategory == category, onClick = { sequenceFilterCategory = category }, label = { Text(category, fontSize = 12.sp) }) }
+                            androidx.compose.foundation.layout.Box {
+                                OutlinedButton(onClick = { libraryFilterCategoryExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("$sequenceFilterCategory  ▾", maxLines = 1)
+                                }
+                                DropdownMenu(expanded = libraryFilterCategoryExpanded, onDismissRequest = { libraryFilterCategoryExpanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+                                    (listOf("Todas") + sequenceCategories).forEach { category ->
+                                        DropdownMenuItem(text = { Text(category) }, onClick = { sequenceFilterCategory = category; libraryFilterCategoryExpanded = false })
+                                    }
+                                }
                             }
                         }
                         item {
@@ -1125,6 +1140,7 @@ private fun AprenderApp() {
                             listOf("Fácil", "Normal", "Difícil").forEach { level ->
                                 OutlinedButton(onClick = { sequenceDifficultyDraft = level }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceDifficultyDraft == level) "✓ $level" else level) }
                             }
+                            Text("Cada niño aprende a su ritmo. La dificultad indica la complejidad de la actividad y es orientativa. Elige el nivel que mejor se adapte a sus necesidades y experiencia.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         item { OutlinedTextField(value = sequenceCategoryDraft, onValueChange = { sequenceCategoryDraft = it }, label = { Text("Categoría temática") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                         item {
@@ -1836,6 +1852,8 @@ private fun AprenderApp() {
                                         else -> (correct * 2 - wrong).coerceAtLeast(0)
                                     }
                                     addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
+                                    resultCorrectCount = correct
+                                    resultTotalCount = pairCount
                                     screen = "result"
                                 }
                             }
@@ -1882,17 +1900,17 @@ private fun AprenderApp() {
         }
     } else if (screen == "result") {
         val rewardIcon = when {
-            correct == 0 -> "😢"
-            correct == pairCount -> "🏆"
-            correct * 2 < pairCount -> "⭐"
-            correct * 2 == pairCount -> "⭐⭐"
+            resultCorrectCount == 0 -> "😢"
+            resultCorrectCount == resultTotalCount -> "🏆"
+            resultCorrectCount * 2 < resultTotalCount -> "⭐"
+            resultCorrectCount * 2 == resultTotalCount -> "⭐⭐"
             else -> "⭐⭐⭐"
         }
         val rewardMessage = when {
-            correct == 0 -> "¡Vamos a intentarlo otra vez!"
-            correct == pairCount -> "¡PERFECTO! ¡Eres un campeón!"
-            correct * 2 < pairCount -> "¡Buen intento! Sigue practicando"
-            correct * 2 == pairCount -> "¡Bien hecho! Has conseguido la mitad"
+            resultCorrectCount == 0 -> "¡Vamos a intentarlo otra vez!"
+            resultCorrectCount == resultTotalCount -> "¡PERFECTO! ¡Eres un campeón!"
+            resultCorrectCount * 2 < resultTotalCount -> "¡Buen intento! Sigue practicando"
+            resultCorrectCount * 2 == resultTotalCount -> "¡Bien hecho! Has conseguido la mitad"
             else -> "¡Muy bien! Cada vez lo haces mejor"
         }
         val celebration = rememberInfiniteTransition(label = "celebracion")
@@ -1910,7 +1928,7 @@ private fun AprenderApp() {
             Text("+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
             Text("MINUTOS GANADOS", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
             Spacer(Modifier.height(14.dp))
-            Text("$correct de $pairCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
+            Text("$resultCorrectCount de $resultTotalCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
             Spacer(Modifier.height(24.dp))
             Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }, modifier = Modifier.fillMaxWidth()) {
                 Text("🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -2026,6 +2044,9 @@ private fun AprenderApp() {
                                 if (nextOrder.size == exercise.cards.size) {
                                     sequencePlayMessage = "¡Secuencia completada!"
                                     addEarnedTime((when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60)
+                                    resultCorrectCount = exercise.cards.size
+                                    resultTotalCount = exercise.cards.size
+                                    screen = "result"
                                 } else {
                                     sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
                                 }
