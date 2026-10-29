@@ -2,6 +2,7 @@ package es.aprenderparajugar
 
 import android.os.Bundle
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.content.Intent
 import android.os.Build
 import android.Manifest
@@ -31,6 +32,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,6 +71,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -398,6 +402,7 @@ private fun AprenderApp() {
         }
     }
     var mode by remember { mutableStateOf("Al azar") }
+    var cardsStartMessage by remember { mutableStateOf("") }
     var difficulty by remember { mutableStateOf("Fácil") }
     var dailyManualLimit by remember { mutableIntStateOf(preferences.getInt("daily_manual_limit", 2).coerceIn(0, 10)) }
     val manualSelectionDayKey = currentDayKey()
@@ -500,9 +505,11 @@ private fun AprenderApp() {
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
-    BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result") {
+    BackHandler(enabled = screen == "parent" || screen == "parent-pin" || screen == "exit-pin" || screen == "exercise" || screen == "result" || screen == "cards-options" || screen == "category-select") {
         when (screen) {
             "parent" -> if (parentSection != "menu") parentSection = "menu" else { screen = "home"; parentSection = "menu" }
+            "cards-options" -> { screen = "home"; cardsStartMessage = "" }
+            "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
             "parent-pin", "exit-pin", "exercise", "result" -> { screen = "home"; pinEntry = ""; pinError = false }
         }
     }
@@ -523,6 +530,55 @@ private fun AprenderApp() {
             preferences.edit().putInt("balance_seconds", updated).commit()
             balanceSeconds = updated
         }
+    }
+
+
+    fun startCardsGame(requestedMode: String, requestedCategory: String? = null) {
+        cardsStartMessage = ""
+        if (requestedMode == "Elegir" && manualCategoryLimitReached) {
+            cardsStartMessage = "Has alcanzado el límite diario de elecciones manuales."
+            return
+        }
+        val chosenCategory = when (requestedMode) {
+            "Al azar" -> {
+                val eligible = categories.filter { category ->
+                    pairs.count { it.active && it.difficulty == difficulty && it.category.equals(category, true) } >= questionCount
+                }
+                eligible.randomOrNull() ?: run {
+                    cardsStartMessage = "No hay ninguna categoría con suficientes tarjetas activas para esta dificultad."
+                    return
+                }
+            }
+            "Elegir" -> requestedCategory ?: selectedExerciseCategory
+            else -> ""
+        }
+        val candidates = pairs.filter { it.active && it.difficulty == difficulty &&
+            (requestedMode == "Mezcladas" || it.category.equals(chosenCategory, true)) }
+        if (candidates.size < questionCount) {
+            cardsStartMessage = "No hay suficientes tarjetas activas para esta dificultad. Prueba otra dificultad o mezcla categorías."
+            return
+        }
+        if (requestedMode == "Elegir") {
+            val uses = manualCategoryUsesToday + 1
+            manualCategoryUsesToday = uses
+            preferences.edit().putString("manual_category_day", manualSelectionDayKey).putInt("manual_category_uses", uses).apply()
+            if (uses >= dailyManualLimit) mode = "Al azar"
+        }
+        mode = requestedMode
+        if (chosenCategory.isNotBlank()) {
+            selectedExerciseCategory = chosenCategory
+            preferences.edit().putString("selected_exercise_category", chosenCategory).apply()
+        }
+        activeExercisePairs = chooseAdaptivePairs(candidates, questionCount, learningStats, learningTurn)
+        activeExercisePairs.forEach { pair ->
+            learningTurn += 1
+            val state = learningStats[pair.word] ?: WordLearning()
+            learningStats = learningStats + (pair.word to state.copy(lastShownTurn = learningTurn))
+        }
+        preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
+        saveLearningStats(preferences, learningStats)
+        resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap()
+        correct = 0; feedback = ""; screen = "exercise"
     }
 
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
@@ -636,6 +692,8 @@ private fun AprenderApp() {
                 Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "words" -> "Gestiona palabras e imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
+                item { Text("AJUSTES POR MODALIDAD", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF667085)) }
+                item { Text("Tarjetas", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)) }
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "words" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -652,6 +710,24 @@ private fun AprenderApp() {
                         }
                     }
                 }
+                item { Text("Otras modalidades", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344)) }
+                item {
+                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🌱", fontSize = 30.sp)
+                            Column { Text("Configurar Secuencias", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Próximamente", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item {
+                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🔤", fontSize = 30.sp)
+                            Column { Text("Configurar Palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Próximamente", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item { Text("CONFIGURACIÓN GENERAL", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF667085)) }
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "rewards" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1076,8 +1152,8 @@ private fun AprenderApp() {
                         Text("Creado por Miguel Ponce Torres", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Text("Desarrollado con ayuda de inteligencia artificial (IA), como herramienta de apoyo en el diseño, la programación y la resolución de problemas.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Versión 0.3.9", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text("Fecha de versión: 28 de octubre de 2026", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("Versión 0.3.11", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Fecha de versión: 29 de octubre de 2026", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Propósito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Text("Aplicación educativa para que los niños practiquen vocabulario y asociación de palabras e imágenes mediante ejercicios breves. El aprendizaje se refuerza con recompensas de tiempo de juego y controles configurables por la familia.", fontSize = 14.sp, color = Color(0xFF667085))
@@ -1284,6 +1360,87 @@ private fun AprenderApp() {
                 Text("🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
+    } else if (screen == "cards-options") {
+        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                OutlinedButton(onClick = { screen = "home"; cardsStartMessage = "" }) { Text("← Volver al inicio") }
+                Text("Tarjetas", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Elige cómo quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
+            }
+            item {
+                Text("Dificultad", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("Fácil", "Normal", "Difícil").forEach { option ->
+                        Card(Modifier.weight(1f).clickable { difficulty = option }, shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = if (difficulty == option) Color(0xFFEAF2FF) else Color.White),
+                            border = androidx.compose.foundation.BorderStroke(if (difficulty == option) 2.dp else 1.dp, if (difficulty == option) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
+                            Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text(when(option) { "Normal" -> "$normalRewardMinutes min"; "Difícil" -> "$hardRewardMinutes min"; else -> "$easyRewardMinutes min" }, fontSize = 12.sp, color = Color(0xFF667085))
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth().clickable { startCardsGame("Al azar") }, shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0D9)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B66D))) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        androidx.compose.foundation.layout.Box(Modifier.width(56.dp).height(56.dp).background(Color(0xFFFFD9A3), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("🎲", fontSize = 30.sp) }
+                        Column(Modifier.weight(1f)) { Text("Al azar", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7A4618)); Text("Una categoría sorpresa", fontSize = 14.sp, color = Color(0xFF795A3C)) }
+                        Text("›", fontSize = 30.sp, color = Color(0xFFB96B20))
+                    }
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth().clickable { startCardsGame("Mezcladas") }, shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE2F4E8)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9BD4AC))) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        androidx.compose.foundation.layout.Box(Modifier.width(56.dp).height(56.dp).background(Color(0xFFC6EAD0), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("🗂️", fontSize = 30.sp) }
+                        Column(Modifier.weight(1f)) { Text("Mezcladas", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF205F37)); Text("Tarjetas de distintas categorías", fontSize = 14.sp, color = Color(0xFF476C51)) }
+                        Text("›", fontSize = 30.sp, color = Color(0xFF25834A))
+                    }
+                }
+            }
+            item {
+                val locked = manualCategoryLimitReached
+                Card(Modifier.fillMaxWidth().clickable(enabled = !locked) { cardsStartMessage = ""; screen = "category-select" }, shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (locked) Color(0xFFF0F0F0) else Color(0xFFE4EDFF)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (locked) Color(0xFFD7D7D7) else Color(0xFFA9C2F3))) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        androidx.compose.foundation.layout.Box(Modifier.width(56.dp).height(56.dp).background(if (locked) Color(0xFFE0E0E0) else Color(0xFFC9DAFF), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text(if (locked) "🔒" else "▦", fontSize = 30.sp, color = Color(0xFF356BC5)) }
+                        Column(Modifier.weight(1f)) { Text("Elegir categoría", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = if (locked) Color(0xFF777777) else Color(0xFF244D91)); Text(if (locked) "Límite diario alcanzado" else "Escoge qué quieres practicar", fontSize = 14.sp, color = if (locked) Color(0xFF777777) else Color(0xFF4D6794)) }
+                        Text("›", fontSize = 30.sp, color = if (locked) Color(0xFF777777) else Color(0xFF356BC5))
+                    }
+                }
+            }
+            if (cardsStartMessage.isNotBlank()) item { Text(cardsStartMessage, color = Color(0xFF9A4E00), fontWeight = FontWeight.SemiBold) }
+            if (manualCategoryLimitReached) item { Text("Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit). Podrás volver a elegir categoría mañana.", fontSize = 13.sp, color = Color(0xFF8A4B08)) }
+        }
+    } else if (screen == "category-select") {
+        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                OutlinedButton(onClick = { screen = "cards-options"; cardsStartMessage = "" }) { Text("← Volver a las opciones") }
+                Text("Elegir categoría", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Toca una categoría para empezar la partida.", fontSize = 16.sp, color = Color(0xFF667085))
+            }
+            categories.forEach { name ->
+                item {
+                    val count = pairs.count { it.active && it.difficulty == difficulty && it.category.equals(name, ignoreCase = true) }
+                    Card(Modifier.fillMaxWidth().clickable(enabled = count >= questionCount && !manualCategoryLimitReached) { startCardsGame("Elegir", name) },
+                        shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (count >= questionCount) Color.White else Color(0xFFF0F0F0)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8E0D2))) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("📚", fontSize = 30.sp)
+                            Column(Modifier.weight(1f)) { Text(name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344)); Text("$count tarjetas disponibles", fontSize = 13.sp, color = Color(0xFF667085)) }
+                            Text(if (count >= questionCount) "›" else "—", fontSize = 28.sp, color = Color(0xFF3567A8))
+                        }
+                    }
+                }
+            }
+            if (manualCategoryLimitReached) item { Text("Has alcanzado el límite diario de elecciones manuales.", color = Color(0xFF8A4B08), fontWeight = FontWeight.SemiBold) }
+            if (cardsStartMessage.isNotBlank()) item { Text(cardsStartMessage, color = Color(0xFF9A4E00), fontWeight = FontWeight.SemiBold) }
+        }
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(20.dp),
@@ -1311,90 +1468,31 @@ private fun AprenderApp() {
                 }
             }
             item {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDF7)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8E0D2))) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("¿Cómo quieres jugar?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("Al azar", "Mezcladas", "Elegir").forEach { option ->
-                                val optionLocked = option == "Elegir" && manualCategoryLimitReached
-                                Card(modifier = Modifier.weight(1f).clickable(enabled = !optionLocked) { mode = option }, shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = when { optionLocked -> Color(0xFFF0F0F0); mode == option -> Color(0xFFEAF2FF); else -> Color.White }), border = androidx.compose.foundation.BorderStroke(if (mode == option && !optionLocked) 2.dp else 1.dp, if (mode == option && !optionLocked) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
-                                    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(when(option) { "Al azar" -> "🎲"; "Mezcladas" -> "🧩"; else -> if (optionLocked) "🔒" else "📚" }, fontSize = 22.sp)
-                                        Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (optionLocked) Color(0xFF777777) else Color(0xFF253344))
-                                        Text(when(option) { "Al azar" -> "Una categoría sorpresa"; "Mezcladas" -> "Varias categorías"; else -> if (optionLocked) "Límite diario alcanzado" else "Escoge categoría" }, fontSize = 10.sp, color = if (optionLocked) Color(0xFF777777) else Color(0xFF667085))
-                                    }
-                                }
-                            }
-                        }
-                        if (manualCategoryLimitReached) {
-                            Text("🔒 Has alcanzado el límite diario de elecciones manuales ($manualCategoryUsesToday/$dailyManualLimit). Puedes seguir jugando en «Al azar» o «Mezcladas»; la selección de categoría se desbloqueará mañana.", fontSize = 13.sp, color = Color(0xFF8A4B08), fontWeight = FontWeight.SemiBold)
-                        }
-                        if (mode == "Elegir" && !manualCategoryLimitReached) {
-                            Spacer(Modifier.height(4.dp))
-                            OutlinedButton(onClick = { exerciseCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text("📚 Tema: $selectedExerciseCategory  ▾")
-                            }
-                            DropdownMenu(
-                                expanded = exerciseCategoryMenuExpanded,
-                                onDismissRequest = { exerciseCategoryMenuExpanded = false }
-                            ) {
-                                categories.forEach { category ->
-                                    DropdownMenuItem(
-                                        text = { Text(category) },
-                                        onClick = {
-                                            selectedExerciseCategory = category
-                                            preferences.edit().putString("selected_exercise_category", category).apply()
-                                            exerciseCategoryMenuExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        Text("Preguntas por partida: $questionCount · Disponibles en ${difficulty.lowercase()}: ${availableExercisePairs.size}", fontSize = 14.sp, color = Color(0xFF667085))
-                        if (availableExercisePairs.isEmpty()) {
-                            Text("No hay preguntas activas para esta dificultad. Entra en Configuración parental → Biblioteca de palabras y activa o crea palabras de dificultad $difficulty.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold)
-                        } else if (availableExercisePairs.size < questionCount) {
-                            Text("La partida tendrá ${availableExercisePairs.size} preguntas: no hay más palabras activas de esta dificultad.", color = Color(0xFF8A5A00))
-                        }
-                        Text("Dificultad y recompensa", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("Fácil", "Normal", "Difícil").forEach { option ->
-                                Card(modifier = Modifier.weight(1f).clickable { difficulty = option }, shape = RoundedCornerShape(15.dp), colors = CardDefaults.cardColors(containerColor = if (difficulty == option) Color(0xFFEAF2FF) else Color.White), border = androidx.compose.foundation.BorderStroke(if (difficulty == option) 2.dp else 1.dp, if (difficulty == option) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
-                                    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                        Text(when(option) { "Normal" -> "$normalRewardMinutes min"; "Difícil" -> "$hardRewardMinutes min"; else -> "$easyRewardMinutes min" }, fontSize = 12.sp, color = Color(0xFF667085))
-                                    }
-                                }
-                            }
-                        }
+                Card(Modifier.fillMaxWidth().clickable { screen = "cards-options"; cardsStartMessage = "" }, shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF5D8)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B95D)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
+                    ModeCardImage(0, "Tarjetas: aprender con imágenes", Modifier.fillMaxWidth().height(220.dp))
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F8E8)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB4DDA0))) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        ModeCardImage(1, "Secuencias: ordenar y razonar", Modifier.fillMaxWidth().height(220.dp))
+                        Text("PRÓXIMAMENTE", Modifier.padding(bottom = 12.dp), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
                     }
                 }
             }
             item {
-                Button(onClick = {
-                    if (availableExercisePairs.size >= questionCount && !(mode == "Elegir" && manualCategoryLimitReached)) {
-                        if (mode == "Elegir") {
-                            val updatedUses = manualCategoryUsesToday + 1
-                            manualCategoryUsesToday = updatedUses
-                            preferences.edit()
-                                .putString("manual_category_day", manualSelectionDayKey)
-                                .putInt("manual_category_uses", updatedUses)
-                                .apply()
-                            if (updatedUses >= dailyManualLimit) mode = "Al azar"
-                        }
-                        activeExercisePairs = chooseAdaptivePairs(availableExercisePairs, questionCount, learningStats, learningTurn)
-                        activeExercisePairs.forEach { pair ->
-                            learningTurn += 1
-                            val state = learningStats[pair.word] ?: WordLearning()
-                            learningStats = learningStats + (pair.word to state.copy(lastShownTurn = learningTurn))
-                        }
-                        preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
-                        saveLearningStats(preferences, learningStats)
-                        resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; screen = "exercise"
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CCCF4))) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        ModeCardImage(2, "Palabras: ordenar letras y completar palabras", Modifier.fillMaxWidth().height(220.dp))
+                        Text("PRÓXIMAMENTE", Modifier.padding(bottom = 12.dp), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF285F94))
                     }
-                }, enabled = availableExercisePairs.size >= questionCount && !(mode == "Elegir" && manualCategoryLimitReached), modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF3567A8))) {
-                    Text("📚 Empezar ejercicio", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+            item {
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
@@ -1451,6 +1549,20 @@ private fun AprenderApp() {
             }
         }
     }
+}
+
+
+@Composable
+private fun ModeCardImage(index: Int, description: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val image = remember(context, index) {
+        val encoded = context.resources.openRawResource(R.raw.cards_sprite_b64).bufferedReader().use { it.readText() }
+        val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+        val sheet = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        val tileHeight = sheet.height / 3
+        Bitmap.createBitmap(sheet, 0, index.coerceIn(0, 2) * tileHeight, sheet.width, tileHeight).asImageBitmap()
+    }
+    Image(bitmap = image, contentDescription = description, modifier = modifier, contentScale = ContentScale.FillBounds)
 }
 
 private fun loadPairs(preferences: android.content.SharedPreferences): List<PairItem> {
