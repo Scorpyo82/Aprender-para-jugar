@@ -2337,7 +2337,7 @@ private fun AprenderApp() {
                     Card(
                         Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
                             val expectedIndex = sequenceSelectedOrder.size
-                            val isCorrectChoice = if (isLettersExercise) targetLetterWord.getOrNull(expectedIndex)?.equals(targetLetterWord.getOrNull(cardIndex), ignoreCase = true) == true else cardIndex == expectedIndex
+                            val isCorrectChoice = if (isLettersExercise) targetLetterWord.getOrNull(expectedIndex) != null && targetLetterWord.getOrNull(expectedIndex)?.uppercaseChar() == targetLetterWord.getOrNull(cardIndex)?.uppercaseChar() else cardIndex == expectedIndex
                             if (isCorrectChoice) {
                                 val nextOrder = sequenceSelectedOrder + cardIndex
                                 sequenceSelectedOrder = nextOrder
