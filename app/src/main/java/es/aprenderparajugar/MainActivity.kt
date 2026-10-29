@@ -510,6 +510,17 @@ private fun AprenderApp() {
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceFormatDraft by remember { mutableStateOf("Imagen y texto") }
     var sequenceCategoryDraft by remember { mutableStateOf("Rutinas") }
+    var sequenceNewCategoryDraft by remember { mutableStateOf("") }
+    var sequenceCategoryMenuExpanded by remember { mutableStateOf(false) }
+    var sequenceCategoryNames by remember {
+        mutableStateOf(
+            (preferences.getString("sequence_categories_v1", null)
+                ?: "Rutinas|Naturaleza|Cocina")
+                .split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        )
+    }
+    var sequenceCategoryMessage by remember { mutableStateOf("") }
+    var sequenceCategoryToDelete by remember { mutableStateOf<String?>(null) }
     var sequenceTypeDraft by remember { mutableStateOf("Orden temporal") }
     var sequenceDifficultyDraft by remember { mutableStateOf("Normal") }
     var sequenceFilterType by remember { mutableStateOf("Todos") }
@@ -525,6 +536,7 @@ private fun AprenderApp() {
     var sequencePlayingExercise by remember { mutableStateOf<SequenceExercise?>(null) }
     var sequencePlayOrder by remember { mutableStateOf(emptyList<Int>()) }
     var sequenceSelectedOrder by remember { mutableStateOf(emptyList<Int>()) }
+    var sequenceWrongAnswers by remember { mutableIntStateOf(0) }
     var sequencePlayMessage by remember { mutableStateOf("") }
     var sequenceChosenCategory by remember { mutableStateOf("") }
     var sequenceChosenDifficulty by remember { mutableStateOf("") }
@@ -1169,7 +1181,7 @@ private fun AprenderApp() {
                     }
                     "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
                         val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
-                        val sequenceCategories = (sequenceExercises.map { it.category }.filter { it.isNotBlank() } + listOf("Rutinas", "Naturaleza", "Cocina")).distinct().sorted()
+                        val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
                             (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
                             (sequenceFilterCategory == "Todas" || exercise.category == sequenceFilterCategory) &&
@@ -1269,22 +1281,58 @@ private fun AprenderApp() {
                         }
                     }
                     "sequence-categories", "sequence-categories-temporal", "sequence-categories-procesos", "sequence-categories-causa", "sequence-categories-ciclos" -> {
-                        val sequenceCategories = (sequenceExercises.map { it.category }.filter { it.isNotBlank() } + listOf("Rutinas", "Naturaleza", "Cocina")).distinct().sorted()
+                        val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         item { Text("Categorías de secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Las categorías son comunes a todos los tipos. Al desactivar una, sus ejercicios no aparecerán en las partidas, aunque sigan guardados en la biblioteca.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Crea y organiza categorías temáticas compartidas por todos los tipos de secuencia. Desactivar una categoría mantiene sus ejercicios guardados, pero evita que aparezcan en las partidas.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            OutlinedTextField(
+                                value = sequenceNewCategoryDraft,
+                                onValueChange = { sequenceNewCategoryDraft = it; sequenceCategoryMessage = "" },
+                                label = { Text("Nueva categoría") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                            Button(onClick = {
+                                val name = sequenceNewCategoryDraft.trim()
+                                when {
+                                    name.isBlank() -> sequenceCategoryMessage = "Escribe un nombre para la categoría."
+                                    sequenceCategories.any { it.equals(name, ignoreCase = true) } -> sequenceCategoryMessage = "Ya existe una categoría con ese nombre."
+                                    else -> {
+                                        sequenceCategoryNames = (sequenceCategoryNames + name).distinct()
+                                        preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
+                                        sequenceNewCategoryDraft = ""
+                                        sequenceCategoryMessage = "Categoría creada."
+                                    }
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear categoría") }
+                            if (sequenceCategoryMessage.isNotBlank()) Text(sequenceCategoryMessage, color = if (sequenceCategoryMessage == "Categoría creada.") Color(0xFF24733B) else Color(0xFFB3261E), fontSize = 13.sp)
+                        }
                         sequenceCategories.forEach { category ->
                             item {
                                 val enabled = category !in disabledSequenceCategories
                                 Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = if (enabled) Color.White else Color(0xFFF2F4F7))) {
-                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(category, fontWeight = FontWeight.Bold)
-                                            Text("${sequenceExercises.count { it.category == category }} ejercicios · ${sequenceExercises.count { it.category == category && it.active }} activos", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(category, fontWeight = FontWeight.Bold)
+                                                Text("${sequenceExercises.count { it.category == category }} ejercicios · ${sequenceExercises.count { it.category == category && it.active }} activos", fontSize = 12.sp, color = Color(0xFF667085))
+                                            }
+                                            Switch(checked = enabled, onCheckedChange = { checked ->
+                                                disabledSequenceCategories = if (checked) disabledSequenceCategories - category else disabledSequenceCategories + category
+                                                preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
+                                            })
                                         }
-                                        Switch(checked = enabled, onCheckedChange = { checked ->
-                                            disabledSequenceCategories = if (checked) disabledSequenceCategories - category else disabledSequenceCategories + category
-                                            preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
-                                        })
+                                        if (sequenceExercises.none { it.category == category }) {
+                                            TextButton(onClick = {
+                                                sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
+                                                preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
+                                                disabledSequenceCategories = disabledSequenceCategories - category
+                                                preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
+                                                sequenceCategoryMessage = "Categoría eliminada."
+                                            }) { Text("Eliminar categoría") }
+                                        } else {
+                                            Text("No se puede eliminar mientras tenga ejercicios asignados.", fontSize = 12.sp, color = Color(0xFF667085))
+                                        }
                                     }
                                 }
                             }
@@ -1317,7 +1365,20 @@ private fun AprenderApp() {
                             }
                             Text("Cada niño aprende a su ritmo. La dificultad indica la complejidad de la actividad y es orientativa. Elige el nivel que mejor se adapte a sus necesidades y experiencia.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
-                        item { OutlinedTextField(value = sequenceCategoryDraft, onValueChange = { sequenceCategoryDraft = it }, label = { Text("Categoría temática") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item {
+                            Text("Categoría temática", fontWeight = FontWeight.Bold)
+                            androidx.compose.foundation.layout.Box {
+                                OutlinedButton(onClick = { sequenceCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("🗂️ $sequenceCategoryDraft  ▾", maxLines = 1)
+                                }
+                                DropdownMenu(expanded = sequenceCategoryMenuExpanded, onDismissRequest = { sequenceCategoryMenuExpanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+                                    (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted().forEach { category ->
+                                        DropdownMenuItem(text = { Text(category) }, onClick = { sequenceCategoryDraft = category; sequenceCategoryMenuExpanded = false })
+                                    }
+                                }
+                            }
+                            Text("Las categorías se crean y gestionan desde el menú Categorías de la biblioteca.", fontSize = 12.sp, color = Color(0xFF667085))
+                        }
                         item {
                             Text("Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
                             Text("Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
@@ -2159,6 +2220,7 @@ private fun AprenderApp() {
                             val shuffled = indexes.shuffled()
                             sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
                             sequenceSelectedOrder = emptyList()
+                            sequenceWrongAnswers = 0
                             sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
                             screen = "sequence-game"
                         } else {
@@ -2218,14 +2280,18 @@ private fun AprenderApp() {
                                 sequenceSelectedOrder = nextOrder
                                 if (nextOrder.size == exercise.cards.size) {
                                     sequencePlayMessage = "¡Secuencia completada!"
-                                    addEarnedTime((when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60)
-                                    resultCorrectCount = exercise.cards.size
+                                    val baseRewardSeconds = (when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60
+                                    val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
+                                    val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(20)
+                                    addEarnedTime(baseRewardSeconds * rewardPercent / 100)
+                                    resultCorrectCount = (exercise.cards.size - sequenceWrongAnswers).coerceIn(0, exercise.cards.size)
                                     resultTotalCount = exercise.cards.size
                                     screen = "result"
                                 } else {
                                     sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
                                 }
                             } else {
+                                sequenceWrongAnswers += 1
                                 sequencePlayMessage = "No es esa todavía. Busca el paso que ocurre antes."
                             }
                         },
