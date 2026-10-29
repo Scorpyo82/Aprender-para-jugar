@@ -908,6 +908,24 @@ private fun AprenderApp() {
                     "sequences-settings" -> {
                         item { Text("Configurar Secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-library" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5E6))) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("📚", fontSize = 26.sp)
+                                    Column(Modifier.weight(1f)) { Text("Biblioteca común de ejercicios", fontWeight = FontWeight.Bold); Text("Crear, editar, filtrar y activar ejercicios de los cuatro tipos", fontSize = 13.sp, color = Color(0xFF667085)) }
+                                    Text("›", fontSize = 24.sp)
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-categories" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5E6))) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🗂️", fontSize = 26.sp)
+                                    Column(Modifier.weight(1f)) { Text("Categorías comunes", fontWeight = FontWeight.Bold); Text("Activar o desactivar categorías para todos los tipos", fontSize = 13.sp, color = Color(0xFF667085)) }
+                                    Text("›", fontSize = 24.sp)
+                                }
+                            }
+                        }
+                        item {
                             Text("Tipos de ejercicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text("Estos son los cuatro tipos previstos para esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085))
                         }
