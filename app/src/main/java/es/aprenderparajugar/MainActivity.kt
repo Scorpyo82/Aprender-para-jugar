@@ -525,7 +525,7 @@ private fun AprenderApp() {
     var wordNewCategoryDraft by remember { mutableStateOf("") }
     var wordCategoryToDelete by remember { mutableStateOf<String?>(null) }
     var wordDraft by remember { mutableStateOf("") }
-    var pictureDraft by remember { mutableStateOf("🐱") }
+    var pictureDraft by remember { mutableStateOf("") }
     var categoryDraft by remember { mutableStateOf("") }
     var difficultyDraft by remember { mutableStateOf("Fácil") }
     var editingWord by remember { mutableStateOf<String?>(null) }
@@ -761,7 +761,7 @@ private fun AprenderApp() {
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
-    var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "Primeras palabras") ?: "Primeras palabras") }
+    var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "") ?: "") }
     var exerciseCategoryMenuExpanded by remember { mutableStateOf(false) }
     var libraryCategoryFilter by remember { mutableStateOf("Todas") }
     var libraryDifficultyFilter by remember { mutableStateOf("Todas") }
@@ -1698,12 +1698,12 @@ private fun AprenderApp() {
                                     sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
                                     (if (sequenceTypeDraft == "Letras") cleanCards.size != 1 else cleanCards.size < 2) || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = if (sequenceTypeDraft == "Letras") "Escribe la palabra que se formará con las letras." else "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
-                                     sequenceTypeDraft != "Letras" && sequenceFormatDraft == "Solo imágenes" && sequenceCardPicturesDraft.take(cleanCards.size).any { it.isBlank() } -> sequenceEditorMessage = "En el formato «Solo imágenes», selecciona una imagen para cada tarjeta."
+                                     sequenceTypeDraft != "Letras" && sequenceCardPicturesDraft.take(cleanCards.size).any { it.isBlank() } -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta; todos los ejercicios deben tener texto e imagen."
                                     sequenceTypeDraft != "Letras" && alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
                                         val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
                                         val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
-                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, sequenceExercises.getOrNull(sequenceEditingIndex)?.active ?: true)
+                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim(), alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, sequenceExercises.getOrNull(sequenceEditingIndex)?.active ?: true)
                                         val updatedExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
                                         }
