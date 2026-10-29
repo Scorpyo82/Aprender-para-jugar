@@ -1469,49 +1469,123 @@ private fun AprenderApp() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("🌱 Aprender para jugar", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), modifier = Modifier.weight(1f))
-                    OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }) { Text("⚙️") }
-                    OutlinedButton(onClick = {
-                        soundEnabled = !soundEnabled
-                        preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
-                    }) { Text(if (soundEnabled) "🔊" else "🔇") }
-                    Card(shape = RoundedCornerShape(50), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Text("⏱ $balanceMinutes min", Modifier.padding(horizontal = 12.dp, vertical = 9.dp), fontWeight = FontWeight.Bold)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Aprender para jugar", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                        Text("¡Cada acierto te acerca a jugar!", fontSize = 13.sp, color = Color(0xFF667085))
                     }
+                    OutlinedButton(
+                        onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) { Text("⚙️", fontSize = 18.sp) }
+                    OutlinedButton(
+                        onClick = {
+                            soundEnabled = !soundEnabled
+                            preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) { Text(if (soundEnabled) "🔊" else "🔇", fontSize = 18.sp) }
                 }
             }
             item {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDF7)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8E0D2)), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD968)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
                         Text("🦊", fontSize = 54.sp)
-                        Text("¡Vamos a aprender!", Modifier.fillMaxWidth(), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        Text("Lee, piensa, empareja y gana minutos para jugar.", Modifier.fillMaxWidth(), fontSize = 16.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Column(Modifier.weight(1f)) {
+                            Text("¡Vamos a aprender!", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF653D12))
+                            Text("Lee, piensa, empareja y gana minutos para jugar.", fontSize = 14.sp, color = Color(0xFF704D26))
+                        }
                     }
                 }
             }
             item {
-                Card(Modifier.fillMaxWidth().clickable { screen = "cards-options"; cardsStartMessage = "" }, shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF5D8)), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B95D)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-                    ModeCardImage(0, "Tarjetas: aprender con imágenes", Modifier.fillMaxWidth().aspectRatio(1.5f))
-                }
-            }
-            item {
-                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F8E8)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB4DDA0))) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ModeCardImage(1, "Secuencias: ordenar y razonar", Modifier.fillMaxWidth().aspectRatio(1.5f))
-                        Text("PRÓXIMAMENTE", Modifier.padding(bottom = 12.dp), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Elige cómo aprender", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                    Card(shape = RoundedCornerShape(50), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Text("⏱ $balanceMinutes min", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, color = Color(0xFF4B367C))
                     }
                 }
             }
             item {
-                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CCCF4))) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ModeCardImage(2, "Palabras: ordenar letras y completar palabras", Modifier.fillMaxWidth().aspectRatio(1.5f))
-                        Text("PRÓXIMAMENTE", Modifier.padding(bottom = 12.dp), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF285F94))
+                Card(
+                    Modifier.fillMaxWidth().clickable { screen = "cards-options"; cardsStartMessage = "" },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0B8)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B95D)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ModeCardImage(0, "Ilustración de Tarjetas", Modifier.width(118.dp).height(118.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Tarjetas", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
+                            Text("Aprender con imágenes", fontSize = 14.sp, color = Color(0xFF795A3C))
+                            Text("EMPEZAR  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
+                        }
+                    }
+                }
+            }
+            item {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFDDF3D3)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ModeCardImage(1, "Ilustración de Secuencias", Modifier.width(118.dp).height(118.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Secuencias", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
+                            Text("Ordenar y razonar", fontSize = 14.sp, color = Color(0xFF476C51))
+                            Text("PRÓXIMAMENTE  🔒", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF39713A))
+                        }
+                    }
+                }
+            }
+            item {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD8EEFF)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CCCF4))
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ModeCardImage(2, "Ilustración de Palabras", Modifier.width(118.dp).height(118.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Palabras", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+                            Text("Ordenar letras y completar palabras", fontSize = 14.sp, color = Color(0xFF42647D))
+                            Text("PRÓXIMAMENTE  🔒", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF285F94))
+                        }
                     }
                 }
             }
