@@ -769,7 +769,7 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-library-temporal", "sequence-editor-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-library-temporal", "sequence-editor-temporal", "sequence-categories-temporal", "sequence-library-procesos", "sequence-categories-procesos", "sequence-library-causa", "sequence-categories-causa", "sequence-library-ciclos", "sequence-categories-ciclos" -> if (parentSection.endsWith("procesos")) "sequence-type-procesos" else if (parentSection.endsWith("causa")) "sequence-type-causa" else if (parentSection.endsWith("ciclos")) "sequence-type-ciclos" else "sequence-type-temporal"; "words", "categories" -> "cards-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "game-modes" -> {
                         item { Text("Modos de juego", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -849,7 +849,13 @@ private fun AprenderApp() {
                         item { Text("Configura el contenido específico de esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
                             Card(Modifier.fillMaxWidth().clickable {
-                                parentSection = if (parentSection == "sequence-type-temporal") "sequence-library-temporal" else "sequence-library-temporal"
+                                val key = when (parentSection) {
+                                    "sequence-type-temporal" -> "temporal"
+                                    "sequence-type-procesos" -> "procesos"
+                                    "sequence-type-causa" -> "causa"
+                                    else -> "ciclos"
+                                }
+                                parentSection = if (key == "temporal") "sequence-library-temporal" else "sequence-library-$key"
                             }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🖼️", fontSize = 26.sp)
@@ -858,7 +864,15 @@ private fun AprenderApp() {
                             }
                         }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-categories-temporal" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                            Card(Modifier.fillMaxWidth().clickable {
+                                val key = when (parentSection) {
+                                    "sequence-type-temporal" -> "temporal"
+                                    "sequence-type-procesos" -> "procesos"
+                                    "sequence-type-causa" -> "causa"
+                                    else -> "ciclos"
+                                }
+                                parentSection = "sequence-categories-$key"
+                            }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🗂️", fontSize = 26.sp)
                                     Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organizar por temas los ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -983,6 +997,24 @@ private fun AprenderApp() {
                             }
                         }
                         item { Text("En esta primera versión las categorías se muestran como ejemplo; su edición se añadirá después.", fontSize = 12.sp, color = Color(0xFF667085)) }
+                    }
+                    "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
+                        val typeName = when (parentSection) {
+                            "sequence-library-procesos" -> "Procesos"
+                            "sequence-library-causa" -> "Causa y consecuencia"
+                            else -> "Ciclos"
+                        }
+                        item { Text("Biblioteca · $typeName", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("La biblioteca de esta modalidad tendrá sus propios ejercicios, formatos y soluciones. El editor se implementará después de validar el de Orden temporal.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                    }
+                    "sequence-categories-procesos", "sequence-categories-causa", "sequence-categories-ciclos" -> {
+                        val typeName = when (parentSection) {
+                            "sequence-categories-procesos" -> "Procesos"
+                            "sequence-categories-causa" -> "Causa y consecuencia"
+                            else -> "Ciclos"
+                        }
+                        item { Text("Categorías · $typeName", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Estas categorías son independientes de las demás modalidades. Su gestión se habilitará cuando implementemos la biblioteca de $typeName.", fontSize = 14.sp, color = Color(0xFF667085)) }
                     }
                     "words-settings" -> {
                         item { Text("Configurar Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
