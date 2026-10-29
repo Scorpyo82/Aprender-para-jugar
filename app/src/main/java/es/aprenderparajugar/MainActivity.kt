@@ -776,6 +776,22 @@ private fun AprenderApp() {
                     "sequences-settings" -> {
                         item { Text("Configurar Secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🖼️", fontSize = 26.sp)
+                                    Column { Text("Biblioteca de secuencias", fontWeight = FontWeight.Bold); Text("Gestionar las secuencias, imágenes y textos de cada ejercicio", fontSize = 13.sp, color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🗂️", fontSize = 26.sp)
+                                    Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organizar las secuencias por temas", fontSize = 13.sp, color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
+                        item {
                             Text("Tipos de ejercicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text("Estos son los cuatro tipos previstos para esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085))
                         }
@@ -1234,7 +1250,7 @@ private fun AprenderApp() {
                         Text("Creado por Miguel Ponce Torres", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Text("Desarrollado con ayuda de inteligencia artificial (IA), como herramienta de apoyo en el diseño, la programación y la resolución de problemas.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("Versión 0.3.19", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Versión 0.3.20", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Text("Fecha de versión: 29 de octubre de 2026", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         Text("Propósito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
