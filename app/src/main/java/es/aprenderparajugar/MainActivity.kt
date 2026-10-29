@@ -1449,6 +1449,7 @@ private fun AprenderApp() {
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("🌱 Aprender para jugar", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), modifier = Modifier.weight(1f))
+                    OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }) { Text("⚙️") }
                     OutlinedButton(onClick = {
                         soundEnabled = !soundEnabled
                         preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
@@ -1493,7 +1494,6 @@ private fun AprenderApp() {
                 }
             }
             item {
-                OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️ Configuración parental", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
