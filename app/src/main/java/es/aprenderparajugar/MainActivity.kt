@@ -904,7 +904,7 @@ private fun AprenderApp() {
                                     sequenceFormatDraft = exercise.format
                                     sequenceCategoryDraft = exercise.category
                                     sequenceCardsDraft = exercise.cards
-                                    sequenceAlternativeDraft = exercise.alternatives.joinToString("\\n") { it.replace("|", " → ") }
+                                    sequenceAlternativeDraft = exercise.alternatives.joinToString("\n") { alternative -> alternative.split("|").mapNotNull { step -> exercise.cards.indexOf(step).takeIf { it >= 0 }?.plus(1) }.joinToString(",") }
                                     sequenceEditorMessage = ""
                                     parentSection = "sequence-editor-temporal"
                                 }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -933,9 +933,12 @@ private fun AprenderApp() {
                         item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = it }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                         item {
                             Text("Formato de las tarjetas", fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 listOf("Imagen y texto", "Solo imágenes", "Solo texto").forEach { format ->
-                                    OutlinedButton(onClick = { sequenceFormatDraft = format }) { Text(if (sequenceFormatDraft == format) "✓ $format" else format, fontSize = 11.sp) }
+                                    OutlinedButton(
+                                        onClick = { sequenceFormatDraft = format },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text(if (sequenceFormatDraft == format) "✓ $format" else format, fontSize = 14.sp) }
                                 }
                             }
                         }
@@ -958,19 +961,27 @@ private fun AprenderApp() {
                         }
                         item {
                             Text("Soluciones alternativas (opcional)", fontWeight = FontWeight.Bold)
-                            Text("Una alternativa por línea, usando los textos de las tarjetas separados por →.", fontSize = 13.sp, color = Color(0xFF667085))
-                            OutlinedTextField(value = sequenceAlternativeDraft, onValueChange = { sequenceAlternativeDraft = it }, label = { Text("Ej.: Paso B → Paso A → Paso C") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                            Text("Una alternativa por línea. Escribe los números de las tarjetas en el orden correcto, separados por comas.", fontSize = 13.sp, color = Color(0xFF667085))
+                            OutlinedTextField(value = sequenceAlternativeDraft, onValueChange = { sequenceAlternativeDraft = it }, label = { Text("Ej.: 1,3,4,2") }, placeholder = { Text("1,3,4,2\n1,2,3,4") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                         }
                         item {
                             if (sequenceEditorMessage.isNotBlank()) Text(sequenceEditorMessage, color = Color(0xFFB3261E), fontSize = 13.sp)
                             Button(onClick = {
                                 val cleanCards = sequenceCardsDraft.map { it.trim() }
+                                val alternativeLines = sequenceAlternativeDraft.lines().map { it.trim() }.filter { it.isNotBlank() }
+                                val parsedAlternatives = alternativeLines.map { line -> line.split(",").map { it.trim().toIntOrNull() } }
+                                val invalidAlternative = parsedAlternatives.any { indexes ->
+                                    indexes.size != cleanCards.size ||
+                                        indexes.any { it == null || it !in 1..cleanCards.size } ||
+                                        indexes.filterNotNull().distinct().size != cleanCards.size
+                                }
                                 when {
                                     sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
                                     cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
+                                    alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
-                                        val alternatives = sequenceAlternativeDraft.lines().map { line -> line.split("→").map { it.trim() }.filter { it.isNotBlank() }.joinToString("|") }.filter { it.isNotBlank() }
+                                        val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
                                         val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, sequenceFormatDraft, sequenceCategoryDraft.trim().ifBlank { "Sin categoría" }, alternatives)
                                         sequenceExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
