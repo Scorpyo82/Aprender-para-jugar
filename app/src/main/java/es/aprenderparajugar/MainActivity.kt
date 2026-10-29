@@ -1180,7 +1180,7 @@ private fun AprenderApp() {
                         item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Biblioteca de ejemplo disponible inicialmente para Orden temporal.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
-                        val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
+                        val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos", "Letras")
                         val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
                             (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
@@ -1384,8 +1384,19 @@ private fun AprenderApp() {
                         }
                         item {
                             Text("Tipo de secuencia", fontWeight = FontWeight.Bold)
-                            listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
-                                OutlinedButton(onClick = { sequenceTypeDraft = type }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceTypeDraft == type) "✓ $type" else type) }
+                            listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos", "Letras").forEach { type ->
+                                OutlinedButton(onClick = {
+                                    sequenceTypeDraft = type
+                                    if (type == "Letras") {
+                                        sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty())
+                                        sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty())
+                                        sequenceAlternativeDraft = ""
+                                        sequenceFormatDraft = "Imagen y texto"
+                                    } else if (sequenceCardsDraft.size < 2) {
+                                        sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty(), "", "")
+                                        sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty(), "", "")
+                                    }
+                                }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceTypeDraft == type) "✓ $type" else type) }
                             }
                         }
                         item {
@@ -1410,8 +1421,8 @@ private fun AprenderApp() {
                             Text("Las categorías se crean y gestionan desde el menú Categorías de la biblioteca.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                         item {
-                            Text("Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
-                            Text("Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text(if (sequenceTypeDraft == "Letras") "Palabra e imagen" else "Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
+                            Text(if (sequenceTypeDraft == "Letras") "Escribe la palabra que el niño tendrá que formar. Se utilizará una única imagen como pista." else "Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         sequenceCardsDraft.forEachIndexed { index, card ->
                             item {
@@ -1420,9 +1431,9 @@ private fun AprenderApp() {
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text("${index + 1}.", fontWeight = FontWeight.Bold)
-                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text("Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
-                                        OutlinedButton(onClick = {
+                                        if (sequenceTypeDraft != "Letras") Text("${index + 1}.", fontWeight = FontWeight.Bold)
+                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text(if (sequenceTypeDraft == "Letras") "Palabra objetivo" else "Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
+                                        if (sequenceTypeDraft != "Letras") OutlinedButton(onClick = {
                                             if (sequenceCardsDraft.size > 2) {
                                                 sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) }
                                                 sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also { if (index < it.size) it.removeAt(index) }
@@ -1485,11 +1496,11 @@ private fun AprenderApp() {
                         }
                         item {
                             OutlinedButton(onClick = {
-                                if (sequenceCardsDraft.size < 6) {
+                                if (sequenceCardsDraft.size < 6 && sequenceTypeDraft != "Letras") {
                                     sequenceCardsDraft = sequenceCardsDraft + ""
                                     sequenceCardPicturesDraft = sequenceCardPicturesDraft + ""
                                 }
-                            }, enabled = sequenceCardsDraft.size < 6, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
+                            }, enabled = sequenceCardsDraft.size < 6 && sequenceTypeDraft != "Letras", modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
                         }
                         item {
                             Text("Soluciones alternativas (opcional)", fontWeight = FontWeight.Bold)
@@ -1509,10 +1520,10 @@ private fun AprenderApp() {
                                 }
                                 when {
                                     sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
-                                    cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
+                                    (if (sequenceTypeDraft == "Letras") cleanCards.size != 1 else cleanCards.size < 2) || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = if (sequenceTypeDraft == "Letras") "Escribe la palabra que se formará con las letras." else "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
-                                     sequenceFormatDraft == "Solo imágenes" && sequenceCardPicturesDraft.take(cleanCards.size).any { it.isBlank() } -> sequenceEditorMessage = "En el formato «Solo imágenes», selecciona una imagen para cada tarjeta."
-                                    alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
+                                     sequenceTypeDraft != "Letras" && sequenceFormatDraft == "Solo imágenes" && sequenceCardPicturesDraft.take(cleanCards.size).any { it.isBlank() } -> sequenceEditorMessage = "En el formato «Solo imágenes», selecciona una imagen para cada tarjeta."
+                                    sequenceTypeDraft != "Letras" && alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
                                         val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
                                         val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
