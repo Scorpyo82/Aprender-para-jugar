@@ -511,6 +511,9 @@ private fun AprenderApp() {
     var wordLibraryCategoryDraft by remember { mutableStateOf("Animales") }
     var wordLibraryDifficultyDraft by remember { mutableStateOf("Fácil") }
     var wordLibraryMessage by remember { mutableStateOf("") }
+    var wordLibraryCategoryMenuExpanded by remember { mutableStateOf(false) }
+    var wordPackageMessage by remember { mutableStateOf("") }
+    var wordPendingImportMode by remember { mutableStateOf("replace") }
     var wordNewCategoryDraft by remember { mutableStateOf("") }
     var wordCategoryToDelete by remember { mutableStateOf<String?>(null) }
     var wordDraft by remember { mutableStateOf("") }
@@ -567,6 +570,14 @@ private fun AprenderApp() {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
             pictureDraft = uri.toString()
             libraryMessage = "Imagen seleccionada."
+        }
+    }
+    val wordImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+            wordLibraryPictureDraft = uri.toString()
+            wordLibraryMessage = "Imagen seleccionada."
         }
     }
     val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -772,6 +783,37 @@ private fun AprenderApp() {
         }
     }
 
+    val exportWordPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            wordPackageMessage = try {
+                exportContentPackage(context, uri, wordExercises, wordExerciseCategories)
+                "Copia de Palabras creada: " + wordExercises.size + " ejercicios."
+            } catch (e: Exception) { "No se pudo exportar: " + (e.message ?: "error de archivo") }
+        }
+    }
+    val importWordPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            wordPackageMessage = try {
+                val imported = importContentPackage(context, uri)
+                val nextExercises = if (wordPendingImportMode == "replace") imported.pairs else {
+                    val merged = wordExercises.toMutableList()
+                    imported.pairs.forEach { incoming ->
+                        val existingIndex = merged.indexOfFirst { it.word.equals(incoming.word, ignoreCase = true) }
+                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
+                    }
+                    merged
+                }
+                wordExercises = nextExercises
+                saveWordExercises(preferences, nextExercises)
+                val nextCategories = if (wordPendingImportMode == "replace") imported.categories else (wordExerciseCategories + imported.categories).distinctBy { it.lowercase() }
+                wordExerciseCategories = nextCategories
+                preferences.edit().putString("letter_word_categories_v1", nextCategories.joinToString("|")).apply()
+                "Importación de Palabras completada: " + imported.pairs.size + " ejercicios. " + if (wordPendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado."
+            } catch (e: Exception) { "No se pudo importar: " + (e.message ?: "archivo no válido") }
+        }
+    }
     val exportSequencePackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
@@ -817,7 +859,10 @@ private fun AprenderApp() {
     BackHandler(enabled = screen != "home" && screen != "play-time") {
         when (screen) {
             "parent" -> when (parentSection) {
-                "word-library", "word-categories" -> parentSection = "words-settings"
+                "word-library", "word-categories" -> {
+                    if (parentSection == "word-library" && wordLibraryPage == "edit") { wordLibraryPage = "list"; wordLibraryMessage = "" }
+                    else parentSection = "words-settings"
+                }
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
                 "game-modes" -> parentSection = "menu"
@@ -1201,7 +1246,7 @@ private fun AprenderApp() {
                         item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Biblioteca de ejemplo disponible inicialmente para Orden temporal.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
-                        val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos", "Letras")
+                        val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
                         val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
                             (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
@@ -1623,7 +1668,14 @@ private fun AprenderApp() {
                     "word-library" -> {
                         item { Text(if (wordLibraryPage == "list") "Ejercicios de Palabras" else if (wordLibraryEditingIndex < 0) "Nuevo ejercicio de Palabras" else "Editar ejercicio de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         if (wordLibraryPage == "list") {
-                            item { Text("Esta biblioteca es independiente de Tarjetas y Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                            item { Text("Esta biblioteca es independiente de Parejas y Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                            item {
+                                Text("Copia de seguridad y traslado", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                OutlinedButton(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); exportWordPackageLauncher.launch("aprender-para-jugar-palabras.zip") }, modifier = Modifier.fillMaxWidth()) { Text("📦 Exportar palabras a ZIP") }
+                                OutlinedButton(onClick = { wordPendingImportMode = "replace"; preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); importWordPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("♻️ Importar y sustituir palabras") }
+                                OutlinedButton(onClick = { wordPendingImportMode = "merge"; preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); importWordPackageLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("➕ Importar y combinar palabras") }
+                                if (wordPackageMessage.isNotBlank()) Text(wordPackageMessage, color = if (wordPackageMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 13.sp)
+                            }
                             item { Button(onClick = { wordLibraryEditingIndex = -1; wordLibraryWordDraft = ""; wordLibraryPictureDraft = "🐱"; wordLibraryCategoryDraft = wordExerciseCategories.firstOrNull() ?: ""; wordLibraryDifficultyDraft = "Fácil"; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ejercicio") } }
                             if (wordExercises.isEmpty()) item { Text("Todavía no hay ejercicios de Palabras. Añade uno con su palabra, imagen y categoría para probarlo.", color = Color(0xFF667085)) }
                             wordExercises.forEachIndexed { index, exercise ->
@@ -1643,13 +1695,18 @@ private fun AprenderApp() {
                             }
                         } else {
                             item { OutlinedTextField(value = wordLibraryWordDraft, onValueChange = { wordLibraryWordDraft = it }, label = { Text("Palabra que formará") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                            item { OutlinedTextField(value = wordLibraryPictureDraft, onValueChange = { wordLibraryPictureDraft = it }, label = { Text("Imagen o emoji de pista") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                            item {
+                                Text("Imagen de pista", fontWeight = FontWeight.Bold)
+                                Text("Puedes escribir un emoji o seleccionar una imagen del dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
+                                OutlinedTextField(value = wordLibraryPictureDraft, onValueChange = { wordLibraryPictureDraft = it }, label = { Text("Emoji o referencia de imagen") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                OutlinedButton(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); wordImagePicker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text("🖼️ Seleccionar imagen") }
+                            }
                             item {
                                 Text("Categoría", fontWeight = FontWeight.Bold)
                                 androidx.compose.foundation.layout.Box {
-                                    OutlinedButton(onClick = { sequenceCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) { Text(if (wordLibraryCategoryDraft.isBlank()) "Seleccionar categoría" else wordLibraryCategoryDraft) }
-                                    DropdownMenu(expanded = sequenceCategoryMenuExpanded, onDismissRequest = { sequenceCategoryMenuExpanded = false }) {
-                                        wordExerciseCategories.forEach { name -> DropdownMenuItem(text = { Text(name) }, onClick = { wordLibraryCategoryDraft = name; sequenceCategoryMenuExpanded = false }) }
+                                    OutlinedButton(onClick = { wordLibraryCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) { Text(if (wordLibraryCategoryDraft.isBlank()) "Seleccionar categoría" else wordLibraryCategoryDraft) }
+                                    DropdownMenu(expanded = wordLibraryCategoryMenuExpanded, onDismissRequest = { wordLibraryCategoryMenuExpanded = false }) {
+                                        wordExerciseCategories.forEach { name -> DropdownMenuItem(text = { Text(name) }, onClick = { wordLibraryCategoryDraft = name; wordLibraryCategoryMenuExpanded = false }) }
                                     }
                                 }
                             }
