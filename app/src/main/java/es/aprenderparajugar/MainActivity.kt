@@ -2940,16 +2940,16 @@ private fun savePairs(preferences: android.content.SharedPreferences, pairs: Lis
 
 private fun loadWordExercises(preferences: android.content.SharedPreferences): List<PairItem> {
     val saved = preferences.getString("letter_word_exercises_v1", null) ?: return emptyList()
-    return saved.split("\\n").mapNotNull { line ->
-        val fields = line.split("\\t")
+    return saved.split("\n").mapNotNull { line ->
+        val fields = line.split("\t")
         if (fields.size < 5 || fields[0].isBlank()) null
         else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
     }
 }
 
 private fun saveWordExercises(preferences: android.content.SharedPreferences, exercises: List<PairItem>) {
-    val saved = exercises.joinToString("\\n") { exercise ->
-        listOf(exercise.word, exercise.picture, exercise.category, exercise.difficulty, exercise.active.toString()).joinToString("\\t")
+    val saved = exercises.joinToString("\n") { exercise ->
+        listOf(exercise.word, exercise.picture, exercise.category, exercise.difficulty, exercise.active.toString()).joinToString("\t")
     }
     preferences.edit().putString("letter_word_exercises_v1", saved).apply()
 }
