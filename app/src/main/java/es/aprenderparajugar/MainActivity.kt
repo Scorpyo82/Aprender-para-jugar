@@ -1323,7 +1323,7 @@ private fun AprenderApp() {
                                             })
                                         }
                                         if (sequenceExercises.none { it.category == category }) {
-                                            TextButton(onClick = {
+                                            OutlinedButton(onClick = {
                                                 sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
                                                 preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
                                                 disabledSequenceCategories = disabledSequenceCategories - category
