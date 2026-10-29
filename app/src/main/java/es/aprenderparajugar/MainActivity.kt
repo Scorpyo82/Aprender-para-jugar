@@ -1591,13 +1591,16 @@ private fun ModeCardImage(index: Int, description: String, modifier: Modifier = 
         }.getOrNull()
         val sheet = bitmap ?: Bitmap.createBitmap(1, 3, Bitmap.Config.ARGB_8888)
         val tileHeight = (sheet.height / 3).coerceAtLeast(1)
-        Bitmap.createBitmap(
+        val tile = Bitmap.createBitmap(
             sheet,
             0,
             (index.coerceIn(0, 2) * tileHeight).coerceAtMost(sheet.height - tileHeight),
             sheet.width,
             tileHeight
-        ).asImageBitmap()
+        )
+        // Enable filtered scaling so the small legacy artwork looks less jagged
+        // when displayed in the large home cards.
+        Bitmap.createScaledBitmap(tile, 762, 470, true).asImageBitmap()
     }
     Image(bitmap = image, contentDescription = description, modifier = modifier, contentScale = ContentScale.FillBounds)
 }
