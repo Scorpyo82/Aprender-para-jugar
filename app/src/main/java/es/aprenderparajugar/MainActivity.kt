@@ -541,7 +541,6 @@ private fun SequenceGameScreen(
     exercise: SequenceExercise?,
     playOrder: List<Int>,
     selectedOrder: List<Int>,
-    contentFormat: String,
     playMessage: String,
     onBack: () -> Unit,
     onChooseOther: () -> Unit,
@@ -620,7 +619,7 @@ private fun SequenceGameScreen(
                 ) {
                     if (isLettersExercise) {
                         Text(targetLetterWord.getOrNull(cardIndex)?.uppercase() ?: "", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                    } else if (contentFormat != "Solo texto") {
+                    } else if (exercise.format != "Solo texto") {
                         if (picture.startsWith("content://") || picture.startsWith("file://")) {
                             AndroidView(
                                 factory = { ctx -> ImageView(ctx).apply {
@@ -647,7 +646,7 @@ private fun SequenceGameScreen(
                     }
                     if (isLettersExercise) {
                         Spacer(Modifier.weight(1f))
-                    } else if (contentFormat != "Solo imágenes") {
+                    } else if (exercise.format != "Solo imágenes") {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             if (alreadySelected) Text("${selectedOrder.indexOf(cardIndex) + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
                             Text(exercise.cards[cardIndex], fontSize = if (isTabletLayout) 22.sp else 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF253344))
@@ -2986,7 +2985,6 @@ private fun AprenderApp() {
             exercise = sequencePlayingExercise,
             playOrder = sequencePlayOrder,
             selectedOrder = sequenceSelectedOrder,
-            contentFormat = sequenceContentFormat,
             playMessage = sequencePlayMessage,
             onBack = {
                 screen = "sequences"
