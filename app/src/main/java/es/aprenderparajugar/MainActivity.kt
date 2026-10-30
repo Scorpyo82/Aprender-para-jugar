@@ -519,6 +519,7 @@ private fun AprenderApp() {
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceMaxCards by remember { mutableIntStateOf(preferences.getInt("sequence_max_cards_v1", 6).coerceIn(2, 6)) }
+    var sequenceContentFormat by remember { mutableStateOf(preferences.getString("sequence_content_format_v1", "Imagen y texto") ?: "Imagen y texto") }
     var sequenceCategoryDraft by remember { mutableStateOf("") }
     var sequenceNewCategoryDraft by remember { mutableStateOf("") }
     var sequenceCategoryMenuExpanded by remember { mutableStateOf(false) }
@@ -1268,12 +1269,23 @@ private fun AprenderApp() {
                         }
                         item {
                             androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Formato del contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("Se podrá elegir entre los tres formatos acordados. Estos controles son una vista previa; el juego aún no está implementado.", fontSize = 14.sp, color = Color(0xFF667085))
-                            listOf("Imagen y texto", "Solo imágenes", "Solo texto").forEach { format ->
-                                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(format, modifier = Modifier.weight(1f))
-                                    Text("Próximamente", fontSize = 12.sp, color = Color(0xFF667085))
+                            Text("Qué mostrar en la actividad:", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            listOf("Imagen y texto" to "Imágenes con texto", "Solo imágenes" to "Solo imágenes", "Solo texto" to "Solo texto").forEach { (format, label) ->
+                                Row(
+                                    Modifier.fillMaxWidth().clickable {
+                                        sequenceContentFormat = format
+                                        preferences.edit().putString("sequence_content_format_v1", format).apply()
+                                    }.padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(label, modifier = Modifier.weight(1f))
+                                    androidx.compose.material3.RadioButton(
+                                        selected = sequenceContentFormat == format,
+                                        onClick = {
+                                            sequenceContentFormat = format
+                                            preferences.edit().putString("sequence_content_format_v1", format).apply()
+                                        }
+                                    )
                                 }
                             }
                         }
