@@ -2721,12 +2721,15 @@ private fun AprenderApp() {
             }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
         }
     } else if (screen == "result" || screen == "sequence-result") {
+        val rewardStars = when {
+            resultCorrectCount * 2 == resultTotalCount -> 2
+            resultCorrectCount * 2 > resultTotalCount && resultCorrectCount != resultTotalCount -> 3
+            else -> 0
+        }
         val rewardIcon = when {
             resultCorrectCount == 0 -> "😢"
             resultCorrectCount == resultTotalCount -> "🏆"
-            resultCorrectCount * 2 < resultTotalCount -> "⭐"
-            resultCorrectCount * 2 == resultTotalCount -> "⭐⭐"
-            else -> "⭐⭐⭐"
+            else -> "⭐"
         }
         val rewardMessage = when {
             resultCorrectCount == 0 -> "¡Vamos a intentarlo otra vez!"
@@ -2743,7 +2746,19 @@ private fun AprenderApp() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(rewardIcon, fontSize = if (correct == pairCount) 104.sp else 76.sp, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale })
+            if (rewardStars > 0) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale }
+                ) {
+                    repeat(rewardStars) {
+                        Text("⭐", fontSize = 76.sp)
+                    }
+                }
+            } else {
+                Text(rewardIcon, fontSize = if (correct == pairCount) 104.sp else 76.sp, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale })
+            }
             Spacer(Modifier.height(8.dp))
             Text(rewardMessage, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(18.dp))
