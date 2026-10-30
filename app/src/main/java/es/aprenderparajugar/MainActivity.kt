@@ -2785,7 +2785,7 @@ private fun AprenderApp() {
                 Text("Elige el tipo de actividad que quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
             }
             items(sequenceTypes) { type ->
-                val availableCount = eligibleSequenceExercises(type).size
+                val availableCount = eligibleSequenceExercises(sequenceExercises, type, null, sequenceMaxCards, disabledSequenceCategories).size
                 val available = availableCount > 0
                 Card(
                     Modifier.fillMaxWidth().clickable {
@@ -2823,7 +2823,7 @@ private fun AprenderApp() {
             }
             items(listOf("Fácil", "Normal", "Difícil")) { level ->
                 val reward = when(level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
-                val availableCount = eligibleSequenceExercises(sequenceChosenCategory, level).size
+                val availableCount = eligibleSequenceExercises(sequenceExercises, sequenceChosenCategory, level, sequenceMaxCards, disabledSequenceCategories).size
                 val available = availableCount > 0
                 Card(
                     Modifier.fillMaxWidth().clickable {
