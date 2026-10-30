@@ -2905,31 +2905,8 @@ private fun AprenderApp() {
             Spacer(Modifier.height(14.dp))
             Text("$resultCorrectCount de $resultTotalCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
             Spacer(Modifier.height(24.dp))
-            Button(onClick = {
-                if (sequenceResultPending) {
-                    sequenceResultPending = false
-                    val round = prepareSequenceExerciseRound(
-                        sequenceExercises, sequenceChosenCategory, sequenceChosenDifficulty,
-                        sequenceMaxCards, disabledSequenceCategories, preferences
-                    )
-                    if (round == null) {
-                        sequencePlayMessage = "No hay ejercicios activos de ${sequenceChosenCategory} con dificultad ${sequenceChosenDifficulty} y un máximo de ${sequenceMaxCards} tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
-                        android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
-                        screen = "sequence-difficulty"
-                    } else {
-                        sequencePlayingExercise = round.first
-                        sequencePlayOrder = round.second
-                        sequenceSelectedOrder = emptyList()
-                        sequenceWrongAnswers = 0
-                        sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
-                        sequenceResultPending = false
-                        screen = "sequence-game"
-                    }
-                } else {
-                    screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0
-                }
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (sequenceResultPending) "Siguiente ejercicio" else "🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Button(onClick = { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }, modifier = Modifier.fillMaxWidth()) {
+                Text("🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     } else if (screen == "sequences") {
@@ -2941,31 +2918,23 @@ private fun AprenderApp() {
                 Text("Elige el tipo de actividad que quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
             }
             items(sequenceTypes) { type ->
-                val availableCount = eligibleSequenceExercises(sequenceExercises, type, null, sequenceMaxCards, disabledSequenceCategories).size
-                val available = availableCount > 0
                 Card(
                     Modifier.fillMaxWidth().clickable {
                         sequenceChosenCategory = type
                         sequenceChosenDifficulty = ""
-                        if (available) {
-                            sequencePlayMessage = ""
-                            screen = "sequence-difficulty"
-                        } else {
-                            sequencePlayMessage = "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."
-                            android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
-                        }
+                        screen = "sequence-difficulty"
                     },
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (available) Color(0xFFF1F8EC) else Color(0xFFF0F0F0)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, if (available) Color(0xFFA9D79A) else Color(0xFFD0D0D0))
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
                 ) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(when(type) { "Orden temporal" -> "⏳"; "Procesos" -> "⚙️"; "Causa y consecuencia" -> "🔗"; else -> "🔄" }, fontSize = 30.sp)
                         Column(Modifier.weight(1f)) {
-                            Text(type, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF245C2A) else Color(0xFF777777))
-                            Text(if (available) "$availableCount ejercicios disponibles" else "No hay ejercicios que cumplan la configuración", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text(type, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF245C2A))
+                            Text("Practicar este tipo de secuencia", fontSize = 13.sp, color = Color(0xFF667085))
                         }
-                        Text(if (available) "›" else "—", fontSize = 26.sp, color = Color(0xFF667085))
+                        Text("›", fontSize = 26.sp, color = Color(0xFF39713A))
                     }
                 }
             }
@@ -2979,38 +2948,35 @@ private fun AprenderApp() {
             }
             items(listOf("Fácil", "Normal", "Difícil")) { level ->
                 val reward = when(level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
-                val availableCount = eligibleSequenceExercises(sequenceExercises, sequenceChosenCategory, level, sequenceMaxCards, disabledSequenceCategories).size
-                val available = availableCount > 0
                 Card(
                     Modifier.fillMaxWidth().clickable {
                         sequenceChosenDifficulty = level
-                        val round = prepareSequenceExerciseRound(
-                            sequenceExercises, sequenceChosenCategory, level,
-                            sequenceMaxCards, disabledSequenceCategories, preferences
-                        )
-                        if (round == null) {
-                            sequencePlayMessage = "No hay ejercicios activos de ${sequenceChosenCategory} con dificultad $level y un máximo de ${sequenceMaxCards} tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
-                            android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
-                        } else {
-                            sequencePlayingExercise = round.first
-                            sequencePlayOrder = round.second
+                        val candidates = eligibleSequenceExercises(sequenceExercises, sequenceChosenCategory, level, sequenceMaxCards, disabledSequenceCategories)
+                        if (candidates.isNotEmpty()) {
+                            val exercise = chooseLeastUsedSequenceExercise(candidates, preferences)
+                            sequencePlayingExercise = exercise
+                            val indexes = if (exercise.type == "Letras") exercise.cards.firstOrNull().orEmpty().indices.toList() else exercise.cards.indices.toList()
+                            val shuffled = indexes.shuffled()
+                            sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
                             sequenceSelectedOrder = emptyList()
                             sequenceWrongAnswers = 0
                             sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
-                            sequenceResultPending = false
                             screen = "sequence-game"
+                        } else {
+                            sequencePlayMessage = "Todavía no hay ejercicios de $sequenceChosenCategory con dificultad $level. Prueba otra combinación o crea uno desde la configuración."
+                            android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
                         }
                     },
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (available) Color.White else Color(0xFFF0F0F0)),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E5EA))
                 ) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(level, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                            Text(if (available) "Premio: $reward min de juego · $availableCount ejercicios" else "Sin ejercicios que cumplan los filtros", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("Premio: $reward min de juego", fontSize = 14.sp, color = Color(0xFF667085))
                         }
-                        Text(if (available) "EMPEZAR  ›" else "NO DISPONIBLE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF39713A) else Color(0xFF9A4E00))
+                        Text("EMPEZAR  ›", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF39713A))
                     }
                 }
             }
