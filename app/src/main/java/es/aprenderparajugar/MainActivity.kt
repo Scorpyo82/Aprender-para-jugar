@@ -1339,9 +1339,7 @@ private fun AprenderApp() {
                                 Text("$sequenceMaxCards", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 OutlinedButton(onClick = { if (sequenceMaxCards < 6) { sequenceMaxCards++; preferences.edit().putInt("sequence_max_cards_v1", sequenceMaxCards).apply() } }, enabled = sequenceMaxCards < 6, modifier = Modifier.weight(1f)) { Text("+") }
                             }
-                            Text("El valor se guarda en este dispositivo y quedará disponible para filtrar los ejercicios por número de tarjetas.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
-                        item { Text("Configuración en fase beta: todavía no modifica ejercicios reales.", fontSize = 13.sp, color = Color(0xFF667085)) }
                     }
                     "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> {
                         val sequenceType = when (parentSection) {
