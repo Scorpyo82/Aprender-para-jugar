@@ -757,6 +757,7 @@ private fun AprenderApp() {
     var wordExerciseWrongAnswers by remember { mutableIntStateOf(0) }
     var wordExerciseMessage by remember { mutableStateOf("") }
     var wordSelectedDifficulty by remember { mutableStateOf("Fácil") }
+    var wordCurrentCategory by remember { mutableStateOf<String?>(null) }
     var wordStartMessage by remember { mutableStateOf("") }
     var wordCategoryCandidates by remember { mutableStateOf(emptyList<String>()) }
 
@@ -904,6 +905,7 @@ private fun AprenderApp() {
     }
 
     fun startWordExercise(category: String?) {
+        wordCurrentCategory = category
         val eligible = wordExercises.filter {
             it.active &&
             it.category !in disabledWordExerciseCategories &&
@@ -2750,14 +2752,46 @@ private fun AprenderApp() {
             Spacer(Modifier.height(14.dp))
             Text("$resultCorrectCount de $resultTotalCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
             Spacer(Modifier.height(24.dp))
-            Button(onClick = {
-                if (screen == "sequence-result") {
-                    if (!startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty)) screen = "sequence-difficulty"
-                } else {
-                    screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(
+                    onClick = {
+                        screen = "home"
+                        resolved = emptySet()
+                        selected = emptyMap()
+                        selectedPicture = ""
+                        evaluatedPictures = emptyMap()
+                        correct = 0
+                        feedback = ""
+                        lastEarnedSeconds = 0
+                        wordExerciseTarget = null
+                        wordExercisePlaced = emptyList()
+                        wordExerciseMessage = ""
+                        sequenceSelectedOrder = emptyList()
+                        sequencePlayMessage = ""
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("⌂  Volver al inicio", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (screen == "sequence-result") "Siguiente ejercicio" else "🏠 Volver al inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = {
+                        when (screen) {
+                            "sequence-result" -> {
+                                if (!startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty)) screen = "sequence-difficulty"
+                            }
+                            else -> {
+                                if (wordExerciseTarget != null) {
+                                    startWordExercise(wordCurrentCategory)
+                                } else {
+                                    startCardsGame(mode, if (mode == "Elegir") selectedExerciseCategory else null)
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Siguiente ejercicio", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     } else if (screen == "sequences") {
