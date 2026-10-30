@@ -745,7 +745,6 @@ private fun AprenderApp() {
     var sequencePlayMessage by remember { mutableStateOf("") }
     var sequenceChosenCategory by remember { mutableStateOf("") }
     var sequenceChosenDifficulty by remember { mutableStateOf("") }
-    var sequenceResultPending by remember { mutableStateOf(false) }
 
     var packageMessage by remember { mutableStateOf("") }
     var sequencePackageMessage by remember { mutableStateOf("") }
@@ -1090,7 +1089,7 @@ private fun AprenderApp() {
             "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "parent-pin", "exit-pin" -> { screen = "home"; pinEntry = ""; pinError = false }
             "exercise" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
-            "result" -> { screen = "home"; sequenceResultPending = false; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
+            "result" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
             else -> { screen = "home"; parentSection = "menu" }
         }
     }
@@ -3025,7 +3024,6 @@ private fun AprenderApp() {
                             resultTotalCount = resultSize
                             val usageKey = sequenceDailyUsagePreferenceKey(exercise)
                             preferences.edit().putInt(usageKey, preferences.getInt(usageKey, 0) + 1).apply()
-                            sequenceResultPending = true
                             screen = "result"
                         } else {
                             sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
