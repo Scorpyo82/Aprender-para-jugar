@@ -2025,7 +2025,7 @@ private fun AprenderApp() {
                             Text("Exporta categorías, palabras, dificultad, estado e imágenes en un ZIP. El PIN y el saldo no se incluyen.", fontSize = 13.sp, color = Color(0xFF667085))
                             OutlinedButton(onClick = {
                                 preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                exportPackageLauncher.launch("aprender-para-jugar-contenido.zip")
+                                exportPackageLauncher.launch("aprender-para-jugar-tarjetas.zip")
                             }, modifier = Modifier.fillMaxWidth()) { Text("📦 Exportar contenido a ZIP") }
                             OutlinedButton(onClick = {
                                 pendingImportMode = "replace"
