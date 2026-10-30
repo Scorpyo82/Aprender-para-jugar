@@ -896,10 +896,9 @@ private fun AprenderApp() {
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
             "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
-            "result" -> { screen = "home"; sequenceResultPending = false }
             "parent-pin", "exit-pin" -> { screen = "home"; pinEntry = ""; pinError = false }
             "exercise" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
-            "result" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
+            "result" -> { screen = "home"; sequenceResultPending = false; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
             else -> { screen = "home"; parentSection = "menu" }
         }
     }
