@@ -510,9 +510,6 @@ private fun chooseLeastUsedSequenceExercise(
     }.random()
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-
 @Composable
 private fun SequenceGameScreen(
     exercise: SequenceExercise?,
@@ -647,6 +644,8 @@ private fun SequenceGameScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
 private fun AprenderApp() {
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
