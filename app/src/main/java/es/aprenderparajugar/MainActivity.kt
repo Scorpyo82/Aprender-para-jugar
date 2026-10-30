@@ -477,6 +477,39 @@ private fun currentDayKey(): String {
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
 }
 
+private fun sequenceDailyUsagePreferenceKey(exercise: SequenceExercise): String {
+    val today = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(java.util.Date())
+    val identity = listOf(exercise.type, exercise.title, exercise.category, exercise.difficulty,
+        exercise.cards.joinToString("\u001F"), exercise.pictures.joinToString("\u001F")).joinToString("\u001E")
+    val digest = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(identity.toByteArray(Charsets.UTF_8))
+        .joinToString("") { byte -> "%02x".format(byte) }
+    return "sequence_completed_count_${today}_${digest}"
+}
+
+private fun eligibleSequenceExercises(
+    exercises: List<SequenceExercise>,
+    type: String,
+    level: String?,
+    maxCards: Int,
+    disabledCategories: Set<String>
+): List<SequenceExercise> = exercises.filter { exercise ->
+    exercise.active && exercise.cards.size <= maxCards &&
+        exercise.category !in disabledCategories &&
+        exercise.type.equals(type, ignoreCase = true) &&
+        (level == null || exercise.difficulty.equals(level, ignoreCase = true))
+}
+
+private fun chooseLeastUsedSequenceExercise(
+    candidates: List<SequenceExercise>,
+    preferences: android.content.SharedPreferences
+): SequenceExercise {
+    val leastCompleted = candidates.minOf { preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) }
+    return candidates.filter {
+        preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) == leastCompleted
+    }.random()
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AprenderApp() {
@@ -932,34 +965,14 @@ private fun AprenderApp() {
         screen = "word-exercise"
     }
 
-    fun sequenceDailyUsagePreferenceKey(exercise: SequenceExercise): String {
-        val today = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(java.util.Date())
-        val identity = listOf(exercise.type, exercise.title, exercise.category, exercise.difficulty,
-            exercise.cards.joinToString("\u001F"), exercise.pictures.joinToString("\u001F")).joinToString("\u001E")
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-            .digest(identity.toByteArray(Charsets.UTF_8))
-            .joinToString("") { byte -> "%02x".format(byte) }
-        return "sequence_completed_count_${today}_${digest}"
-    }
-
-    fun eligibleSequenceExercises(type: String, level: String? = null): List<SequenceExercise> =
-        sequenceExercises.filter { exercise ->
-            exercise.active && exercise.cards.size <= sequenceMaxCards &&
-                exercise.category !in disabledSequenceCategories &&
-                exercise.type.equals(type, ignoreCase = true) &&
-                (level == null || exercise.difficulty.equals(level, ignoreCase = true))
-        }
-
     fun startSequenceExercise(type: String, level: String): Boolean {
-        val candidates = eligibleSequenceExercises(type, level)
+        val candidates = eligibleSequenceExercises(sequenceExercises, type, level, sequenceMaxCards, disabledSequenceCategories)
         if (candidates.isEmpty()) {
             sequencePlayMessage = "No hay ejercicios activos de $type con dificultad $level y un máximo de $sequenceMaxCards tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
             android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
             return false
         }
-        val leastCompleted = candidates.minOf { preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) }
-        val leastUsed = candidates.filter { preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) == leastCompleted }
-        val exercise = leastUsed.random()
+        val exercise = chooseLeastUsedSequenceExercise(candidates, preferences)
         sequencePlayingExercise = exercise
         val indexes = if (exercise.type == "Letras") exercise.cards.firstOrNull().orEmpty().indices.toList() else exercise.cards.indices.toList()
         val shuffled = indexes.shuffled()
