@@ -954,7 +954,6 @@ private fun AprenderApp() {
         val candidates = eligibleSequenceExercises(type, level)
         if (candidates.isEmpty()) {
             sequencePlayMessage = "No hay ejercicios activos de $type con dificultad $level y un máximo de $sequenceMaxCards tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
-            android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
             return false
         }
         val leastCompleted = candidates.minOf { preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) }
@@ -2769,6 +2768,11 @@ private fun AprenderApp() {
                 Text("Secuencias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                 Text("Elige el tipo de actividad que quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
             }
+            if (sequencePlayMessage.isNotBlank()) {
+                item {
+                    Text(sequencePlayMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
+                }
+            }
             items(sequenceTypes) { type ->
                 val availableCount = eligibleSequenceExercises(type).size
                 val available = availableCount > 0
@@ -2781,7 +2785,6 @@ private fun AprenderApp() {
                             screen = "sequence-difficulty"
                         } else {
                             sequencePlayMessage = "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."
-                            android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
                         }
                     },
                     shape = RoundedCornerShape(18.dp),
@@ -2805,6 +2808,9 @@ private fun AprenderApp() {
                 OutlinedButton(onClick = { screen = "sequences" }) { Text("← Volver a las actividades") }
                 Text(sequenceChosenCategory, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                 Text("Elige la dificultad. El premio dependerá del nivel seleccionado.", fontSize = 16.sp, color = Color(0xFF667085))
+                if (sequencePlayMessage.isNotBlank()) {
+                    Text(sequencePlayMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
+                }
             }
             items(listOf("Fácil", "Normal", "Difícil")) { level ->
                 val reward = when(level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
