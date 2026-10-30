@@ -2768,7 +2768,7 @@ private fun AprenderApp() {
                 Text("Secuencias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                 Text("Elige el tipo de actividad que quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
             }
-            if (sequencePlayMessage.isNotBlank()) {
+            if (sequencePlayMessage.startsWith("No hay ejercicios")) {
                 item {
                     Text(sequencePlayMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
                 }
@@ -2808,7 +2808,7 @@ private fun AprenderApp() {
                 OutlinedButton(onClick = { screen = "sequences" }) { Text("← Volver a las actividades") }
                 Text(sequenceChosenCategory, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                 Text("Elige la dificultad. El premio dependerá del nivel seleccionado.", fontSize = 16.sp, color = Color(0xFF667085))
-                if (sequencePlayMessage.isNotBlank()) {
+                if (sequencePlayMessage.startsWith("No hay ejercicios")) {
                     Text(sequencePlayMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
                 }
             }
