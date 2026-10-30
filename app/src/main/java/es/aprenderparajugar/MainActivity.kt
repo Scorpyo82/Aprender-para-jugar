@@ -510,6 +510,32 @@ private fun chooseLeastUsedSequenceExercise(
     }.random()
 }
 
+private fun prepareSequenceExerciseRound(
+    exercises: List<SequenceExercise>,
+    type: String,
+    level: String,
+    maxCards: Int,
+    disabledCategories: Set<String>,
+    preferences: android.content.SharedPreferences
+): Pair<SequenceExercise, List<Int>>? {
+    val candidates = eligibleSequenceExercises(exercises, type, level, maxCards, disabledCategories)
+    if (candidates.isEmpty()) return null
+
+    val exercise = chooseLeastUsedSequenceExercise(candidates, preferences)
+    val indexes = if (exercise.type == "Letras") {
+        exercise.cards.firstOrNull().orEmpty().indices.toList()
+    } else {
+        exercise.cards.indices.toList()
+    }
+    val shuffled = indexes.shuffled()
+    val playOrder = if (shuffled.size > 1 && shuffled == indexes) {
+        shuffled.drop(1) + shuffled.first()
+    } else {
+        shuffled
+    }
+    return exercise to playOrder
+}
+
 @Composable
 private fun SequenceGameScreen(
     exercise: SequenceExercise?,
@@ -1097,26 +1123,6 @@ private fun AprenderApp() {
         wordExerciseMessage = ""
         wordStartMessage = ""
         screen = "word-exercise"
-    }
-
-    fun startSequenceExercise(type: String, level: String): Boolean {
-        val candidates = eligibleSequenceExercises(sequenceExercises, type, level, sequenceMaxCards, disabledSequenceCategories)
-        if (candidates.isEmpty()) {
-            sequencePlayMessage = "No hay ejercicios activos de $type con dificultad $level y un máximo de $sequenceMaxCards tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
-            android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
-            return false
-        }
-        val exercise = chooseLeastUsedSequenceExercise(candidates, preferences)
-        sequencePlayingExercise = exercise
-        val indexes = if (exercise.type == "Letras") exercise.cards.firstOrNull().orEmpty().indices.toList() else exercise.cards.indices.toList()
-        val shuffled = indexes.shuffled()
-        sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
-        sequenceSelectedOrder = emptyList()
-        sequenceWrongAnswers = 0
-        sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
-        sequenceResultPending = false
-        screen = "sequence-game"
-        return true
     }
 
     fun addEarnedTime(seconds: Int) {
@@ -2902,7 +2908,23 @@ private fun AprenderApp() {
             Button(onClick = {
                 if (sequenceResultPending) {
                     sequenceResultPending = false
-                    if (!startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty)) screen = "sequence-difficulty"
+                    val round = prepareSequenceExerciseRound(
+                        sequenceExercises, sequenceChosenCategory, sequenceChosenDifficulty,
+                        sequenceMaxCards, disabledSequenceCategories, preferences
+                    )
+                    if (round == null) {
+                        sequencePlayMessage = "No hay ejercicios activos de ${sequenceChosenCategory} con dificultad ${sequenceChosenDifficulty} y un máximo de ${sequenceMaxCards} tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
+                        android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
+                        screen = "sequence-difficulty"
+                    } else {
+                        sequencePlayingExercise = round.first
+                        sequencePlayOrder = round.second
+                        sequenceSelectedOrder = emptyList()
+                        sequenceWrongAnswers = 0
+                        sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
+                        sequenceResultPending = false
+                        screen = "sequence-game"
+                    }
                 } else {
                     screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0
                 }
@@ -2962,7 +2984,22 @@ private fun AprenderApp() {
                 Card(
                     Modifier.fillMaxWidth().clickable {
                         sequenceChosenDifficulty = level
-                        startSequenceExercise(sequenceChosenCategory, level)
+                        val round = prepareSequenceExerciseRound(
+                            sequenceExercises, sequenceChosenCategory, level,
+                            sequenceMaxCards, disabledSequenceCategories, preferences
+                        )
+                        if (round == null) {
+                            sequencePlayMessage = "No hay ejercicios activos de ${sequenceChosenCategory} con dificultad $level y un máximo de ${sequenceMaxCards} tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
+                            android.widget.Toast.makeText(context, sequencePlayMessage, android.widget.Toast.LENGTH_LONG).show()
+                        } else {
+                            sequencePlayingExercise = round.first
+                            sequencePlayOrder = round.second
+                            sequenceSelectedOrder = emptyList()
+                            sequenceWrongAnswers = 0
+                            sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
+                            sequenceResultPending = false
+                            screen = "sequence-game"
+                        }
                     },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = if (available) Color.White else Color(0xFFF0F0F0)),
