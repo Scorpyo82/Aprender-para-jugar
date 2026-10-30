@@ -2771,7 +2771,7 @@ private fun AprenderApp() {
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("⌂  Volver al inicio", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text("🏠  Volver al inicio", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
                 Button(
                     onClick = {
