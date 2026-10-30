@@ -2428,7 +2428,7 @@ private fun AprenderApp() {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text("Información de versión", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                     Text("Versión ${BuildConfig.VERSION_NAME} (código ${BuildConfig.VERSION_CODE})", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("Fecha de compilación: ${java.text.SimpleDateFormat(\"dd/MM/yyyy\", java.util.Locale.getDefault()).format(java.util.Date())}", fontSize = 13.sp, color = Color(0xFF667085))
+                                    Text("Fecha de compilación: ${java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date())}", fontSize = 13.sp, color = Color(0xFF667085))
                                 }
                             }
 
