@@ -238,6 +238,7 @@ object ExerciseJsonCodec {
 
     private fun isSafeAssetName(value: String): Boolean {
         if (value.isBlank()) return false
+        if (value.startsWith("emoji:")) return value.length > "emoji:".length
         if (value.startsWith("/") || value.contains('\\') || value.contains(':')) return false
         val segments = value.split('/')
         return segments.all { it.isNotBlank() && it != "." && it != ".." }
