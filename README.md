@@ -1,21 +1,48 @@
 # Aprender para jugar
 
-Aplicación Android en Kotlin y Jetpack Compose para practicar lectura y ganar tiempo de juego.
+**Aplicación Android en fase beta** para practicar habilidades de lectoescritura, asociación y secuenciación mediante actividades breves, con un sistema de recompensas de tiempo de juego gestionado por la familia.
 
-## Estado actual
+> **Estado: Beta en desarrollo.** La aplicación está en pruebas. Las funciones, los contenidos y la interfaz pueden cambiar; se recomienda conservar copias de seguridad de las bibliotecas antes de actualizar o probar operaciones de importación y eliminación.
 
-La primera base técnica incluye pantalla de inicio, selección de dificultad, un ejercicio demostrativo de emparejar palabras e iconos, cálculo proporcional de recompensa en segundos y un flujo de compilación automática con GitHub Actions.
+## Modalidades de aprendizaje
 
-**Todavía es un prototipo, no una versión lista para uso diario.** El saldo no persiste al cerrar la app; la biblioteca parental, PIN, categorías, imágenes locales, base de datos, historial, límite diario, temporizador robusto en segundo plano y restricciones reales del uso del dispositivo están pendientes. Los iconos son ilustrativos y aún no se usa una tipografía de lectoescritura ligada escolar.
+- **Tarjetas:** asociación de palabras e imágenes.
+- **Palabras:** construcción de palabras mediante letras y apoyo visual.
+- **Secuencias:** ordenar situaciones y procesos en cuatro tipos: orden temporal, procesos, causa y consecuencia, y ciclos.
+
+Cada modalidad dispone de bibliotecas organizadas por categorías. Los ejercicios pueden incluir imágenes locales y metadatos de dificultad.
+
+## Control parental
+
+La zona familiar permite configurar las modalidades activas, categorías, recompensas, límites y opciones de seguridad. La aplicación incorpora un saldo de tiempo ganado mediante la realización de ejercicios y un contador de tiempo de juego en segundo plano.
+
+Se está desarrollando una pantalla de estadísticas orientativas para que las familias puedan observar resultados por áreas y modalidades. Estas métricas describen el rendimiento registrado en los ejercicios; **no son diagnósticos, pruebas estandarizadas ni conclusiones pedagógicas definitivas**.
+
+## Bibliotecas y copias de seguridad
+
+Las bibliotecas se almacenan de forma privada en el dispositivo, separadas por modalidad, categoría y ejercicio. La función de importación y exportación permite crear y restaurar paquetes ZIP unificados, con selección de categorías y posibilidad de incluir estadísticas.
+
+Conserva una copia externa de tus bibliotecas antes de realizar cambios importantes o eliminar contenido.
+
+## Versión
+
+- Versión de la aplicación: **0.4.0-beta**
+- Código de versión Android: **39**
+- Paquete: `es.aprenderparajugar`
+- Tecnología: Kotlin y Jetpack Compose.
 
 ## Compilar APK
 
-Cada push a `main` o ejecución manual de la acción **Build Android APK** intenta compilar un APK de depuración. En GitHub, abre **Actions**, entra en la ejecución más reciente y descarga el artefacto `aprender-para-jugar-debug-apk` si el trabajo termina correctamente.
+El repositorio utiliza GitHub Actions para compilar la aplicación Android. Abre la pestaña **Actions**, selecciona la ejecución de **Build Android APK** y descarga el artefacto de APK cuando el trabajo haya terminado correctamente.
 
-## Requisitos
+## Requisitos de desarrollo
 
 - JDK 17
 - Android SDK Platform 35
 - Gradle 8.9
+- Android Gradle Plugin 8.7.3
+- Kotlin 2.0.21
 
-Paquete Android: `es.aprenderparajugar`.
+## Aviso
+
+Esta aplicación es una herramienta educativa complementaria y de apoyo familiar. No sustituye la valoración de profesionales de educación, pedagogía, logopedia o salud. Las estadísticas dependen de los ejercicios disponibles, de cómo se hayan diseñado y del número de intentos registrados.
