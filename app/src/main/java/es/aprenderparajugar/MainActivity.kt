@@ -164,7 +164,7 @@ class MainActivity : ComponentActivity() {
 
 internal data class PairItem(val word: String, val picture: String, val category: String = "Primeras palabras", val difficulty: String = "Fácil", val active: Boolean = true, val directory: File? = null, val createdAt: String = "")
 
-private data class SequenceExercise(
+internal data class SequenceExercise(
     val title: String,
     val cards: List<String>,
     val format: String,
@@ -173,57 +173,18 @@ private data class SequenceExercise(
     val pictures: List<String> = emptyList(),
     val type: String = "Orden temporal",
     val difficulty: String = "Normal",
-    val active: Boolean = true
+    val active: Boolean = true,
+    val directory: File? = null,
+    val createdAt: String = ""
 )
 
 private fun defaultSequencePicture(index: Int): String = ""
 
-private fun loadSequenceExercises(preferences: android.content.SharedPreferences): List<SequenceExercise> {
-    val saved = preferences.getString("sequence_exercises_temporal_v1", null) ?: return emptyList()
-    return runCatching {
-        val array = JSONArray(saved)
-        (0 until array.length()).mapNotNull { index ->
-            val item = array.optJSONObject(index) ?: return@mapNotNull null
-            val cardsJson = item.optJSONArray("cards") ?: JSONArray()
-            val cards = (0 until cardsJson.length()).map { cardsJson.getString(it) }
-            if (cards.size < 2) return@mapNotNull null
-            val alternativesJson = item.optJSONArray("alternatives") ?: JSONArray()
-            val alternatives = (0 until alternativesJson.length()).map { alternativesJson.getString(it) }
-            val picturesJson = item.optJSONArray("pictures") ?: JSONArray()
-            val pictures = (0 until picturesJson.length()).map { picturesJson.getString(it) }
-            SequenceExercise(
-                item.optString("title", "Ejercicio"),
-                cards,
-                item.optString("format", "Imagen y texto"),
-                item.optString("category", "Sin categoría"),
-                alternatives,
-                pictures,
-                item.optString("type", "Orden temporal"),
-                item.optString("difficulty", "Normal"),
-                item.optBoolean("active", true)
-            )
-        }
-    }.getOrDefault(emptyList())
-}
+private fun loadSequenceExercises(context: Context): List<SequenceExercise> =
+    ExerciseUiStorage.loadSequences(context)
 
-private fun saveSequenceExercises(preferences: android.content.SharedPreferences, exercises: List<SequenceExercise>) {
-    val array = JSONArray()
-    exercises.forEach { exercise ->
-        array.put(JSONObject().apply {
-            put("title", exercise.title)
-            put("cards", JSONArray(exercise.cards))
-            put("format", exercise.format)
-            put("category", exercise.category)
-            put("alternatives", JSONArray(exercise.alternatives))
-            put("pictures", JSONArray(exercise.pictures))
-            put("type", exercise.type)
-            put("difficulty", exercise.difficulty)
-            put("active", exercise.active)
-        })
-    }
-    preferences.edit().putString("sequence_exercises_temporal_v1", array.toString()).apply()
-}
-
+private fun saveSequenceExercises(context: Context, exercises: List<SequenceExercise>): List<SequenceExercise> =
+    ExerciseUiStorage.saveSequences(context, exercises)
 private data class WordLearning(
     val streak: Int = 0,
     val lastShownTurn: Int = 0,
@@ -517,7 +478,7 @@ private fun AprenderApp() {
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
     var libraryPage by remember { mutableStateOf("list") }
-    var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(preferences)) }
+    var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceMaxCards by remember { mutableIntStateOf(preferences.getInt("sequence_max_cards_v1", 6).coerceIn(2, 6)) }
@@ -851,7 +812,7 @@ private fun AprenderApp() {
                 val nextDisabled = if (sequencePendingImportMode == "replace") imported.disabledCategories else disabledSequenceCategories + imported.disabledCategories
                 sequenceExercises = nextExercises
                 disabledSequenceCategories = nextDisabled
-                saveSequenceExercises(preferences, nextExercises)
+                sequenceExercises = saveSequenceExercises(context, nextExercises)
                 preferences.edit().putStringSet("disabled_sequence_categories", nextDisabled).apply()
                 "Importación completada: ${imported.exercises.size} ejercicios. ${if (sequencePendingImportMode == "replace") "Biblioteca de secuencias sustituida." else "Contenido combinado."}"
             } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
@@ -964,7 +925,7 @@ private fun AprenderApp() {
         val leastUsed = candidates.filter { preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) == leastCompleted }
         val exercise = leastUsed.random()
         sequencePlayingExercise = exercise
-        val indexes = if (exercise.type == "Letras") exercise.cards.firstOrNull().orEmpty().indices.toList() else exercise.cards.indices.toList()
+        val indexes = exercise.cards.indices.toList()
         val shuffled = indexes.shuffled()
         sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
         sequenceSelectedOrder = emptyList()
@@ -1390,7 +1351,6 @@ private fun AprenderApp() {
                         val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
                         val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
                         val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
-                            exercise.type != "Letras" &&
                             (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
                             (sequenceFilterCategory == "Todas" || exercise.category == sequenceFilterCategory) &&
                             (sequenceFilterDifficulty == "Todas" || exercise.difficulty == sequenceFilterDifficulty) &&
@@ -1479,12 +1439,12 @@ private fun AprenderApp() {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Switch(checked = exercise.active, onCheckedChange = { active ->
                                                 sequenceExercises = sequenceExercises.toMutableList().also { it[index] = exercise.copy(active = active) }
-                                                saveSequenceExercises(preferences, sequenceExercises)
+                                                sequenceExercises = saveSequenceExercises(context, sequenceExercises)
                                             })
                                             Text(if (exercise.active) "Activo" else "Inactivo", fontSize = 11.sp)
                                             OutlinedButton(onClick = {
                                                 sequenceExercises = sequenceExercises.filterIndexed { currentIndex, _ -> currentIndex != index }
-                                                saveSequenceExercises(preferences, sequenceExercises)
+                                                sequenceExercises = saveSequenceExercises(context, sequenceExercises)
                                                 sequenceCategoryMessage = "Ejercicio eliminado."
                                             }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text("Eliminar", fontSize = 12.sp) }
                                         }
@@ -1545,7 +1505,7 @@ private fun AprenderApp() {
                                             )
                                             Button(onClick = {
                                                 sequenceExercises = sequenceExercises.filterNot { it.category.equals(category, ignoreCase = true) }
-                                                saveSequenceExercises(preferences, sequenceExercises)
+                                                sequenceExercises = saveSequenceExercises(context, sequenceExercises)
                                                 sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
                                                 preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
                                                 disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
@@ -1560,7 +1520,7 @@ private fun AprenderApp() {
                                                     sequenceExercises = sequenceExercises.map {
                                                         if (it.category.equals(category, ignoreCase = true)) it.copy(category = destination) else it
                                                     }
-                                                    saveSequenceExercises(preferences, sequenceExercises)
+                                                    sequenceExercises = saveSequenceExercises(context, sequenceExercises)
                                                     sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
                                                     preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
                                                     disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
@@ -1589,11 +1549,7 @@ private fun AprenderApp() {
                             listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
                                 OutlinedButton(onClick = {
                                     sequenceTypeDraft = type
-                                    if (type == "Letras") {
-                                        sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty())
-                                        sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty())
-                                        sequenceAlternativeDraft = ""
-                                    } else if (sequenceCardsDraft.size < 2) {
+                                    if (sequenceCardsDraft.size < 2) {
                                         sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty(), "", "")
                                         sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty(), "", "")
                                     }
@@ -1622,8 +1578,8 @@ private fun AprenderApp() {
                             Text("Las categorías se crean y gestionan desde el menú Categorías de la biblioteca.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                         item {
-                            Text(if (sequenceTypeDraft == "Letras") "Palabra e imagen" else "Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
-                            Text(if (sequenceTypeDraft == "Letras") "Escribe la palabra que el niño tendrá que formar. Se utilizará una única imagen como pista." else "Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text("Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
+                            Text("Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         sequenceCardsDraft.forEachIndexed { index, card ->
                             item {
@@ -1632,9 +1588,9 @@ private fun AprenderApp() {
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        if (sequenceTypeDraft != "Letras") Text("${index + 1}.", fontWeight = FontWeight.Bold)
-                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text(if (sequenceTypeDraft == "Letras") "Palabra objetivo" else "Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
-                                        if (sequenceTypeDraft != "Letras") OutlinedButton(onClick = {
+                                        Text("${index + 1}.", fontWeight = FontWeight.Bold)
+                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text("Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
+                                        OutlinedButton(onClick = {
                                             if (sequenceCardsDraft.size > 2) {
                                                 sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) }
                                                 sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also { if (index < it.size) it.removeAt(index) }
@@ -1703,7 +1659,7 @@ private fun AprenderApp() {
                         }
                         item {
                             OutlinedButton(onClick = {
-                                if (sequenceCardsDraft.size < 6 && sequenceTypeDraft != "Letras") {
+                                if (sequenceCardsDraft.size < 6) {
                                     sequenceCardsDraft = sequenceCardsDraft + ""
                                     sequenceCardPicturesDraft = sequenceCardPicturesDraft + ""
                                 }
@@ -1733,14 +1689,15 @@ private fun AprenderApp() {
                                      sequenceCardPicturesDraft.indices.take(cleanCards.size).any { sequenceCardPicturesDraft.getOrNull(it).isNullOrBlank() } || sequenceCardPicturesDraft.size < cleanCards.size -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta. No puede quedar ninguna imagen vacía."
                                     alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
-                                        val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
+                                        val alternatives = alternativeLines
                                         val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
-                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, "Imagen y texto", sequenceCategoryDraft.trim(), alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, sequenceExercises.getOrNull(sequenceEditingIndex)?.active ?: true)
+                                        val previousExercise = sequenceExercises.getOrNull(sequenceEditingIndex)
+                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, "Imagen y texto", sequenceCategoryDraft.trim(), alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, previousExercise?.active ?: true, previousExercise?.directory, previousExercise?.createdAt)
                                         val updatedExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
                                         }
                                         sequenceExercises = updatedExercises
-                                        saveSequenceExercises(preferences, updatedExercises)
+                                        sequenceExercises = saveSequenceExercises(context, updatedExercises)
                                         parentSection = "sequence-library"
                                     }
                                 }
@@ -2942,9 +2899,7 @@ private fun AprenderApp() {
             }
         } else {
             val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
-            val targetLetterWord = exercise.cards.firstOrNull().orEmpty()
-            val isLettersExercise = exercise.type == "Letras"
-            val finished = if (isLettersExercise) sequenceSelectedOrder.size == targetLetterWord.length else sequenceSelectedOrder.size == exercise.cards.size
+            val finished = sequenceSelectedOrder.size == exercise.cards.size
             LazyColumn(
                 Modifier.fillMaxSize().padding(if (isTabletLayout) 28.dp else 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -2952,53 +2907,34 @@ private fun AprenderApp() {
                 item {
                     OutlinedButton(onClick = { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }) { Text("← Volver a ejercicios") }
                     Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
-                    if (isLettersExercise) {
-                        val wordPicture = exercise.pictures.firstOrNull().orEmpty()
-                        if (wordPicture.startsWith("content://") || wordPicture.startsWith("file://")) {
-                            AndroidView(
-                                factory = { ctx -> ImageView(ctx).apply {
-                                    scaleType = ImageView.ScaleType.FIT_CENTER
-                                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 280)
-                                } },
-                                update = { view ->
-                                    try { view.setImageURI(Uri.parse(wordPicture)) }
-                                    catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) }
-                                },
-                                modifier = Modifier.fillMaxWidth().height(180.dp)
-                            )
-                        } else if (wordPicture.isNotBlank()) {
-                            Text(wordPicture, fontSize = 64.sp)
-                        }
-                        Text("Forma la palabra tocando sus letras en orden.", fontSize = 14.sp, color = Color(0xFF667085))
-                    }
                     Text(
-                        if (finished) { if (isLettersExercise) "¡Has formado la palabra!" else "¡Muy bien! Has completado la secuencia." } else if (isLettersExercise) "Toca las letras en el orden correcto para formar la palabra." else "Toca las tarjetas en el orden en que ocurren.",
+                        if (finished) "¡Muy bien! Has completado la secuencia." else "Toca las tarjetas en el orden en que ocurren.",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (finished) Color(0xFF24733B) else Color(0xFF667085)
                     )
-                    Text(if (isLettersExercise) "Letras colocadas: ${sequenceSelectedOrder.size}/${targetLetterWord.length}" else "Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
+                    Text("Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
                 }
                 items(sequencePlayOrder.size) { displayPosition ->
                     val cardIndex = sequencePlayOrder[displayPosition]
                     val alreadySelected = cardIndex in sequenceSelectedOrder
-                    val picture = if (isLettersExercise) exercise.pictures.firstOrNull()?.takeIf { it.isNotBlank() }.orEmpty() else exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
+                    val picture = exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
                         ?: if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else ""
                     Card(
                         Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
                             val expectedIndex = sequenceSelectedOrder.size
-                            val isCorrectChoice = if (isLettersExercise) targetLetterWord.getOrNull(expectedIndex) != null && targetLetterWord.getOrNull(expectedIndex)?.uppercaseChar() == targetLetterWord.getOrNull(cardIndex)?.uppercaseChar() else cardIndex == expectedIndex
+                            val isCorrectChoice = cardIndex == expectedIndex
                             if (isCorrectChoice) {
                                 val nextOrder = sequenceSelectedOrder + cardIndex
                                 sequenceSelectedOrder = nextOrder
-                                val targetSize = if (isLettersExercise) targetLetterWord.length else exercise.cards.size
+                                val targetSize = exercise.cards.size
                                 if (nextOrder.size == targetSize) {
                                     sequencePlayMessage = "¡Secuencia completada!"
                                     val baseRewardSeconds = (when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60
                                     val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
                                     val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(20)
                                     addEarnedTime(baseRewardSeconds * rewardPercent / 100)
-                                    val resultSize = if (isLettersExercise) targetLetterWord.length else exercise.cards.size
+                                    val resultSize = exercise.cards.size
                                     resultCorrectCount = (resultSize - sequenceWrongAnswers).coerceIn(0, resultSize)
                                     resultTotalCount = resultSize
                                     val usageKey = sequenceDailyUsagePreferenceKey(exercise)
@@ -3029,9 +2965,7 @@ private fun AprenderApp() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            if (isLettersExercise) {
-                                Text(targetLetterWord.getOrNull(cardIndex)?.uppercase() ?: "", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                            } else if (sequenceContentFormat != "Solo texto") {
+                            if (sequenceContentFormat != "Solo texto") {
                                 if (picture.startsWith("content://") || picture.startsWith("file://")) {
                                     AndroidView(
                                         factory = { ctx -> ImageView(ctx).apply {
@@ -3054,9 +2988,7 @@ private fun AprenderApp() {
                                     }
                                 }
                             }
-                            if (isLettersExercise) {
-                                Spacer(Modifier.weight(1f))
-                            } else if (sequenceContentFormat != "Solo imágenes") {
+                            if (sequenceContentFormat != "Solo imágenes") {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     if (alreadySelected) Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
                                     Text(exercise.cards[cardIndex], fontSize = if (isTabletLayout) 22.sp else 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF253344))
