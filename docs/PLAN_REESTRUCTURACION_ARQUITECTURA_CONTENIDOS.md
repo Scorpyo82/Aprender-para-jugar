@@ -260,10 +260,12 @@ No se avanzará al siguiente paso sin comprobar el anterior. La compilación por
 - Las ramas de respaldo y de trabajo se han creado desde el mismo commit de referencia.
 - La rama de trabajo es `refactor/arquitectura-almacenamiento-contenidos`.
 - `ContentStorage.kt` crea al iniciar la aplicación las tres carpetas raíz (`tarjetas/`, `palabras/` y `secuencias/`) bajo `context.filesDir`; las categorías se crean dinámicamente.
+- `ExerciseModels.kt` define los metadatos comunes, los modelos de contenido de las tres modalidades y la serialización/validación de `ejercicio.json` (esquema versión 1).
+- `ExerciseRepository.kt` incorpora lectura del catálogo por modalidad, guardado preparado en carpeta temporal, gestión de recursos relativos y conservación de `statistics.json` al editar. Aún no está conectado a las pantallas ni sustituye las lecturas/escrituras antiguas de `SharedPreferences`.
 - La rama de respaldo es `backup/v0.3.34-alpha.1`.
 - El Issue #15 documenta los dos fallos conocidos.
 - Este documento registra las decisiones acordadas y el estado real de la implementación.
-- El diseño está cerrado; continuar directamente con el paso 1 y respetar el orden de trabajo acordado.
+- El diseño está cerrado. El paso 1 tiene la estructura base y el paso 2 está iniciado: modelos y repositorio están creados, pero falta conectarlos a las pantallas, editores y juegos.
 - Cualquier cambio posterior de alcance o decisión debe actualizar este documento.
 
 ---
