@@ -786,7 +786,7 @@ private fun AprenderApp() {
                     merged
                 }
                 pairs = mergedPairs
-                ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, mergedPairs)
+                pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, mergedPairs)
                 val mergedCategories = if (pendingImportMode == "replace") imported.categories else (categoryNames + imported.categories).distinctBy { it.lowercase() }
                 categoryNames = mergedCategories
                 preferences.edit().putString("categories", mergedCategories.joinToString("|")).apply()
@@ -818,7 +818,7 @@ private fun AprenderApp() {
                     merged
                 }
                 wordExercises = nextExercises
-                ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, nextExercises)
+                wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, nextExercises)
                 val nextCategories = if (wordPendingImportMode == "replace") imported.categories else (wordExerciseCategories + imported.categories).distinctBy { it.lowercase() }
                 wordExerciseCategories = nextCategories
                 preferences.edit().putString("letter_word_categories_v1", nextCategories.joinToString("|")).apply()
