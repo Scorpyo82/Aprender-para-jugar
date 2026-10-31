@@ -205,7 +205,7 @@ internal object LibraryPackageManager {
         source.walkTopDown().filter { it.isFile }.forEach { file ->
             if (!includeStatistics && file.name == STATISTICS_FILE) return@forEach
             if (file.name.endsWith(".tmp") || file.name.endsWith(".bak")) return@forEach
-            val relative = file.relativeTo(source).invariantSeparatorsPath
+            val relative = file.relativeTo(source).path.replace(File.separatorChar, '/')
             val name = "$prefix/$relative"
             zip.putNextEntry(ZipEntry(name))
             file.inputStream().buffered().use { it.copyTo(zip) }
