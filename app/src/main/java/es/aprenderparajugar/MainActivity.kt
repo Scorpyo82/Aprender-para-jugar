@@ -1434,7 +1434,13 @@ private fun AprenderApp() {
                                                                 next.remove("E|" + stored.directory.absolutePath)
                                                                 next.remove("S|" + stored.directory.absolutePath)
                                                             }
-                                                        } else next.remove(categoryKey)
+                                                        } else {
+                                                            next.remove(categoryKey)
+                                                            exercises.forEach { stored ->
+                                                                next.remove("E|" + stored.directory.absolutePath)
+                                                                next.remove("S|" + stored.directory.absolutePath)
+                                                            }
+                                                        }
                                                         deleteSelectedItems = next
                                                         deleteConfirmArmed = false
                                                     }
@@ -1459,6 +1465,7 @@ private fun AprenderApp() {
                                                         Checkbox(checked = exerciseChecked, onCheckedChange = { checked ->
                                                             val next = deleteSelectedItems.toMutableSet()
                                                             next.remove(categoryKey)
+                                                            next.remove("S|" + path)
                                                             if (checked) next.add(exerciseKey) else next.remove(exerciseKey)
                                                             deleteSelectedItems = next
                                                             deleteConfirmArmed = false
@@ -1513,6 +1520,10 @@ private fun AprenderApp() {
                                                 }
                                             }
                                             if (categoriesToRemove.isNotEmpty()) {
+                                                categoriesToRemove.forEach { category ->
+                                                    val categoryDirectory = ContentStorage.categoryDirectory(context, modality, category)
+                                                    if (categoryDirectory.list()?.isEmpty() == true) categoryDirectory.delete()
+                                                }
                                                 val prefKey = when (modality) {
                                                     ContentStorage.Modality.TARJETAS -> "categories"
                                                     ContentStorage.Modality.PALABRAS -> "letter_word_categories_v1"
