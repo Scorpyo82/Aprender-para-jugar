@@ -1869,8 +1869,8 @@ private fun AprenderApp() {
                                             }
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedButton(onClick = { wordLibraryEditingIndex = index; wordLibraryWordDraft = exercise.word; wordLibraryPictureDraft = exercise.picture; wordLibraryCategoryDraft = exercise.category; wordLibraryDifficultyDraft = exercise.difficulty; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar") }
-                                                OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; saveWordExercises(preferences, wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
-                                                OutlinedButton(onClick = { wordExercises = wordExercises.filterIndexed { i, _ -> i != index }; saveWordExercises(preferences, wordExercises) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.filterIndexed { i, _ -> i != index }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
                                             }
                                         }
                                     }
@@ -1926,9 +1926,9 @@ private fun AprenderApp() {
                                         wordLibraryCategoryDraft.isBlank() || wordLibraryCategoryDraft !in wordExerciseCategories -> wordLibraryMessage = "Selecciona una categoría creada en el menú Categorías."
                                         wordExercises.withIndex().any { (i, e) -> i != wordLibraryEditingIndex && e.word.equals(cleanWord, true) } -> wordLibraryMessage = "Ya existe un ejercicio con esa palabra."
                                         else -> {
-                                            val entry = PairItem(cleanWord, wordLibraryPictureDraft.trim(), wordLibraryCategoryDraft, wordLibraryDifficultyDraft, true)
+                                            val entry = wordExercises.getOrNull(wordLibraryEditingIndex)?.copy(word = cleanWord, picture = wordLibraryPictureDraft.trim(), category = wordLibraryCategoryDraft, difficulty = wordLibraryDifficultyDraft, active = true) ?: PairItem(cleanWord, wordLibraryPictureDraft.trim(), wordLibraryCategoryDraft, wordLibraryDifficultyDraft, true)
                                             wordExercises = if (wordLibraryEditingIndex < 0) wordExercises + entry else wordExercises.toMutableList().also { it[wordLibraryEditingIndex] = entry }
-                                            saveWordExercises(preferences, wordExercises)
+                                            wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises)
                                             wordLibraryPage = "list"; wordLibraryMessage = ""
                                         }
                                     }
@@ -1964,10 +1964,10 @@ private fun AprenderApp() {
                                         if (wordCategoryToDelete == category) {
                                             Text("Borrar categoría y contenido", fontWeight = FontWeight.Bold)
                                             Text("Se eliminarán también los ${wordExercises.count { it.category == category }} ejercicios asignados.", color = Color(0xFFB3261E))
-                                            Button(onClick = { wordExercises = wordExercises.filterNot { it.category == category }; saveWordExercises(preferences, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
+                                            Button(onClick = { wordExercises = wordExercises.filterNot { it.category == category }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
                                             Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.Bold)
                                             wordExerciseCategories.filterNot { it == category }.forEach { destination ->
-                                                OutlinedButton(onClick = { wordExercises = wordExercises.map { if (it.category == category) it.copy(category = destination) else it }; saveWordExercises(preferences, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.map { if (it.category == category) it.copy(category = destination) else it }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
                                             }
                                             OutlinedButton(onClick = { wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                                         } else {
@@ -2080,8 +2080,8 @@ private fun AprenderApp() {
                                         }
                                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                             OutlinedButton(onClick = { editingWord = pair.word; wordDraft = pair.word; pictureDraft = pair.picture; categoryDraft = pair.category; difficultyDraft = pair.difficulty; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar", maxLines = 1, fontSize = 13.sp) }
-                                            OutlinedButton(onClick = { pairs = pairs.map { if (it.word == pair.word) it.copy(active = !it.active) else it }; savePairs(preferences, pairs) }, modifier = Modifier.weight(1.2f)) { Text(if (pair.active) "Desactivar" else "Activar", maxLines = 1, fontSize = 13.sp) }
-                                            OutlinedButton(onClick = { pairs = pairs.filterNot { it.word == pair.word }; savePairs(preferences, pairs) }, modifier = Modifier.weight(1f)) { Text("Eliminar", maxLines = 1, fontSize = 13.sp) }
+                                            OutlinedButton(onClick = { pairs = pairs.map { if (it.word == pair.word) it.copy(active = !it.active) else it }; pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs) }, modifier = Modifier.weight(1.2f)) { Text(if (pair.active) "Desactivar" else "Activar", maxLines = 1, fontSize = 13.sp) }
+                                            OutlinedButton(onClick = { pairs = pairs.filterNot { it.word == pair.word }; pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs) }, modifier = Modifier.weight(1f)) { Text("Eliminar", maxLines = 1, fontSize = 13.sp) }
                                         }
                                     }
                                 }
@@ -2132,7 +2132,7 @@ private fun AprenderApp() {
                                 else if (pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord }) libraryMessage = "Esa palabra ya existe."
                                 else {
                                     pairs = if (editingWord == null) pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft) else pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
-                                    savePairs(preferences, pairs)
+                                    pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
                                     wordDraft = ""; pictureDraft = ""; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; editingWord = null; libraryMessage = "Palabra guardada."; libraryPage = "list"
                                 }
                             }, modifier = Modifier.fillMaxWidth()) { Text("Guardar palabra") }
@@ -2158,7 +2158,7 @@ private fun AprenderApp() {
                                         onClick = {
                                             val activate = !allCategoryWordsActive
                                             pairs = pairs.map { pair -> if (pair.category.equals(name, ignoreCase = true)) pair.copy(active = activate) else pair }
-                                            savePairs(preferences, pairs)
+                                            pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
                                             categoryMessage = if (categoryPairs.isEmpty()) "Esta categoría no tiene palabras todavía." else if (activate) "Categoría «$name» activada." else "Categoría «$name» desactivada."
                                         },
                                         enabled = categoryPairs.isNotEmpty(),
@@ -2169,7 +2169,7 @@ private fun AprenderApp() {
                                         Text("Esta opción eliminará también las ${pairs.count { it.category.equals(name, ignoreCase = true) }} palabras de esta categoría.", fontSize = 13.sp, color = Color(0xFFB3261E))
                                         Button(onClick = {
                                             pairs = pairs.filterNot { it.category.equals(name, ignoreCase = true) }
-                                            savePairs(preferences, pairs)
+                                            pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
                                             categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
                                             preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
                                             categoryToRemove = ""
@@ -2179,7 +2179,7 @@ private fun AprenderApp() {
                                         categories.filterNot { it.equals(name, ignoreCase = true) }.forEach { destination ->
                                             OutlinedButton(onClick = {
                                                 pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }
-                                                savePairs(preferences, pairs)
+                                                pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
                                                 categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
                                                 preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
                                                 categoryToRemove = ""
