@@ -155,7 +155,8 @@ internal object LibraryPackageManager {
         context: Context,
         packageInfo: PackageInfo,
         selectedCategories: Map<ContentStorage.Modality, Set<String>>,
-        replaceSameName: Boolean
+        replaceSameName: Boolean,
+        importStatistics: Boolean
     ): Int {
         var imported = 0
         try {
@@ -176,6 +177,18 @@ internal object LibraryPackageManager {
                         val target = if (existing != null) existing.directory else File(targetCategory, incoming.name)
                         val stagingExercise = File(targetCategory, ".import-${System.nanoTime()}")
                         copyDirectory(incoming, stagingExercise)
+                        val incomingStatistics = File(stagingExercise, STATISTICS_FILE)
+                        if (!importStatistics) {
+                            // El ZIP no debe sobrescribir las estadísticas locales si el usuario
+                            // ha decidido importar únicamente los ejercicios.
+                            incomingStatistics.delete()
+                            if (existing != null) {
+                                val existingStatistics = File(existing.directory, STATISTICS_FILE)
+                                if (existingStatistics.isFile) {
+                                    existingStatistics.copyTo(incomingStatistics, overwrite = true)
+                                }
+                            }
+                        }
                         if (target.exists()) {
                             val backup = File(targetCategory, ".backup-import-${System.nanoTime()}")
                             check(target.renameTo(backup)) { "No se pudo reservar el ejercicio anterior." }
