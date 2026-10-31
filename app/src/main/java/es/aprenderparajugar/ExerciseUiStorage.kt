@@ -106,4 +106,66 @@ internal object ExerciseUiStorage {
         val assetName = "images/imagen_principal.$extension"
         return assetName to mapOf(assetName to bytes)
     }
+    fun loadSequences(context: Context): List<SequenceExercise> =
+        ExerciseRepository.list(context, ContentStorage.Modality.SECUENCIAS).map { stored ->
+            val content = stored.content as SequenceExerciseContent
+            SequenceExercise(
+                title = stored.metadata.title,
+                cards = content.steps.map { it.text },
+                format = "Imagen y texto",
+                category = stored.metadata.category,
+                alternatives = content.alternativeSolutions.map { solution ->
+                    solution.mapNotNull { id -> content.steps.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1) }.joinToString(",")
+                },
+                pictures = content.steps.map { Uri.fromFile(File(stored.directory, it.image)).toString() },
+                type = content.type.displayName,
+                difficulty = stored.metadata.difficulty,
+                active = stored.metadata.active,
+                directory = stored.directory,
+                createdAt = stored.metadata.createdAt
+            )
+        }
+
+    fun saveSequences(context: Context, exercises: List<SequenceExercise>): List<SequenceExercise> {
+        val modality = ContentStorage.Modality.SECUENCIAS
+        val previous = ExerciseRepository.list(context, modality)
+        val saved = exercises.map { exercise ->
+            val timestamp = ExerciseRepository.newTimestamp()
+            val assets = linkedMapOf<String, ByteArray>()
+            val steps = exercise.cards.mapIndexed { index, text ->
+                val copied = copySelectedImage(context, exercise.pictures.getOrNull(index).orEmpty(), "images/paso_" + (index + 1))
+                assets.putAll(copied.second)
+                SequenceStep("step_" + (index + 1), text, copied.first)
+            }
+            val alternatives = exercise.alternatives.map { line ->
+                line.split(",").map { it.trim().toIntOrNull() }.map { number -> steps.getOrNull((number ?: 0) - 1)?.id ?: "" }
+            }
+            val metadata = ExerciseMetadata(modality = modality, title = exercise.title, category = exercise.category, difficulty = exercise.difficulty, active = exercise.active, createdAt = exercise.createdAt.ifBlank { timestamp }, updatedAt = timestamp)
+            val source = exercise.directory ?: previous.firstOrNull { it.metadata.title.equals(exercise.title, true) && it.metadata.category.equals(exercise.category, true) }?.directory
+            val stored = ExerciseRepository.save(context, metadata, SequenceExerciseContent(SequenceType.fromDisplayName(exercise.type), steps, alternatives), assets, source)
+            exercise.copy(pictures = steps.map { Uri.fromFile(File(stored.directory, it.image)).toString() }, directory = stored.directory, createdAt = stored.metadata.createdAt)
+        }
+        val retained = saved.mapNotNull { it.directory?.canonicalFile }.toSet()
+        previous.filter { it.directory.canonicalFile !in retained }.forEach { if (it.directory.exists()) ExerciseRepository.delete(context, modality, it.directory) }
+        return saved
+    }
+
+    private fun copySelectedImage(context: Context, picture: String, prefix: String): Pair<String, Map<String, ByteArray>> {
+        require(picture.isNotBlank()) { "Selecciona una imagen para el ejercicio." }
+        val uri = Uri.parse(picture)
+        val bytes = when (uri.scheme) {
+            "content" -> context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            "file" -> uri.path?.let(::File)?.takeIf { it.isFile }?.readBytes()
+            else -> null
+        } ?: throw IllegalArgumentException("No se puede acceder al archivo de imagen seleccionado.")
+        val extension = when (context.contentResolver.getType(uri)?.lowercase()) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            "image/jpeg", "image/jpg" -> "jpg"
+            else -> uri.lastPathSegment?.substringAfterLast(".", "")?.lowercase()?.takeIf { it in setOf("jpg", "jpeg", "png", "webp", "gif") } ?: "jpg"
+        }
+        val name = prefix + "." + extension
+        return name to mapOf(name to bytes)
+    }
 }
