@@ -709,6 +709,7 @@ private fun AprenderApp() {
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
+    var transferImportStatistics by remember { mutableStateOf(false) }
     var transferMessage by remember { mutableStateOf("") }
     var deleteSelectedModalities by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var deleteConfirmArmed by remember { mutableStateOf(false) }
@@ -854,6 +855,7 @@ private fun AprenderApp() {
                 transferPackage = inspected
                 transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
                 transferReplaceDuplicates = false
+                transferImportStatistics = false
                 transferMessage = "Archivo válido. Selecciona las categorías que deseas importar."
                 parentSection = "library-import"
             } catch (e: Exception) {
@@ -1559,6 +1561,17 @@ private fun AprenderApp() {
                                     Text(if (modalityInfo.includesStatistics) "El paquete incluye estadísticas." else "El paquete no incluye estadísticas.", fontSize = 12.sp, color = Color(0xFF667085))
                                 }
                             }
+                            if (info.modalities.any { it.includesStatistics }) {
+                                item {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = transferImportStatistics, onCheckedChange = { transferImportStatistics = it })
+                                        Column {
+                                            Text("Importar también las estadísticas del paquete", fontWeight = FontWeight.SemiBold)
+                                            Text("Desactivado por defecto. Si lo dejas sin marcar, se importarán solo los ejercicios y se conservarán las estadísticas que ya tengas en el dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
+                                        }
+                                    }
+                                }
+                            }
                             item {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Checkbox(checked = transferReplaceDuplicates, onCheckedChange = { transferReplaceDuplicates = it })
@@ -1567,12 +1580,12 @@ private fun AprenderApp() {
                                         Text("La coincidencia se busca dentro de la misma modalidad y categoría.", fontSize = 12.sp, color = Color(0xFF667085))
                                     }
                                 }
-                                Text("Si sustituyes un ejercicio, sus estadísticas también se sustituyen solo cuando el ZIP las incluye. Si no las incluye, el ejercicio importado quedará sin estadísticas anteriores.", fontSize = 12.sp, color = Color(0xFF667085))
+                                Text(if (transferImportStatistics) "Al sustituir un ejercicio, se incorporarán también las estadísticas incluidas en el ZIP." else "Si sustituyes un ejercicio sin importar estadísticas, se conservarán las estadísticas que ya tenía en este dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
                             }
                             item {
                                 Button(onClick = {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates)
+                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics)
                                         transferPackage = null
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)
