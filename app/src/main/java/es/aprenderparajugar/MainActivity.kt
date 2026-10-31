@@ -2517,6 +2517,12 @@ private fun AprenderApp() {
                                     addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
                                     resultCorrectCount = correct
                                     resultTotalCount = pairCount
+                                    exercisePairs.forEach { pair ->
+                                        pair.directory?.let { directory ->
+                                            val wasCorrect = evaluatedPictures[pair.picture] == true
+                                            runCatching { ExerciseRepository.recordResult(directory, if (wasCorrect) 1 else 0, if (wasCorrect) 0 else 1) }
+                                        }
+                                    }
                                     screen = "result"
                                 }
                             }
@@ -2683,6 +2689,9 @@ private fun AprenderApp() {
                                         resultCorrectCount = (targetWord.length - wordExerciseWrongAnswers).coerceIn(0, targetWord.length)
                                         resultTotalCount = targetWord.length
                                         correct = if (wordExerciseWrongAnswers == 0) targetWord.length else resultCorrectCount
+                                        target.directory?.let { directory ->
+                                            runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, wordExerciseWrongAnswers) }
+                                        }
                                         screen = "result"
                                     }
                                 } else {
