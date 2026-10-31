@@ -150,9 +150,7 @@ object ExerciseRepository {
 
     fun readStatistics(directory: File): JSONObject {
         val file = File(directory, STATISTICS_FILE)
-        if (!file.isFile) {
-            file.writeText(EMPTY_STATISTICS, Charsets.UTF_8)
-        }
+        if (!file.isFile) writeStatistics(directory, JSONObject(EMPTY_STATISTICS))
         return JSONObject(file.readText(Charsets.UTF_8))
     }
 
@@ -161,16 +159,20 @@ object ExerciseRepository {
             "La carpeta indicada no corresponde a un ejercicio guardado."
         }
         val temporary = File(directory, ".$STATISTICS_FILE.tmp")
-        temporary.writeText(statistics.toString(2), Charsets.UTF_8)
+        val backup = File(directory, ".$STATISTICS_FILE.bak")
         val destination = File(directory, STATISTICS_FILE)
-        if (destination.exists() && !destination.delete()) {
+        temporary.writeText(statistics.toString(2), Charsets.UTF_8)
+
+        if (destination.exists() && !destination.renameTo(backup)) {
             temporary.delete()
-            throw IllegalStateException("No se pudieron actualizar las estadísticas.")
+            throw IllegalStateException("No se pudieron reservar las estadísticas anteriores.")
         }
         if (!temporary.renameTo(destination)) {
             temporary.delete()
+            if (backup.exists()) backup.renameTo(destination)
             throw IllegalStateException("No se pudieron guardar las estadísticas.")
         }
+        if (backup.exists()) backup.delete()
     }
 
     private fun readExercise(directory: File): StoredExercise? =
