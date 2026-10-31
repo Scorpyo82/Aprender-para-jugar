@@ -2923,7 +2923,14 @@ private fun AprenderApp() {
                     Card(
                         Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
                             val expectedIndex = sequenceSelectedOrder.size
-                            val isCorrectChoice = cardIndex == expectedIndex
+                            val validOrders = listOf(exercise.cards.indices.toList()) + exercise.alternatives.mapNotNull { line ->
+                                line.split(",").map { it.trim().toIntOrNull()?.minus(1) }.takeIf { values ->
+                                    values.size == exercise.cards.size && values.all { it != null } && values.filterNotNull().distinct().size == exercise.cards.size
+                                }?.map { it!! }
+                            }
+                            val isCorrectChoice = validOrders.any { order ->
+                                order.take(expectedIndex) == sequenceSelectedOrder && order.getOrNull(expectedIndex) == cardIndex
+                            }
                             if (isCorrectChoice) {
                                 val nextOrder = sequenceSelectedOrder + cardIndex
                                 sequenceSelectedOrder = nextOrder
