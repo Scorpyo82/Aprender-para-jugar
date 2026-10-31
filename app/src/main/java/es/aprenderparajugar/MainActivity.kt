@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-internal data class PairItem(val word: String, val picture: String, val category: String = "Primeras palabras", val difficulty: String = "Fácil", val active: Boolean = true, val directory: File? = null, val createdAt: String = "")
+internal data class PairItem(val word: String, val picture: String, val category: String = "", val difficulty: String = "Fácil", val active: Boolean = true, val directory: File? = null, val createdAt: String = "")
 
 internal data class SequenceExercise(
     val title: String,
@@ -228,219 +228,6 @@ private fun chooseAdaptivePairs(
 }
 
 
-private fun exportContentPackage(context: Context, target: Uri, pairs: List<PairItem>, categories: List<String>, format: String = "aprender-para-jugar-content") {
-    val resolver = context.contentResolver
-    ZipOutputStream(resolver.openOutputStream(target)?.buffered() ?: throw IllegalArgumentException("No se puede escribir en el destino.")).use { zip ->
-        val root = JSONObject()
-        root.put("format", format)
-        root.put("version", 1)
-        root.put("categories", JSONArray(categories))
-        val words = JSONArray()
-        pairs.forEachIndexed { index, pair ->
-            val item = JSONObject()
-            item.put("word", pair.word)
-            item.put("category", pair.category)
-            item.put("difficulty", pair.difficulty)
-            item.put("active", pair.active)
-            val uri = Uri.parse(pair.picture)
-            val imageName = if (pair.picture.startsWith("content://") || pair.picture.startsWith("file://")) {
-                val extension = when (resolver.getType(uri)?.lowercase()) {
-                    "image/png" -> "png"
-                    "image/webp" -> "webp"
-                    "image/gif" -> "gif"
-                    else -> "jpg"
-                }
-                val name = "images/${index}_image.$extension"
-                val bytes = runCatching { resolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
-                if (bytes != null) {
-                    zip.putNextEntry(ZipEntry(name))
-                    zip.write(bytes)
-                    zip.closeEntry()
-                    name
-                } else null
-            } else null
-            if (imageName != null) item.put("image", imageName) else item.put("picture", pair.picture)
-            words.put(item)
-        }
-        root.put("words", words)
-        zip.putNextEntry(ZipEntry("content.json"))
-        zip.write(root.toString(2).toByteArray(Charsets.UTF_8))
-        zip.closeEntry()
-    }
-}
-
-private data class ImportedContent(val categories: List<String>, val pairs: List<PairItem>)
-
-private fun importContentPackage(context: Context, source: Uri, expectedFormat: String = "aprender-para-jugar-content"): ImportedContent {
-    val entries = mutableMapOf<String, ByteArray>()
-    ZipInputStream(context.contentResolver.openInputStream(source)?.buffered() ?: throw IllegalArgumentException("No se puede leer el archivo seleccionado.")).use { zip ->
-        while (true) {
-            val entry = zip.nextEntry ?: break
-            if (!entry.isDirectory) {
-                val out = ByteArrayOutputStream()
-                zip.copyTo(out)
-                entries[entry.name] = out.toByteArray()
-            }
-            zip.closeEntry()
-        }
-    }
-    val jsonBytes = entries["content.json"] ?: throw IllegalArgumentException("El ZIP no contiene content.json.")
-    val root = JSONObject(String(jsonBytes, Charsets.UTF_8))
-    require(root.optString("format") == expectedFormat) { "El archivo no corresponde a esta biblioteca de ejercicios." }
-    val categoriesJson = root.optJSONArray("categories") ?: JSONArray()
-    val categories = (0 until categoriesJson.length()).map { categoriesJson.getString(it) }.filter { it.isNotBlank() }
-    val words = root.optJSONArray("words") ?: JSONArray()
-    val importedPairs = (0 until words.length()).mapNotNull { index ->
-        val item = words.optJSONObject(index) ?: return@mapNotNull null
-        val word = item.optString("word").trim()
-        if (word.isBlank()) return@mapNotNull null
-        val imageName = item.optString("image")
-        val picture = if (imageName.isNotBlank()) {
-            val bytes = entries[imageName] ?: throw IllegalArgumentException("Falta la imagen $imageName.")
-            val extension = imageName.substringAfterLast('.', "jpg").filter { it.isLetterOrDigit() }.ifBlank { "jpg" }
-            val file = java.io.File(context.filesDir, "imported_${word.hashCode()}.$extension")
-            file.writeBytes(bytes)
-            Uri.fromFile(file).toString()
-        } else item.optString("picture", "❔")
-        PairItem(word, picture, item.optString("category", "Primeras palabras"), item.optString("difficulty", "Fácil"), item.optBoolean("active", true))
-    }
-    require(importedPairs.isNotEmpty()) { "El archivo no contiene palabras válidas." }
-    return ImportedContent(categories, importedPairs)
-}
-
-private data class ImportedSequenceContent(
-    val categories: List<String>,
-    val disabledCategories: Set<String>,
-    val exercises: List<SequenceExercise>
-)
-
-private fun exportSequencePackage(
-    context: Context,
-    target: Uri,
-    exercises: List<SequenceExercise>,
-    categories: List<String>,
-    disabledCategories: Set<String>
-) {
-    val resolver = context.contentResolver
-    ZipOutputStream(resolver.openOutputStream(target)?.buffered() ?: throw IllegalArgumentException("No se puede escribir en el destino.")).use { zip ->
-        val root = JSONObject().apply {
-            put("format", "aprender-para-jugar-sequences")
-            put("version", 1)
-            put("categories", JSONArray(categories))
-            put("disabledCategories", JSONArray(disabledCategories.toList()))
-        }
-        val exerciseArray = JSONArray()
-        exercises.forEachIndexed { exerciseIndex, exercise ->
-            val item = JSONObject().apply {
-                put("title", exercise.title)
-                put("format", exercise.format)
-                put("category", exercise.category)
-                put("type", exercise.type)
-                put("difficulty", exercise.difficulty)
-                put("active", exercise.active)
-                put("cards", JSONArray(exercise.cards))
-                put("alternatives", JSONArray(exercise.alternatives))
-            }
-            val pictures = JSONArray()
-            exercise.pictures.forEachIndexed { pictureIndex, picture ->
-                val uri = Uri.parse(picture)
-                val imageName = if (picture.startsWith("content://") || picture.startsWith("file://")) {
-                    val extension = when (resolver.getType(uri)?.lowercase()) {
-                        "image/png" -> "png"
-                        "image/webp" -> "webp"
-                        "image/gif" -> "gif"
-                        else -> "jpg"
-                    }
-                    val name = "images/exercise_${exerciseIndex}_picture_${pictureIndex}.$extension"
-                    val bytes = runCatching { resolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
-                    if (bytes != null) {
-                        zip.putNextEntry(ZipEntry(name))
-                        zip.write(bytes)
-                        zip.closeEntry()
-                        name
-                    } else null
-                } else null
-                pictures.put(if (imageName != null) JSONObject().put("image", imageName) else JSONObject().put("picture", picture))
-            }
-            item.put("pictures", pictures)
-            exerciseArray.put(item)
-        }
-        root.put("exercises", exerciseArray)
-        zip.putNextEntry(ZipEntry("sequences.json"))
-        zip.write(root.toString(2).toByteArray(Charsets.UTF_8))
-        zip.closeEntry()
-    }
-}
-
-private fun importSequencePackage(context: Context, source: Uri): ImportedSequenceContent {
-    val entries = mutableMapOf<String, ByteArray>()
-    ZipInputStream(context.contentResolver.openInputStream(source)?.buffered() ?: throw IllegalArgumentException("No se puede leer el archivo seleccionado.")).use { zip ->
-        while (true) {
-            val entry = zip.nextEntry ?: break
-            if (!entry.isDirectory) {
-                val out = ByteArrayOutputStream()
-                zip.copyTo(out)
-                entries[entry.name] = out.toByteArray()
-            }
-            zip.closeEntry()
-        }
-    }
-    val jsonBytes = entries["sequences.json"] ?: throw IllegalArgumentException("El ZIP no contiene sequences.json.")
-    val root = JSONObject(String(jsonBytes, Charsets.UTF_8))
-    require(root.optString("format") == "aprender-para-jugar-sequences") { "El archivo no es una copia de seguridad de secuencias." }
-    val categoryJson = root.optJSONArray("categories") ?: JSONArray()
-    val categories = (0 until categoryJson.length()).map { categoryJson.getString(it) }.filter { it.isNotBlank() }
-    val disabledJson = root.optJSONArray("disabledCategories") ?: JSONArray()
-    val disabled = (0 until disabledJson.length()).map { disabledJson.getString(it) }.toSet()
-    val array = root.optJSONArray("exercises") ?: JSONArray()
-    val exercises = (0 until array.length()).mapNotNull { index ->
-        val item = array.optJSONObject(index) ?: return@mapNotNull null
-        val cardsJson = item.optJSONArray("cards") ?: JSONArray()
-        val cards = (0 until cardsJson.length()).map { cardsJson.getString(it) }
-        if (cards.size < 2) return@mapNotNull null
-        val alternativesJson = item.optJSONArray("alternatives") ?: JSONArray()
-        val alternatives = (0 until alternativesJson.length()).map { alternativesJson.getString(it) }
-        val picturesJson = item.optJSONArray("pictures") ?: JSONArray()
-        val pictures = (0 until picturesJson.length()).map { pictureIndex ->
-            val picture = picturesJson.optJSONObject(pictureIndex) ?: return@map (picturesJson.optString(pictureIndex))
-            val imageName = picture.optString("image")
-            if (imageName.isNotBlank()) {
-                val bytes = entries[imageName] ?: throw IllegalArgumentException("Falta una imagen de secuencia: $imageName.")
-                val extension = imageName.substringAfterLast('.', "jpg").filter { it.isLetterOrDigit() }.ifBlank { "jpg" }
-                val file = File(context.filesDir, "imported_sequence_${index}_${pictureIndex}.$extension")
-                file.writeBytes(bytes)
-                Uri.fromFile(file).toString()
-            } else picture.optString("picture", "❔")
-        }
-        SequenceExercise(
-            item.optString("title", "Ejercicio"),
-            cards,
-            item.optString("format", "Imagen y texto"),
-            item.optString("category", "Sin categoría"),
-            alternatives,
-            pictures,
-            item.optString("type", "Orden temporal"),
-            item.optString("difficulty", "Normal"),
-            item.optBoolean("active", true)
-        )
-    }
-    require(exercises.isNotEmpty()) { "El archivo no contiene ejercicios de secuencias válidos." }
-    return ImportedSequenceContent(categories, disabled, exercises)
-}
-
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val expected = android.content.ComponentName(context, PlayTimeAccessibilityService::class.java)
-    val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager ?: return false
-    return manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-        .any { info -> info.resolveInfo.serviceInfo.packageName == expected.packageName && info.resolveInfo.serviceInfo.name == expected.className }
-}
-
-private fun currentDayKey(): String {
-    val calendar = Calendar.getInstance()
-    return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
-}
-
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AprenderApp() {
     val context = LocalContext.current
@@ -517,11 +304,7 @@ private fun AprenderApp() {
     var sequenceChosenCategory by remember { mutableStateOf("") }
     var sequenceChosenDifficulty by remember { mutableStateOf("") }
 
-    var packageMessage by remember { mutableStateOf("") }
-    var sequencePackageMessage by remember { mutableStateOf("") }
-    var sequencePendingImportMode by remember { mutableStateOf("replace") }
     var sequenceLibraryFilterCategoryExpanded by remember { mutableStateOf(false) }
-    var pendingImportMode by remember { mutableStateOf("replace") }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
@@ -715,7 +498,7 @@ private fun AprenderApp() {
     var categoryNames by remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
-    val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
+    val categories = categoryNames.map { it.trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase() }.sorted()
     var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "") ?: "") }
     var exerciseCategoryMenuExpanded by remember { mutableStateOf(false) }
     var libraryCategoryFilter by remember { mutableStateOf("Todas") }
@@ -730,101 +513,6 @@ private fun AprenderApp() {
     var wordCurrentCategory by remember { mutableStateOf<String?>(null) }
     var wordStartMessage by remember { mutableStateOf("") }
     var wordCategoryCandidates by remember { mutableStateOf(emptyList<String>()) }
-
-    val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) {
-            packageMessage = try {
-                exportContentPackage(context, uri, pairs, categories)
-                "Exportación completada: ${pairs.size} palabras y ${categories.size} categorías."
-            } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
-        }
-    }
-    val importPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) {
-            packageMessage = try {
-                val imported = importContentPackage(context, uri)
-                val mergedPairs = if (pendingImportMode == "replace") imported.pairs else {
-                    val merged = pairs.toMutableList()
-                    imported.pairs.forEach { incoming ->
-                        val existingIndex = merged.indexOfFirst { it.word.equals(incoming.word, ignoreCase = true) }
-                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
-                    }
-                    merged
-                }
-                pairs = mergedPairs
-                pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, mergedPairs)
-                val mergedCategories = if (pendingImportMode == "replace") imported.categories else (categoryNames + imported.categories).distinctBy { it.lowercase() }
-                categoryNames = mergedCategories
-                preferences.edit().putString("categories", mergedCategories.joinToString("|")).apply()
-                "Importación completada: ${imported.pairs.size} palabras procesadas. ${if (pendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado; las palabras con el mismo nombre se actualizaron."}"
-            } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
-        }
-    }
-
-    val exportWordPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) {
-            wordPackageMessage = try {
-                exportContentPackage(context, uri, wordExercises, wordExerciseCategories, "aprender-para-jugar-words")
-                "Copia de Palabras creada: " + wordExercises.size + " ejercicios."
-            } catch (e: Exception) { "No se pudo exportar: " + (e.message ?: "error de archivo") }
-        }
-    }
-    val importWordPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) {
-            wordPackageMessage = try {
-                val imported = importContentPackage(context, uri, "aprender-para-jugar-words")
-                val nextExercises = if (wordPendingImportMode == "replace") imported.pairs else {
-                    val merged = wordExercises.toMutableList()
-                    imported.pairs.forEach { incoming ->
-                        val existingIndex = merged.indexOfFirst { it.word.equals(incoming.word, ignoreCase = true) }
-                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
-                    }
-                    merged
-                }
-                wordExercises = nextExercises
-                wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, nextExercises)
-                val nextCategories = if (wordPendingImportMode == "replace") imported.categories else (wordExerciseCategories + imported.categories).distinctBy { it.lowercase() }
-                wordExerciseCategories = nextCategories
-                preferences.edit().putString("letter_word_categories_v1", nextCategories.joinToString("|")).apply()
-                "Importación de Palabras completada: " + imported.pairs.size + " ejercicios. " + if (wordPendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado."
-            } catch (e: Exception) { "No se pudo importar: " + (e.message ?: "archivo no válido") }
-        }
-    }
-    val exportSequencePackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) {
-            sequencePackageMessage = try {
-                exportSequencePackage(context, uri, sequenceExercises, (sequenceExercises.map { it.category } + emptyList()).filter { it.isNotBlank() }.distinct().sorted(), disabledSequenceCategories)
-                "Copia de seguridad creada: ${sequenceExercises.size} ejercicios."
-            } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
-        }
-    }
-    val importSequencePackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) {
-            sequencePackageMessage = try {
-                val imported = importSequencePackage(context, uri)
-                val nextExercises = if (sequencePendingImportMode == "replace") imported.exercises else {
-                    val merged = sequenceExercises.toMutableList()
-                    imported.exercises.forEach { incoming ->
-                        val existingIndex = merged.indexOfFirst { it.title.equals(incoming.title, ignoreCase = true) && it.type == incoming.type && it.category.equals(incoming.category, ignoreCase = true) }
-                        if (existingIndex >= 0) merged[existingIndex] = incoming else merged.add(incoming)
-                    }
-                    merged
-                }
-                val nextDisabled = if (sequencePendingImportMode == "replace") imported.disabledCategories else disabledSequenceCategories + imported.disabledCategories
-                sequenceExercises = nextExercises
-                disabledSequenceCategories = nextDisabled
-                sequenceExercises = saveSequenceExercises(context, nextExercises)
-                preferences.edit().putStringSet("disabled_sequence_categories", nextDisabled).apply()
-                "Importación completada: ${imported.exercises.size} ejercicios. ${if (sequencePendingImportMode == "replace") "Biblioteca de secuencias sustituida." else "Contenido combinado."}"
-            } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
-        }
-    }
 
     val unifiedExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -872,6 +560,7 @@ private fun AprenderApp() {
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
                 "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> parentSection = "menu"
+                "library-export" -> parentSection = "library-transfer"
                 "library-import" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; parentSection = "library-transfer" }
                 "game-modes" -> parentSection = "menu"
                 "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
@@ -1219,9 +908,16 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> "menu"; "library-import" -> "library-transfer"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> "menu"; "library-import", "library-export" -> "library-transfer"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import") "← Volver a importar y exportar" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "library-transfer" -> {
+ item { Text("Importar y exportar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+ item { Text("Elige qué operación quieres realizar.", fontSize = 14.sp, color = Color(0xFF667085)) }
+ item { Button(onClick = { transferMessage = ""; val available = ContentStorage.Modality.entries.associateWith { LibraryPackageManager.categories(context, it) }; transferExportCategories = available.mapValues { emptySet() }; parentSection = "library-export" }, modifier = Modifier.fillMaxWidth()) { Text("Exportar bibliotecas") } }
+ item { OutlinedButton(onClick = { transferMessage = ""; preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); unifiedImportLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }, modifier = Modifier.fillMaxWidth()) { Text("Importar archivo ZIP") } }
+ if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
+}
+"library-export" -> {
                         val options = ContentStorage.Modality.entries.associateWith { LibraryPackageManager.categories(context, it) }
                         item { Text("Exportar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Selecciona las categorías que quieres incluir. Se generará un único ZIP con la estructura original de las bibliotecas.", fontSize = 14.sp, color = Color(0xFF667085)) }
@@ -1277,14 +973,9 @@ private fun AprenderApp() {
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Exportar selección") }
                         }
-                        item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                unifiedImportLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Importar archivo ZIP") }
-                        }
-                        if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
-                    }
+
+ if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
+}
                     "library-import" -> {
                         val info = transferPackage
                         item { Text("Contenido del archivo", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -1524,7 +1215,7 @@ private fun AprenderApp() {
                     }
                     "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
                         val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
-                        val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
+                        val sequenceCategories = sequenceCategoryNames.map { it.trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase() }.sorted()
                         val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
                             (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
                             (sequenceFilterCategory == "Todas" || exercise.category == sequenceFilterCategory) &&
@@ -2129,7 +1820,7 @@ private fun AprenderApp() {
                         if (libraryPage == "list") {
                             Text("Biblioteca de tarjetas", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                             Text("Gestiona las tarjetas guardadas. Pulsa Añadir para crear una nueva.", fontSize = 14.sp, color = Color(0xFF667085))
-                            Button(onClick = { editingWord = null; wordDraft = ""; pictureDraft = ""; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta") }
+                            Button(onClick = { editingWord = null; wordDraft = ""; pictureDraft = ""; categoryDraft = categoryNames.firstOrNull().orEmpty(); difficultyDraft = "Fácil"; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta") }
                             Spacer(Modifier.height(8.dp))
 
                             Text("Filtrar contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
