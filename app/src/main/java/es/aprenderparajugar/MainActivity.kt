@@ -2939,6 +2939,9 @@ private fun AprenderApp() {
                                     resultTotalCount = resultSize
                                     val usageKey = sequenceDailyUsagePreferenceKey(exercise)
                                     preferences.edit().putInt(usageKey, preferences.getInt(usageKey, 0) + 1).apply()
+                                    exercise.directory?.let { directory ->
+                                        runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, sequenceWrongAnswers) }
+                                    }
                                     screen = "sequence-result"
                                 } else {
                                     sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
