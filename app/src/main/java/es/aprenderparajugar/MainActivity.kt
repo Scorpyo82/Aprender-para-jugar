@@ -1373,6 +1373,7 @@ private fun AprenderApp() {
                         }
                         val allExercises = modalityCategories.values.flatten().flatMap { it.second }
                         val selectedCategories = deleteSelectedItems.filter { it.startsWith("C|") }
+                        val selectedCategoryCount = selectedCategories.size
                         val selectedExerciseCount = allExercises.count { stored ->
                             ("C|" + stored.metadata.modality.name + "|" + stored.metadata.category) in selectedCategories ||
                                 ("E|" + stored.directory.absolutePath) in deleteSelectedItems
@@ -1502,7 +1503,7 @@ private fun AprenderApp() {
                             }
                         }
                         item {
-                            Text("Selección: " + selectedExerciseCount + " ejercicios y " + selectedStatsCount + " conjuntos de estadísticas. El PIN, los límites y las preferencias generales se conservarán.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text("Selección: " + selectedCategoryCount + " categorías, " + selectedExerciseCount + " ejercicios y " + selectedStatsCount + " conjuntos de estadísticas. El PIN, los límites y las preferencias generales se conservarán.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         item {
                             if (!deleteConfirmArmed) {
@@ -1511,7 +1512,7 @@ private fun AprenderApp() {
                                     Text("Continuar con la eliminación")
                                 }
                             } else {
-                                Text("CONFIRMACIÓN: se eliminarán " + selectedExerciseCount + " ejercicios y " + selectedStatsCount + " conjuntos de estadísticas. Esta acción no se puede deshacer.", fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
+                                Text("CONFIRMACIÓN: se eliminarán " + selectedCategoryCount + " categorías, " + selectedExerciseCount + " ejercicios y " + selectedStatsCount + " conjuntos de estadísticas. Esta acción no se puede deshacer.", fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
                                 Button(onClick = {
                                     try {
                                         var removedExercises = 0
