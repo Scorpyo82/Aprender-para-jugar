@@ -16,7 +16,7 @@ Cada modalidad dispone de bibliotecas organizadas por categorías. Los ejercicio
 
 La zona familiar permite configurar las modalidades activas, categorías, recompensas, límites y opciones de seguridad. La aplicación incorpora un saldo de tiempo ganado mediante la realización de ejercicios y un contador de tiempo de juego en segundo plano.
 
-Se está desarrollando una pantalla de estadísticas orientativas para que las familias puedan observar resultados por áreas y modalidades. Estas métricas describen el rendimiento registrado en los ejercicios; **no son diagnósticos, pruebas estandarizadas ni conclusiones pedagógicas definitivas**.
+La pantalla de estadísticas familiares resume intentos, aciertos, errores y ejercicios completados por modalidad, tipo de secuencia y categoría. Incluye áreas descriptivas como asociación palabra-imagen y construcción de palabras, y señala expresamente cuándo una habilidad —por ejemplo, comprensión lectora de textos— no puede valorarse con los ejercicios disponibles. Estas métricas describen el rendimiento registrado; **no son diagnósticos, pruebas estandarizadas ni conclusiones pedagógicas definitivas**.
 
 ## Bibliotecas y copias de seguridad
 
