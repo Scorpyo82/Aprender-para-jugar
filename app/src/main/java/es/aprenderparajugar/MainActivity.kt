@@ -1527,7 +1527,9 @@ private fun AprenderApp() {
                         }
                         item {
                             Text("Cómo interpretar estos datos", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                            Text("Son indicadores descriptivos del uso de los ejercicios disponibles, no una evaluación pedagógica estandarizada. Un porcentaje alto o bajo no demuestra por sí solo que una habilidad esté adquirida o no. Ten en cuenta el número de intentos, la dificultad, el tipo de ejercicio y si el contenido ya se ha practicado.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text("Esta aplicación no diagnostica, no realiza evaluaciones clínicas ni determina lo que un niño es o no es capaz de hacer. Solo ofrece actividades y recoge cómo interactúa con ellas. Los resultados dependen de los ejercicios disponibles, de su diseño, de la experiencia previa, de cómo el niño interpreta la actividad y de factores como la atención, la motivación, la memoria o la familiaridad con los patrones y símbolos.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text("Un acierto o un error aislado no demuestra que una capacidad esté adquirida o ausente. El niño puede encontrar estrategias, asociaciones o soluciones que el ejercicio no había previsto, e incluso descubrir relaciones que a un adulto podrían pasarle inadvertidas. Conviene observar el proceso, escuchar sus explicaciones y no limitar sus posibilidades a lo que reflejan estas cifras.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text("Estas estadísticas son únicamente orientativas y descriptivas. No son pruebas estandarizadas, diagnósticos ni conclusiones pedagógicas definitivas, y no sustituyen la valoración de profesionales cuando sea necesaria.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         item { Text("Ejercicios con estadísticas legibles: ${records.size}. Si no aparecen datos, completa ejercicios para generar registros.", fontSize = 12.sp, color = Color(0xFF667085)) }
                     }
