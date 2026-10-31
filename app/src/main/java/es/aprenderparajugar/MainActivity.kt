@@ -144,6 +144,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Inicializa las raíces privadas para las bibliotecas de contenido.
+        ContentStorage.initialize(this)
         // A manual launch re-arms the focus guard after a parent-authorized exit.
         getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
             .edit().putBoolean("manual_exit_allowed", false).apply()
