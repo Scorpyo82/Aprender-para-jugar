@@ -21,7 +21,7 @@ object ExerciseRepository {
 
     private const val EXERCISE_FILE = "ejercicio.json"
     private const val STATISTICS_FILE = "statistics.json"
-    private const val EMPTY_STATISTICS = """{"schemaVersion":1,"sessions":0,"attempts":0,"correct":0,"incorrect":0}"""
+    private const val EMPTY_STATISTICS = """{"schemaVersion":1}"""
 
     fun newTimestamp(): String = Instant.now().toString()
 
