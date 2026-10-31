@@ -68,6 +68,17 @@ object ExerciseRepository {
         assets: Map<String, ByteArray> = emptyMap(),
         existingDirectory: File? = null
     ): StoredExercise {
+        val preferences = context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE)
+        val categoryPreferenceKey = when (metadata.modality) {
+            ContentStorage.Modality.TARJETAS -> "categories"
+            ContentStorage.Modality.PALABRAS -> "letter_word_categories_v1"
+            ContentStorage.Modality.SECUENCIAS -> "sequence_categories_v1"
+        }
+        val registeredCategories = (preferences.getString(categoryPreferenceKey, "") ?: "")
+            .split("|").map { it.trim() }.filter { it.isNotBlank() }
+        require(registeredCategories.any { it.equals(metadata.category.trim(), ignoreCase = true) }) {
+            "La categoría seleccionada ya no está registrada. Selecciona una categoría válida antes de guardar."
+        }
         val json = ExerciseJsonCodec.encode(metadata, content)
         val root = ContentStorage.modalityDirectory(context, metadata.modality).canonicalFile
         val target = ContentStorage.exerciseDirectory(
