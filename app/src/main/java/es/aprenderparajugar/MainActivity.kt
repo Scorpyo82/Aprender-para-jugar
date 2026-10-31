@@ -1142,9 +1142,9 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
                 Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "library-transfer" -> "Selecciona qué categorías guardar o recuperar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
+                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
                 item {
@@ -1219,12 +1219,50 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> "menu"; "library-import" -> "library-transfer"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> "menu"; "library-export", "library-import" -> "library-transfer"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "library-transfer" -> {
+                        item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Elige qué operación quieres realizar. Cada proceso tiene su propia pantalla para mantener separadas la importación y la exportación.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable {
+                                transferExportCategories = ContentStorage.Modality.entries.associateWith { modality ->
+                                    LibraryPackageManager.categories(context, modality).map { it.directory }.toSet()
+                                }
+                                transferExportStatistics = emptySet()
+                                transferMessage = ""
+                                parentSection = "library-export"
+                            }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("📤", fontSize = 30.sp)
+                                    Column {
+                                        Text("Exportar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        Text("Crear un ZIP con las categorías y modalidades que elijas", color = Color(0xFF667085))
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable {
+                                transferMessage = ""
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                unifiedImportLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                            }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("📥", fontSize = 30.sp)
+                                    Column {
+                                        Text("Importar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        Text("Seleccionar un ZIP y revisar su contenido antes de incorporarlo", color = Color(0xFF667085))
+                                    }
+                                }
+                            }
+                        }
+                        if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
+                    }
+                    "library-export" -> {
                         val options = ContentStorage.Modality.entries.associateWith { LibraryPackageManager.categories(context, it) }
                         item { Text("Exportar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Selecciona las categorías que quieres incluir. Se generará un único ZIP con la estructura original de las bibliotecas.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Selecciona las categorías que quieres incluir. Se generará un único ZIP con la estructura original de las tres bibliotecas.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         ContentStorage.Modality.entries.forEach { modality ->
                             val label = when (modality) { ContentStorage.Modality.TARJETAS -> "Tarjetas"; ContentStorage.Modality.PALABRAS -> "Palabras"; ContentStorage.Modality.SECUENCIAS -> "Secuencias" }
                             val categoriesForModality = options[modality].orEmpty()
@@ -1236,7 +1274,7 @@ private fun AprenderApp() {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(
                                             checked = categoriesForModality.all { it.directory in transferExportCategories[modality].orEmpty() },
-                                            onCheckedChange = { checked -> transferExportCategories = transferExportCategories.toMutableMap().also { it[modality] = if (checked) categoriesForModality.map { c -> c.directory }.toSet() else emptySet() } }
+                                            onCheckedChange = { checked -> transferExportCategories = transferExportCategories.toMutableMap().also { it[modality] = if (checked) categoriesForModality.map { category -> category.directory }.toSet() else emptySet() } }
                                         )
                                         Text("Seleccionar todas las categorías")
                                     }
@@ -1276,12 +1314,6 @@ private fun AprenderApp() {
                                 enabled = transferExportCategories.values.any { it.isNotEmpty() },
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Exportar selección") }
-                        }
-                        item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                unifiedImportLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Importar archivo ZIP") }
                         }
                         if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
                     }
