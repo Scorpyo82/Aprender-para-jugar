@@ -21,7 +21,7 @@ object ExerciseRepository {
 
     private const val EXERCISE_FILE = "ejercicio.json"
     private const val STATISTICS_FILE = "statistics.json"
-    private const val EMPTY_STATISTICS = """{"schemaVersion":1}"""
+    private const val EMPTY_STATISTICS = """{"schemaVersion":1,"attempts":0,"correct":0,"incorrect":0,"completed":0}"""
 
     fun newTimestamp(): String = Instant.now().toString()
 
@@ -134,10 +134,10 @@ object ExerciseRepository {
                 throw IllegalStateException("No se pudo completar el guardado del ejercicio.")
             }
 
+            // El destino ya está confirmado. Un fallo de limpieza de la carpeta
+            // antigua no debe convertir un guardado correcto en un falso error.
             if (source != null && source != target && source.exists()) {
-                check(source.deleteRecursively()) {
-                    "El ejercicio se guardó, pero no se pudo retirar su carpeta anterior."
-                }
+                source.deleteRecursively()
             }
             if (backup.exists()) backup.deleteRecursively()
             return read(target)
@@ -148,10 +148,44 @@ object ExerciseRepository {
         }
     }
 
+    /** Elimina exclusivamente una carpeta de ejercicio validada dentro de su biblioteca. */
+    fun delete(context: Context, modality: ContentStorage.Modality, directory: File) {
+        val root = ContentStorage.modalityDirectory(context, modality).canonicalFile
+        val target = directory.canonicalFile
+        require(target.toPath().startsWith(root.toPath()) && target != root) {
+            "La carpeta indicada no pertenece a la biblioteca seleccionada."
+        }
+        require(File(target, EXERCISE_FILE).isFile) {
+            "No se eliminará una carpeta que no contenga un ejercicio válido."
+        }
+        check(target.deleteRecursively()) { "No se pudo eliminar el ejercicio." }
+        target.parentFile?.takeIf { it.isDirectory && it.list()?.isEmpty() == true }?.delete()
+    }
+
+    /** Lee estadísticas con valores iniciales y valida el esquema antes de devolverlas. */
     fun readStatistics(directory: File): JSONObject {
+        require(directory.isDirectory && File(directory, EXERCISE_FILE).isFile) {
+            "La carpeta indicada no corresponde a un ejercicio guardado."
+        }
         val file = File(directory, STATISTICS_FILE)
         if (!file.isFile) writeStatistics(directory, JSONObject(EMPTY_STATISTICS))
-        return JSONObject(file.readText(Charsets.UTF_8))
+        val result = JSONObject(file.readText(Charsets.UTF_8))
+        require(result.optInt("schemaVersion", -1) == 1) {
+            "La versión de las estadísticas no es compatible."
+        }
+        return result
+    }
+
+    /** Actualiza contadores sin descartar otros campos estadísticos futuros. */
+    fun recordResult(directory: File, correct: Int, incorrect: Int, completed: Boolean = true) {
+        require(correct >= 0 && incorrect >= 0) { "Los resultados no pueden ser negativos." }
+        val statistics = readStatistics(directory)
+        statistics.put("attempts", statistics.optInt("attempts", 0) + correct + incorrect)
+        statistics.put("correct", statistics.optInt("correct", 0) + correct)
+        statistics.put("incorrect", statistics.optInt("incorrect", 0) + incorrect)
+        if (completed) statistics.put("completed", statistics.optInt("completed", 0) + 1)
+        statistics.put("lastPlayedAt", newTimestamp())
+        writeStatistics(directory, statistics)
     }
 
     fun writeStatistics(directory: File, statistics: JSONObject) {
@@ -180,7 +214,7 @@ object ExerciseRepository {
 
     private fun copyExerciseAssets(source: File, destination: File) {
         source.walkTopDown()
-            .filter { it.isFile && it.name != EXERCISE_FILE && it.name != STATISTICS_FILE }
+            .filter { it.isFile && it.name != EXERCISE_FILE && it.name != STATISTICS_FILE && !it.name.endsWith(".tmp") && !it.name.endsWith(".bak") }
             .forEach { file ->
                 val relative = file.relativeTo(source)
                 val target = File(destination, relative.path)
