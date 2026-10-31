@@ -1692,7 +1692,7 @@ private fun AprenderApp() {
                                         val alternatives = alternativeLines
                                         val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
                                         val previousExercise = sequenceExercises.getOrNull(sequenceEditingIndex)
-                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, "Imagen y texto", sequenceCategoryDraft.trim(), alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, previousExercise?.active ?: true, previousExercise?.directory, previousExercise?.createdAt)
+                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, "Imagen y texto", sequenceCategoryDraft.trim(), alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, previousExercise?.active ?: true, previousExercise?.directory, previousExercise?.createdAt.orEmpty())
                                         val updatedExercises = sequenceExercises.toMutableList().also {
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
                                         }
