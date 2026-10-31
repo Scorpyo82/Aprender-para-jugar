@@ -4,7 +4,7 @@
 **Rama de trabajo:** `refactor/arquitectura-almacenamiento-contenidos`  
 **Referencia de partida:** `d51008a48229630f6ec33e08e5469fefde47d6c8`  
 **Versión de la aplicación en esa referencia:** `0.3.34` (`versionCode 38`)  
-**Estado:** diseño cerrado. Implementación en curso por etapas; el paso 1 (estructura base) ya está iniciado.
+**Estado:** diseño cerrado. Paso 1 iniciado; paso 2 en implementación (modelos JSON y repositorio centralizados incorporados en la rama de trabajo).
 
 ---
 
@@ -72,45 +72,51 @@ Los nombres de carpeta se derivan del título/nombre del ejercicio y se normaliz
 
 ## 3. Datos del ejercicio: un JSON por carpeta
 
-Cada ejercicio tendrá un archivo `ejercicio.json` con sus metadatos y contenido. Las imágenes se guardarán junto a él.
+Cada ejercicio tendrá un archivo `ejercicio.json` con metadatos comunes y un bloque `content` específico de su modalidad. Las imágenes se guardarán junto al JSON y se referenciarán mediante rutas relativas a la carpeta del ejercicio.
 
-Ejemplo conceptual de Secuencias:
+### Metadatos comunes
+
+- `schemaVersion`: versión del esquema JSON.
+- `modality`: `tarjetas`, `palabras` o `secuencias`.
+- `title`, `category`, `difficulty` y `active`.
+- `createdAt` y `updatedAt`.
+
+### Contenido por modalidad
+
+- **Tarjetas:** `content.word` y `content.image`.
+- **Palabras:** `content.word` y `content.hintImage`.
+- **Secuencias:** `content.type`, `content.steps` y `content.alternativeSolutions`.
+
+En Secuencias, cada elemento de `steps` agrupa `id`, `text` e `image`. Las soluciones alternativas son listas ordenadas de identificadores de pasos; cada solución debe incluir todos los pasos exactamente una vez. Los tipos se serializan como `orden_temporal`, `procesos`, `causa_efecto` y `ciclos`.
+
+Ejemplo conceptual del formato implementado para Secuencias:
 
 ```json
 {
   "schemaVersion": 1,
   "modality": "secuencias",
-  "category": "Procesos",
   "title": "Preparar una tostada",
-  "type": "Orden temporal",
-  "format": "Imagen y texto",
+  "category": "Vida cotidiana",
   "difficulty": "Normal",
   "active": true,
-  "cards": [
-    {
-      "order": 1,
-      "text": "Coger una rebanada de pan",
-      "image": "imagen_1.png"
-    },
-    {
-      "order": 2,
-      "text": "Introducir el pan en la tostadora",
-      "image": "imagen_2.png"
-    }
-  ],
-  "alternatives": []
+  "createdAt": "2026-10-31T10:00:00Z",
+  "updatedAt": "2026-10-31T10:00:00Z",
+  "content": {
+    "type": "orden_temporal",
+    "steps": [
+      { "id": "paso-1", "text": "Coger una rebanada de pan", "image": "imagen_1.png" },
+      { "id": "paso-2", "text": "Introducir el pan en la tostadora", "image": "imagen_2.png" }
+    ],
+    "alternativeSolutions": [
+      ["paso-1", "paso-2"]
+    ]
+  }
 }
 ```
 
-Este ejemplo es una propuesta de esquema, no una definición final de todos los campos. Antes de implementarlo se contrastará con todas las funcionalidades reales de cada modalidad.
+El modelo valida los metadatos, la modalidad, las referencias relativas a recursos y la integridad de las soluciones alternativas. Las secuencias admiten actualmente entre 2 y 6 pasos y mantienen el formato de imagen y texto: ambos campos son obligatorios en cada paso.
 
-### Principio de asociación
-
-En Secuencias no se mantendrán dos listas paralelas independientes de textos e imágenes. Cada tarjeta/etapa agrupará su texto, su referencia de imagen y su orden correcto. Así se evita que una modificación de una lista desplace las asociaciones de la otra.
-
-Tarjetas y Palabras tendrán esquemas adaptados a sus datos reales, manteniendo el principio de un JSON por ejercicio.
-
-El campo `schemaVersion` permitirá evolucionar el formato y preparar futuras migraciones.
+Los identificadores de paso son referencias internas del ejercicio; no se asignan UUID a los ejercicios. El nombre de carpeta deriva del título normalizado y las colisiones se rechazan antes de sobrescribir otro ejercicio.
 
 ## 4. Gestor de contenidos: separación entre almacenamiento y aplicación
 
