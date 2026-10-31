@@ -1407,7 +1407,13 @@ private fun AprenderApp() {
                                                             next.remove("E|" + stored.directory.absolutePath)
                                                             next.remove("S|" + stored.directory.absolutePath)
                                                         }
-                                                    } else next.remove(key)
+                                                    } else {
+                                                        next.remove(key)
+                                                        pair.second.forEach { stored ->
+                                                            next.remove("E|" + stored.directory.absolutePath)
+                                                            next.remove("S|" + stored.directory.absolutePath)
+                                                        }
+                                                    }
                                                 }
                                                 deleteSelectedItems = next
                                                 deleteConfirmArmed = false
