@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class PairItem(val word: String, val picture: String, val category: String = "Primeras palabras", val difficulty: String = "Fácil", val active: Boolean = true)
+internal data class PairItem(val word: String, val picture: String, val category: String = "Primeras palabras", val difficulty: String = "Fácil", val active: Boolean = true, val directory: File? = null, val createdAt: String = "")
 
 private data class SequenceExercise(
     val title: String,
@@ -486,8 +486,8 @@ private fun AprenderApp() {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
-    var pairs by remember { mutableStateOf(loadPairs(preferences)) }
-    var wordExercises by remember { mutableStateOf(loadWordExercises(preferences)) }
+    var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
+    var wordExercises by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)) }
     var gameActiveCards by remember { mutableStateOf(preferences.getBoolean("game_active_cards", true)) }
     var gameActiveSequences by remember { mutableStateOf(preferences.getBoolean("game_active_sequences", true)) }
     var gameActiveWords by remember { mutableStateOf(preferences.getBoolean("game_active_words", true)) }
@@ -786,7 +786,7 @@ private fun AprenderApp() {
                     merged
                 }
                 pairs = mergedPairs
-                savePairs(preferences, mergedPairs)
+                ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, mergedPairs)
                 val mergedCategories = if (pendingImportMode == "replace") imported.categories else (categoryNames + imported.categories).distinctBy { it.lowercase() }
                 categoryNames = mergedCategories
                 preferences.edit().putString("categories", mergedCategories.joinToString("|")).apply()
@@ -818,7 +818,7 @@ private fun AprenderApp() {
                     merged
                 }
                 wordExercises = nextExercises
-                saveWordExercises(preferences, nextExercises)
+                ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, nextExercises)
                 val nextCategories = if (wordPendingImportMode == "replace") imported.categories else (wordExerciseCategories + imported.categories).distinctBy { it.lowercase() }
                 wordExerciseCategories = nextCategories
                 preferences.edit().putString("letter_word_categories_v1", nextCategories.joinToString("|")).apply()
@@ -3366,33 +3366,3 @@ private fun ModeCardImage(index: Int, description: String, modifier: Modifier = 
     Image(bitmap = image, contentDescription = description, modifier = modifier, contentScale = ContentScale.Fit)
 }
 
-private fun loadPairs(preferences: android.content.SharedPreferences): List<PairItem> {
-    val saved = preferences.getString("pairs_v1", null) ?: return emptyList()
-    return saved.split("\n").mapNotNull { line ->
-        val fields = line.split("\t")
-        if (fields.size < 5) null else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
-    }
-}
-
-private fun savePairs(preferences: android.content.SharedPreferences, pairs: List<PairItem>) {
-    val saved = pairs.joinToString("\n") { pair ->
-        listOf(pair.word, pair.picture, pair.category, pair.difficulty, pair.active.toString()).joinToString("\t")
-    }
-    preferences.edit().putString("pairs_v1", saved).apply()
-}
-
-private fun loadWordExercises(preferences: android.content.SharedPreferences): List<PairItem> {
-    val saved = preferences.getString("letter_word_exercises_v1", null) ?: return emptyList()
-    return saved.split("\n").mapNotNull { line ->
-        val fields = line.split("\t")
-        if (fields.size < 5 || fields[0].isBlank()) null
-        else PairItem(fields[0], fields[1], fields[2], fields[3], fields[4].toBoolean())
-    }
-}
-
-private fun saveWordExercises(preferences: android.content.SharedPreferences, exercises: List<PairItem>) {
-    val saved = exercises.joinToString("\n") { exercise ->
-        listOf(exercise.word, exercise.picture, exercise.category, exercise.difficulty, exercise.active.toString()).joinToString("\t")
-    }
-    preferences.edit().putString("letter_word_exercises_v1", saved).apply()
-}
