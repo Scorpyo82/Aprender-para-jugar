@@ -1393,7 +1393,10 @@ private fun AprenderApp() {
                                     Text(labels[modality] ?: modality.directoryName, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(
-                                            checked = categories.isNotEmpty() && categories.all { pair -> ("C|" + modality.name + "|" + pair.first) in deleteSelectedItems },
+                                            checked = categories.isNotEmpty() && categories.all { pair ->
+                                                val key = "C|" + modality.name + "|" + pair.first
+                                                key in deleteSelectedItems || (pair.second.isNotEmpty() && pair.second.all { ("E|" + it.directory.absolutePath) in deleteSelectedItems })
+                                            },
                                             onCheckedChange = { checked ->
                                                 val next = deleteSelectedItems.toMutableSet()
                                                 categories.forEach { pair ->
