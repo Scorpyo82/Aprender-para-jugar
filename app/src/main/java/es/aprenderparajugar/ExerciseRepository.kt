@@ -173,6 +173,17 @@ object ExerciseRepository {
         target.parentFile?.takeIf { it.isDirectory && it.list()?.isEmpty() == true }?.delete()
     }
 
+    /** Elimina solo las estadísticas y conserva el ejercicio y sus imágenes. */
+    fun deleteStatistics(directory: File): Boolean {
+        require(directory.isDirectory && File(directory, EXERCISE_FILE).isFile) {
+            "La carpeta indicada no corresponde a un ejercicio guardado."
+        }
+        val statistics = File(directory, STATISTICS_FILE)
+        if (!statistics.exists()) return false
+        check(statistics.delete()) { "No se pudieron eliminar las estadísticas del ejercicio." }
+        return true
+    }
+
     /**
      * Elimina una modalidad completa, incluidas categorías, ejercicios, imágenes y estadísticas.
      * La ruta se valida contra filesDir para impedir borrar cualquier dato ajeno a la biblioteca.
