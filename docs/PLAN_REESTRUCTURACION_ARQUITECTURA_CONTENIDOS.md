@@ -4,7 +4,7 @@
 **Rama de trabajo:** `refactor/arquitectura-almacenamiento-contenidos`  
 **Referencia de partida:** `d51008a48229630f6ec33e08e5469fefde47d6c8`  
 **Versión de la aplicación en esa referencia:** `0.3.34` (`versionCode 38`)  
-**Estado:** planificación; la implementación todavía no ha comenzado.
+**Estado:** diseño cerrado. Implementación en curso por etapas; el paso 1 (estructura base) ya está iniciado.
 
 ---
 
@@ -32,6 +32,7 @@ files/
 │   ├── Animales/
 │   │   └── Rana/
 │   │       ├── ejercicio.json
+│   │       ├── statistics.json
 │   │       ├── imagen_1.png
 │   │       └── imagen_2.png
 │   └── Objetos/
@@ -140,25 +141,22 @@ Las pantallas, editores y juegos solicitarán datos al gestor y trabajarán con 
 
 Se mantendrá separada la información educativa de los datos de uso y configuración.
 
-**Dentro del ejercicio:**
-- Título y categoría.
-- Tipo, formato y dificultad.
-- Textos, etapas, tarjetas, respuestas y orden correcto.
-- Referencias relativas a sus imágenes.
-- Estado propio del ejercicio, si corresponde.
+**Dentro de la carpeta de cada ejercicio:**
+- `ejercicio.json`: título, categoría, modalidad, tipo, formato, dificultad, estado y contenido educativo, con referencias relativas a sus imágenes.
+- `statistics.json`: estadísticas locales de aprendizaje de ese ejercicio.
+- Imágenes y demás recursos propios del ejercicio.
 
-**Fuera del ejercicio, en almacenamiento de aplicación:**
-- Estadísticas, puntuaciones e historial de aprendizaje.
-- Progreso y datos de uso.
+**Fuera de las carpetas de ejercicios, en almacenamiento de aplicación:**
+- Progreso e historial global de uso que no pertenezcan a un ejercicio concreto.
 - Temporizadores, saldo y recompensas.
 - Configuración parental y preferencias generales.
-- Estado de categorías que sea configuración global, si no forma parte del contenido exportable.
+- Estado global de categorías y demás ajustes de biblioteca.
 
 Exportar un ejercicio no debe exportar estadísticas personales ni configuración parental.
 
 ## 6. Importación y exportación
 
-El ZIP debe conservar la misma jerarquía de carpetas que el almacenamiento interno e incluir un `ejercicio.json` y sus imágenes por ejercicio.
+El ZIP debe conservar la misma jerarquía de carpetas que el almacenamiento interno e incluir `ejercicio.json` y las imágenes de cada ejercicio. **No incluirá `statistics.json`**, porque contiene datos locales de aprendizaje.
 
 Reglas de importación:
 
@@ -170,7 +168,7 @@ Reglas de importación:
 6. Actualizar el catálogo solo cuando el ejercicio se haya guardado correctamente.
 7. Evitar dejar referencias rotas o ejercicios parcialmente importados si ocurre un error.
 
-En una combinación, los ejercicios no afectados deben conservar sus recursos. Si un ejercicio se actualiza, se actualizan sus datos y sus imágenes como una unidad coherente.
+En una combinación, los ejercicios no afectados deben conservar sus recursos y sus estadísticas locales. Si un ejercicio existente se actualiza, se actualizan sus datos educativos e imágenes como una unidad coherente, pero se conserva su `statistics.json`. Un ejercicio nuevo comienza con estadísticas vacías.
 
 En una sustitución, la biblioteca anterior no se eliminará hasta que la nueva biblioteca se haya validado y guardado correctamente. La limpieza de archivos antiguos se hará después de comprobar que no siguen referenciados.
 
@@ -225,21 +223,17 @@ Causa técnica identificada en la importación actual de Secuencias: los archivo
 
 Issue de seguimiento: [#15 - Incidencias conocidas de la Alpha 0.3.34 y criterios de regresión](https://github.com/Scorpyo82/Aprender-para-jugar/issues/15).
 
-## 9. Plan de trabajo propuesto
+## 9. Plan de trabajo acordado
 
-Los hitos se realizarán de forma incremental, con commits pequeños y pruebas entre ellos.
+La implementación se realizará en este orden, con commits pequeños y comprobaciones antes de avanzar:
 
-1. **Diseño definitivo del modelo:** revisar todos los campos y reglas actuales de Tarjetas, Secuencias y Palabras; cerrar los esquemas JSON.
-2. **Gestor y catálogo:** definir modelos, interfaces y operaciones de almacenamiento; mantener la UI separada del sistema de archivos.
-3. **Pruebas del almacenamiento:** creación, lectura, edición, borrado, duplicados, nombres normalizados y errores de E/S.
-4. **Migración de Secuencias:** convertir y validar contenido existente.
-5. **Migración de Tarjetas.**
-6. **Migración de Palabras.**
-7. **Adaptación de bibliotecas, filtros, editores y juegos** para usar el gestor.
-8. **Importación y exportación:** nuevo formato de paquetes, sustitución y combinación.
-9. **Pruebas de regresión:** verificar las tres modalidades y los dos bugs conocidos.
-10. **Retirada del almacenamiento antiguo:** solo tras confirmar migración, compatibilidad y pruebas.
-11. **Validación final y fusión:** integrar en `main` únicamente cuando la rama esté probada.
+1. **Adaptar la estructura:** establecer la jerarquía modalidad/categoría/ejercicio y los archivos propios de cada ejercicio.
+2. **Adaptar el código:** conectar modelos, catálogo, gestores, editores, juegos y operaciones de almacenamiento con la nueva arquitectura.
+3. **Comprobar creación y edición:** verificar que se pueden crear y editar ejercicios en las tres modalidades, incluidos sus recursos y metadatos.
+4. **Exportar y comprobar la estructura exportada:** revisar los ZIP, sus rutas, imágenes, JSON y exclusión de estadísticas; comprobar también la importación.
+5. **Adaptar los ejercicios actuales:** migrar todos los ejercicios existentes, conservando contenido, asociaciones de imágenes y datos locales que correspondan.
+
+No se avanzará al siguiente paso sin comprobar el anterior. La compilación por sí sola no constituye una validación funcional.
 
 ## 10. Pruebas de aceptación imprescindibles
 
@@ -259,11 +253,12 @@ Los hitos se realizarán de forma incremental, con commits pequeños y pruebas e
 
 - Las ramas de respaldo y de trabajo se han creado desde el mismo commit de referencia.
 - La rama de trabajo es `refactor/arquitectura-almacenamiento-contenidos`.
+- `ContentStorage.kt` crea al iniciar la aplicación las tres carpetas raíz (`tarjetas/`, `palabras/` y `secuencias/`) bajo `context.filesDir`; las categorías se crean dinámicamente.
 - La rama de respaldo es `backup/v0.3.34-alpha.1`.
 - El Issue #15 documenta los dos fallos conocidos.
-- Este documento registra decisiones y objetivos acordados; no significa que el código ya esté modificado.
-- No se debe comenzar a cambiar código hasta revisar y cerrar el diseño de los modelos y la migración.
-- Cualquier decisión nueva debe actualizar este documento para que sirva como contexto de continuidad entre conversaciones.
+- Este documento registra las decisiones acordadas y el estado real de la implementación.
+- El diseño está cerrado; continuar directamente con el paso 1 y respetar el orden de trabajo acordado.
+- Cualquier cambio posterior de alcance o decisión debe actualizar este documento.
 
 ---
 
