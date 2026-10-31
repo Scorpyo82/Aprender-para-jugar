@@ -126,6 +126,14 @@ class MainActivity : ComponentActivity() {
         } catch (_: Exception) { }
     }
 
+    // Home/gesto de inicio: asegura que el saldo ganado empiece a consumirse
+    // aunque el usuario abandone la pantalla de resultados o selección sin pulsar
+    // ningún botón interno de la aplicación. La operación es idempotente.
+    override fun onUserLeaveHint() {
+        persistAndStartEarnedCountdown()
+        super.onUserLeaveHint()
+    }
+
     override fun onPause() {
         persistAndStartEarnedCountdown()
         super.onPause()
