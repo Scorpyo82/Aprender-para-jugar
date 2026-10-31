@@ -173,6 +173,24 @@ object ExerciseRepository {
         target.parentFile?.takeIf { it.isDirectory && it.list()?.isEmpty() == true }?.delete()
     }
 
+    /**
+     * Elimina una modalidad completa, incluidas categorías, ejercicios, imágenes y estadísticas.
+     * La ruta se valida contra filesDir para impedir borrar cualquier dato ajeno a la biblioteca.
+     * Devuelve el número de ejercicios válidos que había antes de borrar.
+     */
+    fun deleteModality(context: Context, modality: ContentStorage.Modality): Int {
+        val root = ContentStorage.modalityDirectory(context, modality).canonicalFile
+        val filesRoot = context.filesDir.canonicalFile
+        require(root.parentFile == filesRoot && root.name == modality.directoryName) {
+            "La ruta de la biblioteca no es válida."
+        }
+        val count = list(context, modality).size
+        root.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }?.forEach { category ->
+            check(category.deleteRecursively()) { "No se pudo eliminar la categoría ${category.name}." }
+        }
+        return count
+    }
+
     /** Lee estadísticas con valores iniciales y valida el esquema antes de devolverlas. */
     fun readStatistics(directory: File): JSONObject {
         require(directory.isDirectory && File(directory, EXERCISE_FILE).isFile) {
