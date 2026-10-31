@@ -702,6 +702,8 @@ private fun AprenderApp() {
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
     var transferMessage by remember { mutableStateOf("") }
+    var deleteSelectedModalities by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
+    var deleteConfirmArmed by remember { mutableStateOf(false) }
 
     var easyRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_easy_minutes", 2).coerceIn(0, 120)) }
     var normalRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_normal_minutes", 5).coerceIn(0, 120)) }
@@ -872,8 +874,7 @@ private fun AprenderApp() {
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
                 "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> parentSection = "menu"
-                "library-export" -> parentSection = "library-transfer"
-                "library-import" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; parentSection = "library-transfer" }
+                "library-export", "library-import", "library-delete", "learning-stats" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
                 "game-modes" -> parentSection = "menu"
                 "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
                 "sequence-library", "sequence-categories" -> parentSection = "sequences-settings"
@@ -1143,9 +1144,9 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
-                Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "learning-stats" -> "Estadísticas de aprendizaje"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "learning-stats" -> "Estadísticas de aprendizaje"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; "library-delete" -> "Elimina de forma permanente una o varias bibliotecas"; "learning-stats" -> "Observaciones orientativas basadas en los intentos registrados"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
                 item {
@@ -1220,7 +1221,7 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> "menu"; "library-export", "library-import" -> "library-transfer"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import") "← Volver a importar y exportar bibliotecas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> "menu"; "library-export", "library-import", "library-delete", "learning-stats" -> "library-transfer"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import") "← Volver a importar y exportar bibliotecas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "library-transfer" -> {
                         item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -1254,6 +1255,33 @@ private fun AprenderApp() {
                                     Column {
                                         Text("Importar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                         Text("Seleccionar un ZIP y revisar su contenido antes de incorporarlo", color = Color(0xFF667085))
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable {
+                                deleteSelectedModalities = emptySet()
+                                deleteConfirmArmed = false
+                                transferMessage = ""
+                                parentSection = "library-delete"
+                            }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("🗑️", fontSize = 30.sp)
+                                    Column {
+                                        Text("Eliminar biblioteca", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
+                                        Text("Borrar Tarjetas, Palabras o Secuencias", color = Color(0xFF667085))
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "learning-stats" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("📊", fontSize = 30.sp)
+                                    Column {
+                                        Text("Estadísticas de aprendizaje", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        Text("Consulta resultados y patrones registrados", color = Color(0xFF667085))
                                     }
                                 }
                             }
@@ -1317,6 +1345,173 @@ private fun AprenderApp() {
                             ) { Text("Exportar selección") }
                         }
                         if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
+                    }
+                    "library-delete" -> {
+                        val counts = ContentStorage.Modality.entries.associateWith { modality ->
+                            val exercises = ExerciseRepository.list(context, modality)
+                            exercises.size to exercises.map { it.metadata.category }.distinct().size
+                        }
+                        val labels = mapOf(
+                            ContentStorage.Modality.TARJETAS to "Tarjetas",
+                            ContentStorage.Modality.PALABRAS to "Palabras",
+                            ContentStorage.Modality.SECUENCIAS to "Secuencias"
+                        )
+                        val totalExercises = counts.values.sumOf { it.first }
+                        item { Text("Eliminar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB3261E)) }
+                        item { Text("Selecciona una o varias modalidades. Se eliminarán sus ejercicios, imágenes, categorías y estadísticas. Esta acción no se puede deshacer.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = deleteSelectedModalities.size == ContentStorage.Modality.entries.size,
+                                    onCheckedChange = { checked ->
+                                        deleteSelectedModalities = if (checked) ContentStorage.Modality.entries.toSet() else emptySet()
+                                        deleteConfirmArmed = false
+                                    }
+                                )
+                                Text("Seleccionar las tres bibliotecas", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        ContentStorage.Modality.entries.forEach { modality ->
+                            val count = counts[modality] ?: (0 to 0)
+                            item {
+                                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = modality in deleteSelectedModalities,
+                                            onCheckedChange = { checked ->
+                                                deleteSelectedModalities = deleteSelectedModalities.toMutableSet().also {
+                                                    if (checked) it.add(modality) else it.remove(modality)
+                                                }
+                                                deleteConfirmArmed = false
+                                            }
+                                        )
+                                        Column(Modifier.weight(1f)) {
+                                            Text(labels[modality] ?: modality.directoryName, fontWeight = FontWeight.Bold)
+                                            Text("${count.first} ejercicios · ${count.second} categorías", fontSize = 13.sp, color = Color(0xFF667085))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            Text("Total disponible: $totalExercises ejercicios. Las preferencias generales, el PIN familiar, los límites y la configuración del dispositivo se conservarán.", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
+                        item {
+                            if (!deleteConfirmArmed) {
+                                Button(
+                                    onClick = { deleteConfirmArmed = true },
+                                    enabled = deleteSelectedModalities.isNotEmpty(),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E))
+                                ) { Text("Continuar con la eliminación") }
+                            } else {
+                                Text("CONFIRMACIÓN: vas a borrar ${deleteSelectedModalities.mapNotNull { labels[it] }.joinToString(", ")} y todos sus datos asociados.", fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
+                                Button(
+                                    onClick = {
+                                        try {
+                                            var removed = 0
+                                            deleteSelectedModalities.forEach { modality ->
+                                                removed += ExerciseRepository.deleteModality(context, modality)
+                                            }
+                                            val editor = preferences.edit()
+                                            if (ContentStorage.Modality.TARJETAS in deleteSelectedModalities) {
+                                                categoryNames = emptyList()
+                                                editor.putString("categories", "")
+                                            }
+                                            if (ContentStorage.Modality.PALABRAS in deleteSelectedModalities) {
+                                                wordExerciseCategories = emptyList()
+                                                editor.putString("letter_word_categories_v1", "")
+                                            }
+                                            if (ContentStorage.Modality.SECUENCIAS in deleteSelectedModalities) {
+                                                sequenceCategoryNames = emptyList()
+                                                editor.putString("sequence_categories_v1", "")
+                                            }
+                                            editor.apply()
+                                            if (ContentStorage.Modality.TARJETAS in deleteSelectedModalities) pairs = emptyList()
+                                            if (ContentStorage.Modality.PALABRAS in deleteSelectedModalities) wordExercises = emptyList()
+                                            if (ContentStorage.Modality.SECUENCIAS in deleteSelectedModalities) sequenceExercises = emptyList()
+                                            deleteSelectedModalities = emptySet()
+                                            deleteConfirmArmed = false
+                                            transferMessage = "Eliminación completada: $removed ejercicios borrados."
+                                            parentSection = "library-transfer"
+                                        } catch (e: Exception) {
+                                            deleteConfirmArmed = false
+                                            transferMessage = "No se pudo completar la eliminación: ${e.message ?: "error"}"
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E))
+                                ) { Text("Sí, eliminar definitivamente") }
+                                OutlinedButton(onClick = { deleteConfirmArmed = false }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y conservar los datos") }
+                            }
+                        }
+                    }
+                    "learning-stats" -> {
+                        val records = ContentStorage.Modality.entries.flatMap { modality ->
+                            ExerciseRepository.list(context, modality).mapNotNull { stored ->
+                                runCatching { Triple(stored, ExerciseRepository.readStatistics(stored.directory), modality) }.getOrNull()
+                            }
+                        }
+                        val totalAttempts = records.sumOf { it.second.optInt("attempts", 0) }
+                        val totalCorrect = records.sumOf { it.second.optInt("correct", 0) }
+                        val totalIncorrect = records.sumOf { it.second.optInt("incorrect", 0) }
+                        val totalCompleted = records.sumOf { it.second.optInt("completed", 0) }
+                        fun percentage(correct: Int, attempts: Int): String =
+                            if (attempts > 0) "${(correct * 100.0 / attempts).toInt()}%" else "Sin datos"
+                        item { Text("Resumen de actividad", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("$totalCompleted ejercicios completados", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    Text("$totalAttempts intentos registrados · $totalCorrect aciertos · $totalIncorrect errores", fontSize = 14.sp)
+                                    Text("Acierto global: ${percentage(totalCorrect, totalAttempts)}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                        val modalityAreas = listOf(
+                            Triple(ContentStorage.Modality.TARJETAS, "Asociación palabra-imagen", "Observa el rendimiento al relacionar palabras con sus imágenes."),
+                            Triple(ContentStorage.Modality.PALABRAS, "Construcción de palabras", "Observa los resultados al ordenar letras y completar palabras."),
+                            Triple(ContentStorage.Modality.SECUENCIAS, "Ordenación de secuencias", "Observa cómo resuelve secuencias, procesos, causas y ciclos.")
+                        )
+                        modalityAreas.forEach { (modality, title, description) ->
+                            val subset = records.filter { it.third == modality }
+                            val attempts = subset.sumOf { it.second.optInt("attempts", 0) }
+                            val correct = subset.sumOf { it.second.optInt("correct", 0) }
+                            val incorrect = subset.sumOf { it.second.optInt("incorrect", 0) }
+                            val completed = subset.sumOf { it.second.optInt("completed", 0) }
+                            item {
+                                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                        Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        Text(description, fontSize = 13.sp, color = Color(0xFF667085))
+                                        Text("${percentage(correct, attempts)} de acierto · $attempts intentos · $completed completados", fontWeight = FontWeight.SemiBold)
+                                        Text("$correct aciertos y $incorrect errores", fontSize = 13.sp, color = Color(0xFF667085))
+                                    }
+                                }
+                            }
+                        }
+                        val sequenceRecords = records.filter { it.third == ContentStorage.Modality.SECUENCIAS }
+                        val sequenceGroups = sequenceRecords.groupBy { (it.first.content as? SequenceExerciseContent)?.type?.displayName ?: "Tipo no identificado" }
+                        sequenceGroups.forEach { (type, subset) ->
+                            val attempts = subset.sumOf { it.second.optInt("attempts", 0) }
+                            val correct = subset.sumOf { it.second.optInt("correct", 0) }
+                            item {
+                                Text("$type · ${percentage(correct, attempts)} de acierto ($attempts intentos)", fontSize = 14.sp, color = Color(0xFF344054))
+                            }
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F4F8))) {
+                                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Comprensión lectora", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                    Text("Todavía no se puede valorar con rigor: las modalidades actuales registran asociación de imágenes, construcción de palabras y ordenación de secuencias, pero no incluyen una batería específica de preguntas sobre significado y comprensión de textos.", fontSize = 13.sp, color = Color(0xFF475467))
+                                }
+                            }
+                        }
+                        item {
+                            Text("Cómo interpretar estos datos", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text("Son indicadores descriptivos del uso de los ejercicios disponibles, no una evaluación pedagógica estandarizada. Un porcentaje alto o bajo no demuestra por sí solo que una habilidad esté adquirida o no. Ten en cuenta el número de intentos, la dificultad, el tipo de ejercicio y si el contenido ya se ha practicado.", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
+                        item { Text("Ejercicios con estadísticas legibles: ${records.size}. Si no aparecen datos, completa ejercicios para generar registros.", fontSize = 12.sp, color = Color(0xFF667085)) }
                     }
                     "library-import" -> {
                         val info = transferPackage
