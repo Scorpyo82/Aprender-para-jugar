@@ -22,53 +22,48 @@ No se pretende rediseñar los juegos ni sus pantallas. Se pretende separar el al
 
 ## 2. Estructura de almacenamiento acordada
 
-Jerarquía común:
+La aplicación utilizará el almacenamiento privado de Android (`context.filesDir`), que ya corresponde al directorio físico `files/`. Dentro de él se crearán tres carpetas principales:
 
 **Modalidad → Categoría → Ejercicio → Datos e imágenes**
-
-La carpeta del ejercicio utilizará su nombre visible normalizado, no un índice de posición ni un identificador artificial visible.
-
-Ejemplo:
 
 ```text
 files/
 ├── tarjetas/
 │   ├── Animales/
-│   │   ├── Rana/
-│   │   │   ├── ejercicio.json
-│   │   │   ├── imagen_1.png
-│   │   │   └── imagen_2.png
-│   │   └── Perro/
+│   │   └── Rana/
 │   │       ├── ejercicio.json
 │   │       ├── imagen_1.png
 │   │       └── imagen_2.png
-│   └── Alimentos/
+│   └── Objetos/
 │
-├── secuencias/
-│   ├── orden_temporal/
-│   │   ├── Crecimiento_de_un_árbol/
-│   │   │   ├── ejercicio.json
-│   │   │   ├── imagen_1.png
-│   │   │   └── imagen_2.png
-│   │   └── Preparar_una_tostada/
-│   ├── procesos/
-│   ├── causa_y_consecuencia/
-│   └── ciclos/
+├── palabras/
+│   ├── Animales/
+│   └── Objetos/
 │
-└── palabras/
-    ├── Animales/
-    │   └── Unicornio/
+└── secuencias/
+    ├── Vida cotidiana/
+    │   ├── Preparar_un_bocadillo/
+    │   │   ├── ejercicio.json
+    │   │   └── imagen_1.png
+    │   └── Regar_una_planta/
     │       ├── ejercicio.json
     │       └── imagen_1.png
-    └── Objetos/
+    └── Naturaleza/
+        └── Ciclo_de_la_mariposa/
+            ├── ejercicio.json
+            └── imagen_1.png
 ```
 
-Los nombres de categorías de Tarjetas y Palabras del ejemplo son ilustrativos: se utilizarán las categorías reales que admita la aplicación.
+Las categorías de Secuencias son comunes a sus cuatro tipos, tal como funciona actualmente la aplicación. Por tanto, las tres modalidades tendrán la misma jerarquía física: modalidad, categoría y ejercicio.
+
+**El tipo de Secuencias no tendrá carpetas propias.** Se guardará como metadato en el JSON de cada ejercicio (por ejemplo, `orden_temporal`, `procesos`, `causa_efecto` o `ciclos`). Esto permite filtrar y agrupar los cuatro tipos desde la biblioteca común sin fragmentar el almacenamiento.
+
+Los nombres de carpeta se derivan del título/nombre del ejercicio y se normalizan para crear rutas válidas. El título original se conserva en el JSON; normalizar la carpeta no debe modificar el texto que ve el usuario.
 
 ### Reglas de nombres y rutas
 
-- Los nombres de carpeta se derivan del título/nombre del ejercicio y se normalizan para crear rutas válidas.
-- El título original se conserva en el JSON; normalizar la carpeta no debe modificar el texto que ve el usuario.
+- Las carpetas de categorías se crean dinámicamente a partir de las categorías utilizadas en cada modalidad.
+- Los nombres de carpeta se normalizan para formar rutas seguras, conservando los nombres originales en los metadatos.
 - Los nombres de imagen pueden repetirse en ejercicios distintos (`imagen_1.png`, etc.) porque la ruta completa es diferente.
 - El acceso a imágenes debe resolverse dentro de la carpeta del ejercicio; no se deben buscar imágenes globalmente ni asociarlas por el orden físico de los archivos ZIP.
 - Debe definirse una política para títulos duplicados dentro de la misma modalidad y categoría. La colisión se detectará antes de escribir; nunca se sobrescribirá otro ejercicio. Se podrá añadir un sufijo de carpeta cuando sea necesario, conservando el título original.
