@@ -1498,6 +1498,16 @@ private fun AprenderApp() {
                                 }
                             }
                         }
+                        item { Text("Resultados por categoría", fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+                        val categoryGroups = records.groupBy { "${it.third.directoryName} · ${it.first.metadata.category}" }
+                        categoryGroups.forEach { (category, subset) ->
+                            val attempts = subset.sumOf { it.second.optInt("attempts", 0) }
+                            val correct = subset.sumOf { it.second.optInt("correct", 0) }
+                            val completed = subset.sumOf { it.second.optInt("completed", 0) }
+                            item {
+                                Text("$category: ${percentage(correct, attempts)} de acierto · $attempts intentos · $completed completados", fontSize = 13.sp, color = Color(0xFF475467))
+                            }
+                        }
                         val sequenceRecords = records.filter { it.third == ContentStorage.Modality.SECUENCIAS }
                         val sequenceGroups = sequenceRecords.groupBy { (it.first.content as? SequenceExerciseContent)?.type?.displayName ?: "Tipo no identificado" }
                         sequenceGroups.forEach { (type, subset) ->
