@@ -65,7 +65,7 @@ object ContentStorage {
         exerciseName: String
     ): File {
         val safeExerciseName = safePathSegment(exerciseName)
-        return File(categoryDirectory(context, modality, category), safeExerciseName)
+        return File(File(modalityDirectory(context, modality), safePathSegment(category)), safeExerciseName)
     }
 
     private fun safePathSegment(value: String): String {
