@@ -28,8 +28,8 @@ object ContentStorage {
      * Se ejecuta al iniciar la aplicación y no altera ni elimina contenido existente.
      */
     fun initialize(context: Context): Roots {
-        val root = File(context.filesDir, "contenidos")
-        ensureDirectory(root)
+        // filesDir ya es la carpeta privada "files/" de esta aplicación.
+        val root = ensureDirectory(context.filesDir)
 
         return Roots(
             tarjetas = ensureDirectory(File(root, Modality.TARJETAS.directoryName)),
@@ -40,7 +40,7 @@ object ContentStorage {
 
     /** Devuelve la carpeta de una modalidad, creándola si fuera necesario. */
     fun modalityDirectory(context: Context, modality: Modality): File {
-        val root = ensureDirectory(File(context.filesDir, "contenidos"))
+        val root = ensureDirectory(context.filesDir)
         return ensureDirectory(File(root, modality.directoryName))
     }
 
