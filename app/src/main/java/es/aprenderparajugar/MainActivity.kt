@@ -885,7 +885,8 @@ private fun AprenderApp() {
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
                 "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer" -> parentSection = "menu"
-                "library-export", "library-import", "library-delete", "learning-stats" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
+                "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
+                "learning-stats" -> parentSection = "menu"
                 "game-modes" -> parentSection = "menu"
                 "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
                 "sequence-library", "sequence-categories" -> parentSection = "sequences-settings"
