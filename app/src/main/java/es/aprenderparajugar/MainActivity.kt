@@ -542,7 +542,7 @@ private fun AprenderApp() {
     var sequenceFilterStatus by remember { mutableStateOf("Todos") }
     var disabledSequenceCategories by remember { mutableStateOf(preferences.getStringSet("disabled_sequence_categories", emptySet())?.toSet() ?: emptySet()) }
     var sequenceCardsDraft by remember { mutableStateOf(listOf("", "")) }
-    var sequenceCardPicturesDraft by remember { mutableStateOf(listOf("🌱", "🌿")) }
+    var sequenceCardPicturesDraft by remember { mutableStateOf(listOf("", "")) }
     var pendingSequencePictureIndex by remember { mutableIntStateOf(-1) }
     var pendingCameraTarget by remember { mutableStateOf("pair") }
     var pendingCameraSequenceIndex by remember { mutableIntStateOf(-1) }
@@ -1707,7 +1707,7 @@ private fun AprenderApp() {
                                     sequenceCardsDraft = sequenceCardsDraft + ""
                                     sequenceCardPicturesDraft = sequenceCardPicturesDraft + ""
                                 }
-                            }, enabled = sequenceCardsDraft.size < 6 && sequenceTypeDraft != "Letras", modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
+                            }, enabled = sequenceCardsDraft.size < 6 && true, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
                         }
                         item {
                             Text("Soluciones alternativas (opcional)", fontWeight = FontWeight.Bold)
@@ -1728,10 +1728,10 @@ private fun AprenderApp() {
                                 when {
                                     sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
                                     sequenceCategoryDraft.isBlank() -> sequenceEditorMessage = "Crea o selecciona una categoría antes de guardar el ejercicio."
-                                    (if (sequenceTypeDraft == "Letras") cleanCards.size != 1 else cleanCards.size < 2) || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = if (sequenceTypeDraft == "Letras") "Escribe la palabra que se formará con las letras." else "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
+                                    cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
                                      sequenceCardPicturesDraft.indices.take(cleanCards.size).any { sequenceCardPicturesDraft.getOrNull(it).isNullOrBlank() } || sequenceCardPicturesDraft.size < cleanCards.size -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta. No puede quedar ninguna imagen vacía."
-                                    sequenceTypeDraft != "Letras" && alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
+                                    alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
                                         val alternatives = parsedAlternatives.map { indexes -> indexes.filterNotNull().map { cleanCards[it - 1] }.joinToString("|") }
                                         val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
