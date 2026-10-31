@@ -16,7 +16,13 @@ Cada modalidad dispone de bibliotecas organizadas por categorías. Los ejercicio
 
 La zona familiar permite configurar las modalidades activas, categorías, recompensas, límites y opciones de seguridad. La aplicación incorpora un saldo de tiempo ganado mediante la realización de ejercicios y un contador de tiempo de juego en segundo plano.
 
-La pantalla de estadísticas familiares resume intentos, aciertos, errores y ejercicios completados por modalidad, tipo de secuencia y categoría. Incluye áreas descriptivas como asociación palabra-imagen y construcción de palabras, y señala expresamente cuándo una habilidad —por ejemplo, comprensión lectora de textos— no puede valorarse con los ejercicios disponibles. Estas métricas describen el rendimiento registrado; **no son diagnósticos, pruebas estandarizadas ni conclusiones pedagógicas definitivas**.
+La pantalla de estadísticas familiares resume intentos, aciertos, errores y ejercicios completados por modalidad, tipo de secuencia y categoría. Incluye áreas descriptivas como asociación palabra-imagen y construcción de palabras, y señala expresamente cuándo una habilidad —por ejemplo, comprensión lectora de textos— no puede valorarse con los ejercicios disponibles.
+
+**La aplicación no diagnostica ni evalúa clínicamente, y no determina lo que un niño es o no es capaz de hacer.** Únicamente ofrece actividades y registra cómo interactúa con ellas. Los resultados dependen de los ejercicios disponibles y de su diseño, de la experiencia previa y de factores como la atención, la motivación, la memoria o la familiaridad con patrones y símbolos.
+
+Un acierto o un error aislado no demuestra que una capacidad esté adquirida o ausente. Un niño puede desarrollar estrategias propias, establecer asociaciones inesperadas o encontrar soluciones que el ejercicio no había previsto, incluso relaciones que a un adulto podrían pasarle inadvertidas. Por eso es importante observar también el proceso y no limitar sus posibilidades a las cifras registradas.
+
+Las estadísticas son exclusivamente orientativas y descriptivas: **no son pruebas estandarizadas, diagnósticos ni conclusiones pedagógicas definitivas**, y no sustituyen la valoración profesional cuando sea necesaria.
 
 ## Bibliotecas y copias de seguridad
 
