@@ -1272,7 +1272,8 @@ private fun AprenderApp() {
                         }
                         item {
                             Card(Modifier.fillMaxWidth().clickable {
-                                deleteSelectedModalities = emptySet()
+                                deleteSelectedItems = emptySet()
+                                deleteExpandedCategories = emptySet()
                                 deleteConfirmArmed = false
                                 transferMessage = ""
                                 parentSection = "library-delete"
