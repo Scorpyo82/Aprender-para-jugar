@@ -12,6 +12,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -20,14 +21,32 @@ import androidx.compose.ui.unit.sp
 import org.json.JSONObject
 
 /**
- * Pantalla independiente para consultar las partidas completadas.
- * No modifica las estadísticas de aprendizaje de cada ejercicio.
+ * Pantalla independiente para consultar las partidas completadas y el estado
+ * del contenido disponible en cada biblioteca.
  */
 @Composable
 internal fun UsageStatisticsScreen(context: Context) {
     val results = remember(context) {
+        val preferences = context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE)
+        val disabledWordCategories = preferences.getStringSet("disabled_letter_word_categories_v1", emptySet()) ?: emptySet()
+        val disabledSequenceCategories = preferences.getStringSet("disabled_sequence_categories", emptySet()) ?: emptySet()
         ContentStorage.Modality.entries.map { modality ->
-            modality to runCatching { UsageStatisticsRepository.read(context, modality) }
+            val exercises = runCatching { ExerciseRepository.list(context, modality) }
+            val enabledMode = when (modality) {
+                ContentStorage.Modality.TARJETAS -> preferences.getBoolean("game_active_cards", true)
+                ContentStorage.Modality.PALABRAS -> preferences.getBoolean("game_active_words", true)
+                ContentStorage.Modality.SECUENCIAS -> preferences.getBoolean("game_active_sequences", true)
+            }
+            val disabledCategories = when (modality) {
+                ContentStorage.Modality.TARJETAS -> emptySet()
+                ContentStorage.Modality.PALABRAS -> disabledWordCategories
+                ContentStorage.Modality.SECUENCIAS -> disabledSequenceCategories
+            }
+            val exerciseList = exercises.getOrNull().orEmpty()
+            val activeCount = exerciseList.count { it.metadata.active && enabledMode && it.metadata.category !in disabledCategories }
+            val blockedCount = exerciseList.size - activeCount
+            val statistics = runCatching { UsageStatisticsRepository.read(context, modality) }
+            Triple(modality, exercises, Triple(activeCount, blockedCount, statistics))
         }
     }
 
@@ -37,8 +56,9 @@ internal fun UsageStatisticsScreen(context: Context) {
     ) {
         Text("Resumen de partidas", fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
-        results.forEach { (modality, result) ->
-            val statistics = result.getOrNull()
+        results.forEach { (modality, exerciseResult, countsAndStatistics) ->
+            val (activeCount, blockedCount, statisticsResult) = countsAndStatistics
+            val statistics = statisticsResult.getOrNull()
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -46,7 +66,7 @@ internal fun UsageStatisticsScreen(context: Context) {
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
                         when (modality) {
@@ -58,9 +78,25 @@ internal fun UsageStatisticsScreen(context: Context) {
                         fontWeight = FontWeight.Bold
                     )
 
+                    if (exerciseResult.isFailure) {
+                        Text(
+                            "No se pudo leer la biblioteca: ${exerciseResult.exceptionOrNull()?.message ?: "error desconocido"}",
+                            color = Color(0xFFB3261E),
+                            fontSize = 14.sp
+                        )
+                    } else {
+                        val totalExercises = exerciseResult.getOrNull().orEmpty().size
+                        Text("Actividades de la biblioteca", fontSize = 14.sp, color = Color(0xFF667085), fontWeight = FontWeight.Medium)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CountColumn("$totalExercises", "Total", Modifier.weight(1f), Color(0xFF344054))
+                            CountColumn("$activeCount", "Activas", Modifier.weight(1f), Color(0xFF24733B))
+                            CountColumn("$blockedCount", "Bloqueadas", Modifier.weight(1f), Color(0xFFB26A22))
+                        }
+                    }
+
                     if (statistics == null) {
                         Text(
-                            "No se pudieron leer las estadísticas: ${result.exceptionOrNull()?.message ?: "error desconocido"}",
+                            "No se pudieron leer las estadísticas: ${statisticsResult.exceptionOrNull()?.message ?: "error desconocido"}",
                             color = Color(0xFFB3261E),
                             fontSize = 14.sp
                         )
@@ -96,5 +132,13 @@ internal fun UsageStatisticsScreen(context: Context) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CountColumn(value: String, label: String, modifier: Modifier, valueColor: Color) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = valueColor)
+        Text(label, fontSize = 12.sp, color = Color(0xFF667085))
     }
 }
