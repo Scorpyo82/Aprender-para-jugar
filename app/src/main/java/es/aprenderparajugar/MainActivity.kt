@@ -1280,7 +1280,8 @@ private fun AprenderApp() {
                                 transferExportCategories = ContentStorage.Modality.entries.associateWith { modality ->
                                     LibraryPackageManager.categories(context, modality).map { it.directory }.toSet()
                                 }
-                                transferExportStatistics = emptySet()
+                                transferExportLearningStatistics = emptySet()
+                                transferExportUsageStatistics = emptySet()
                                 transferMessage = ""
                                 parentSection = "library-export"
                             }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -1704,7 +1705,7 @@ private fun AprenderApp() {
                                             }
                                         }
                                     }
-                                    Text(if (modalityInfo.includesStatistics) "El paquete incluye estadísticas." else "El paquete no incluye estadísticas.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Text("El paquete incluye estadísticas de aprendizaje: ${if (modalityInfo.includesLearningStatistics) "Sí" else "No"} · de uso: ${if (modalityInfo.includesUsageStatistics) "Sí" else "No"}.", fontSize = 12.sp, color = Color(0xFF667085))
                                 }
                             }
                             if (info.modalities.any { it.includesLearningStatistics }) {
