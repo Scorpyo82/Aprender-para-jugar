@@ -2994,6 +2994,7 @@ private fun AprenderApp() {
                                                 else -> (newCorrect * 2 - wrong).coerceAtLeast(0)
                                             }
                                             addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
+                                            runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.TARJETAS, difficulty) }
                                             screen = "result"
                                         }
                                     }
@@ -3045,6 +3046,7 @@ private fun AprenderApp() {
                                         else -> (correct * 2 - wrong).coerceAtLeast(0)
                                     }
                                     addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
+                                    runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.TARJETAS, difficulty) }
                                     resultCorrectCount = correct
                                     resultTotalCount = pairCount
                                     exercisePairs.forEach { pair ->
@@ -3222,6 +3224,7 @@ private fun AprenderApp() {
                                         target.directory?.let { directory ->
                                             runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, wordExerciseWrongAnswers) }
                                         }
+                                        runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.PALABRAS, target.difficulty) }
                                         screen = "result"
                                     }
                                 } else {
@@ -3487,6 +3490,14 @@ private fun AprenderApp() {
                                     preferences.edit().putInt(usageKey, preferences.getInt(usageKey, 0) + 1).apply()
                                     exercise.directory?.let { directory ->
                                         runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, sequenceWrongAnswers) }
+                                    }
+                                    runCatching {
+                                        UsageStatisticsRepository.recordCompleted(
+                                            context,
+                                            ContentStorage.Modality.SECUENCIAS,
+                                            sequenceChosenDifficulty,
+                                            SequenceType.fromDisplayName(exercise.type)
+                                        )
                                     }
                                     screen = "sequence-result"
                                 } else {
