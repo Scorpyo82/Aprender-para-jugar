@@ -76,6 +76,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
@@ -3862,14 +3863,17 @@ private fun AprenderApp() {
                 }
             }
             item {
-                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF73C9F5)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text("🦊", fontSize = 64.sp)
-                        Column(Modifier.weight(1f)) {
-                            Text("¡Aprender para jugar!", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF143B66))
-                            Text("Aprende, descubre y diviértete", fontSize = 15.sp, color = Color(0xFF174B70))
-                        }
-                    }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(26.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.home_header_fox),
+                        contentDescription = "¡Aprender para jugar! Aprende, descubre y diviértete",
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1.75f),
+                        contentScale = ContentScale.Fit
+                    )
                 }
             }
             item { Text("Elige cómo aprender", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)) }
