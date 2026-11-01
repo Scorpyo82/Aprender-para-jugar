@@ -1360,10 +1360,17 @@ private fun AprenderApp() {
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(
-                                            checked = modality in transferExportStatistics,
-                                            onCheckedChange = { checked -> transferExportStatistics = transferExportStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
+                                            checked = modality in transferExportLearningStatistics,
+                                            onCheckedChange = { checked -> transferExportLearningStatistics = transferExportLearningStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
                                         )
-                                        Text("Incluir estadísticas de $label")
+                                        Text("Incluir estadísticas de aprendizaje")
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = modality in transferExportUsageStatistics,
+                                            onCheckedChange = { checked -> transferExportUsageStatistics = transferExportUsageStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
+                                        )
+                                        Text("Incluir estadísticas de uso")
                                     }
                                 }
                             }
