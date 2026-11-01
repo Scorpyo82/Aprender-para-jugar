@@ -40,7 +40,7 @@ internal fun StatisticsImportOptions(
     onLearningChange: (Boolean) -> Unit,
     onUsageChange: (Boolean) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.sp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (showLearning) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = importLearning, onCheckedChange = onLearningChange)
