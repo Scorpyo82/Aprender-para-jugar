@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -18,7 +19,7 @@ internal fun StatisticsExportOptions(
     onLearningChange: (Boolean) -> Unit,
     onUsageChange: (Boolean) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.sp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = includeLearning, onCheckedChange = onLearningChange)
             Text("Incluir estadísticas de aprendizaje")
