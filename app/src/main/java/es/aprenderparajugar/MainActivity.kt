@@ -3863,18 +3863,12 @@ private fun AprenderApp() {
                 }
             }
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(26.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.home_header_fox),
-                        contentDescription = "¡Aprender para jugar! Aprende, descubre y diviértete",
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1.75f),
-                        contentScale = ContentScale.Fit
-                    )
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.home_header_fox),
+                    contentDescription = "¡Aprender para jugar! Aprende, descubre y diviértete",
+                    modifier = Modifier.fillMaxWidth().aspectRatio(2f),
+                    contentScale = ContentScale.Fit
+                )
             }
             item { Text("Elige cómo aprender", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)) }
             item {
