@@ -1184,20 +1184,6 @@ private fun AprenderApp() {
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable {
-                        transferExportCategories = ContentStorage.Modality.entries.associateWith { modality -> LibraryPackageManager.categories(context, modality).map { it.directory }.toSet() }
-                        transferExportStatistics = emptySet()
-                        transferMessage = ""
-                        parentSection = "library-transfer"
-                    }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("📦", fontSize = 30.sp)
-                            Column { Text("Importar y exportar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Copias selectivas de Tarjetas, Palabras y Secuencias", color = Color(0xFF667085)) }
-                        }
-                    }
-                }
-
-                item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "active-games" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Image(painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_active_games), contentDescription = "Juegos activos", modifier = Modifier.width(48.dp).height(48.dp))
@@ -1222,13 +1208,19 @@ private fun AprenderApp() {
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "security" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Card(Modifier.fillMaxWidth().clickable {
+                        transferExportCategories = ContentStorage.Modality.entries.associateWith { modality -> LibraryPackageManager.categories(context, modality).map { it.directory }.toSet() }
+                        transferExportStatistics = emptySet()
+                        transferMessage = ""
+                        parentSection = "library-transfer"
+                    }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🔐", fontSize = 30.sp)
-                            Column { Text("Cambiar PIN", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Modificar el PIN de acceso familiar", color = Color(0xFF667085)) }
+                            Text("📦", fontSize = 30.sp)
+                            Column { Text("Importar y exportar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Copias selectivas de Tarjetas, Palabras y Secuencias", color = Color(0xFF667085)) }
                         }
                     }
                 }
+
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "statistics-menu" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1249,10 +1241,19 @@ private fun AprenderApp() {
                     }
                 }
                 item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "security" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("🔐", fontSize = 30.sp)
+                            Column { Text("Cambiar PIN", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Modificar el PIN de acceso familiar", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
+                item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⚙️", fontSize = 30.sp)
-                            Column { Text("Configuración del dispositivo", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Permisos y servicio de accesibilidad", color = Color(0xFF667085)) }
+                            Column { Text("Configuración de permisos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Permisos y servicio de accesibilidad", color = Color(0xFF667085)) }
                         }
                     }
                 }
