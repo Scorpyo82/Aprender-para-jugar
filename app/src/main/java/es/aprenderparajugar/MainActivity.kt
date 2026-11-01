@@ -3879,12 +3879,13 @@ private fun AprenderApp() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Aprender para jugar", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253A5A))
-                        Text("¡Aprende, descubre y diviértete!", fontSize = 14.sp, color = Color(0xFF42647D))
-                    }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️", fontSize = 18.sp) }
+                    Spacer(Modifier.width(8.dp))
                     OutlinedButton(onClick = { soundEnabled = !soundEnabled; preferences.edit().putBoolean("sound_enabled", soundEnabled).apply() }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text(if (soundEnabled) "🔊" else "🔇", fontSize = 18.sp) }
                 }
             }
