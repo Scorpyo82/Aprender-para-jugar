@@ -842,7 +842,7 @@ private fun AprenderApp() {
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             transferMessage = try {
-                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics)
+                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics, emptySet())
                 "Exportación completada correctamente.".also { parentSection = "library-transfer" }
             } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
         }
@@ -1693,10 +1693,10 @@ private fun AprenderApp() {
                                             }
                                         }
                                     }
-                                    Text(if (modalityInfo.includesStatistics) "El paquete incluye estadísticas." else "El paquete no incluye estadísticas.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Text(if (modalityInfo.includesLearningStatistics || modalityInfo.includesUsageStatistics) "El paquete incluye estadísticas." else "El paquete no incluye estadísticas.", fontSize = 12.sp, color = Color(0xFF667085))
                                 }
                             }
-                            if (info.modalities.any { it.includesStatistics }) {
+                            if (info.modalities.any { it.includesLearningStatistics || it.includesUsageStatistics }) {
                                 item {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(checked = transferImportStatistics, onCheckedChange = { transferImportStatistics = it })
@@ -1720,7 +1720,7 @@ private fun AprenderApp() {
                             item {
                                 Button(onClick = {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics)
+                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, false)
                                         transferPackage = null
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)
