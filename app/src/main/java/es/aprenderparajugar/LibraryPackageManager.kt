@@ -69,13 +69,14 @@ internal object LibraryPackageManager {
                     val includeLearning = learningStatisticsModalities.contains(modality)
                     val includeUsage = usageStatisticsModalities.contains(modality)
                     if (includeUsage) {
+                        // Si aún no se ha completado ninguna partida, crea y exporta
+                        // el esquema vacío para que la copia de seguridad sea restaurable.
+                        UsageStatisticsRepository.read(context, modality)
                         val usageFile = File(ContentStorage.modalityDirectory(context, modality), UsageStatisticsRepository.FILE_NAME)
-                        if (usageFile.isFile) {
-                            UsageStatisticsRepository.validateFile(usageFile, modality)
-                            zip.putNextEntry(ZipEntry("${modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}"))
-                            usageFile.inputStream().buffered().use { it.copyTo(zip) }
-                            zip.closeEntry()
-                        }
+                        UsageStatisticsRepository.validateFile(usageFile, modality)
+                        zip.putNextEntry(ZipEntry("${modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}"))
+                        usageFile.inputStream().buffered().use { it.copyTo(zip) }
+                        zip.closeEntry()
                     }
                     modalitiesJson.put(JSONObject().put("id", modality.directoryName)
                         .put("includesLearningStatistics", includeLearning)
@@ -230,15 +231,18 @@ internal object LibraryPackageManager {
                         UsageStatisticsRepository.validateFile(incomingUsage, modality)
                         val targetUsage = File(ContentStorage.modalityDirectory(context, modality), UsageStatisticsRepository.FILE_NAME)
                         val temporaryUsage = File(targetUsage.parentFile, ".${targetUsage.name}.import-${System.nanoTime()}")
+                        val backupUsage = File(targetUsage.parentFile, ".${targetUsage.name}.backup-${System.nanoTime()}")
                         incomingUsage.copyTo(temporaryUsage, overwrite = true)
-                        if (targetUsage.exists() && !targetUsage.delete()) {
+                        if (targetUsage.exists() && !targetUsage.renameTo(backupUsage)) {
                             temporaryUsage.delete()
-                            throw IllegalStateException("No se pudieron sustituir las estadísticas de uso de ${modality.directoryName}.")
+                            throw IllegalStateException("No se pudieron reservar las estadísticas de uso anteriores de ${modality.directoryName}.")
                         }
                         if (!temporaryUsage.renameTo(targetUsage)) {
                             temporaryUsage.delete()
+                            if (backupUsage.exists()) backupUsage.renameTo(targetUsage)
                             throw IllegalStateException("No se pudieron guardar las estadísticas de uso de ${modality.directoryName}.")
                         }
+                        if (backupUsage.exists()) backupUsage.delete()
                     }
                 }
             }
