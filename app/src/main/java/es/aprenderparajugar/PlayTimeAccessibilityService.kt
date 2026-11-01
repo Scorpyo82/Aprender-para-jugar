@@ -28,7 +28,7 @@ class PlayTimeAccessibilityService : AccessibilityService() {
             val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
             val minimum = prefs.getInt("minimum_play_minutes", 5).coerceIn(0, 60) * 60
             val sessionAuthorized = prefs.getBoolean("play_session_authorized", false)
-            if (sessionAuthorized || balance >= minimum && balance > 0) {
+            if (balance > 0 && (sessionAuthorized || balance >= minimum)) {
                 prefs.edit()
 
                     .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
@@ -91,7 +91,7 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
         val minimum = prefs.getInt("minimum_play_minutes", 5).coerceIn(0, 60) * 60
         val sessionAuthorized = prefs.getBoolean("play_session_authorized", false)
-        if (sessionAuthorized || balance >= minimum && balance > 0) {
+        if (balance > 0 && (sessionAuthorized || balance >= minimum)) {
             // The reward arrived during the lifecycle transition. Start consuming it once.
             prefs.edit()
 
