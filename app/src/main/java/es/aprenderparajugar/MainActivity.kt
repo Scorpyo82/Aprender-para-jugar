@@ -1795,6 +1795,8 @@ private fun AprenderApp() {
                         val totalCompleted = records.sumOf { it.second.optInt("completed", 0) }
                         fun percentage(correct: Int, attempts: Int): String =
                             if (attempts > 0) "${(correct * 100.0 / attempts).toInt()}%" else "Sin datos"
+                        var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
+
                         item { Text("Resumen de actividad", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
                             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -1805,60 +1807,80 @@ private fun AprenderApp() {
                                 }
                             }
                         }
+
                         val modalityAreas = listOf(
-                            Triple(ContentStorage.Modality.TARJETAS, "Asociación palabra-imagen", "Observa el rendimiento al relacionar palabras con sus imágenes."),
-                            Triple(ContentStorage.Modality.PALABRAS, "Construcción de palabras", "Observa los resultados al ordenar letras y completar palabras."),
-                            Triple(ContentStorage.Modality.SECUENCIAS, "Ordenación de secuencias", "Observa cómo resuelve secuencias, procesos, causas y ciclos.")
+                            Triple(ContentStorage.Modality.TARJETAS, "Tarjetas", "🃏"),
+                            Triple(ContentStorage.Modality.PALABRAS, "Palabras", "🔤"),
+                            Triple(ContentStorage.Modality.SECUENCIAS, "Secuencias", "🧩")
                         )
-                        modalityAreas.forEach { (modality, title, description) ->
+                        item { Text("Estadísticas por modalidad", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+                        modalityAreas.forEach { (modality, title, icon) ->
                             val subset = records.filter { it.third == modality }
                             val attempts = subset.sumOf { it.second.optInt("attempts", 0) }
                             val correct = subset.sumOf { it.second.optInt("correct", 0) }
                             val incorrect = subset.sumOf { it.second.optInt("incorrect", 0) }
                             val completed = subset.sumOf { it.second.optInt("completed", 0) }
+                            val expanded = modality in expandedLearningModalities
+                            val categoryGroups = subset.groupBy { stored ->
+                                val category = stored.first.metadata.category
+                                if (modality == ContentStorage.Modality.SECUENCIAS) {
+                                    val type = (stored.first.content as? SequenceExerciseContent)?.type?.displayName
+                                    if (type.isNullOrBlank()) category else "$category · $type"
+                                } else category
+                            }.toSortedMap()
                             item {
-                                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        Text(description, fontSize = 13.sp, color = Color(0xFF667085))
-                                        Text("${percentage(correct, attempts)} de acierto · $attempts intentos · $completed completados", fontWeight = FontWeight.SemiBold)
-                                        Text("$correct aciertos y $incorrect errores", fontSize = 13.sp, color = Color(0xFF667085))
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().clickable {
+                                        expandedLearningModalities = if (expanded) expandedLearningModalities - modality else expandedLearningModalities + modality
+                                    },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                                ) {
+                                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(icon, fontSize = 22.sp)
+                                            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                            Spacer(Modifier.weight(1f))
+                                            Text(if (attempts == 0) "Sin actividad" else "Ver detalle", fontSize = 12.sp, color = Color(0xFF667085))
+                                            Text(if (expanded) "⌃" else "⌄", fontSize = 18.sp, color = Color(0xFF667085))
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            Text("Aciertos: $correct", fontSize = 13.sp, color = Color(0xFF475467))
+                                            Text("Errores: $incorrect", fontSize = 13.sp, color = Color(0xFF475467))
+                                        }
+                                        Text("Intentos: $attempts · Completados: $completed", fontSize = 13.sp, color = Color(0xFF475467))
+                                        if (expanded) {
+                                            Spacer(Modifier.height(2.dp))
+                                            if (categoryGroups.isEmpty()) {
+                                                Text("Todavía no hay actividad registrada en esta modalidad.", fontSize = 13.sp, color = Color(0xFF667085))
+                                            } else {
+                                                categoryGroups.forEach { (category, categoryRecords) ->
+                                                    val categoryAttempts = categoryRecords.sumOf { it.second.optInt("attempts", 0) }
+                                                    val categoryCorrect = categoryRecords.sumOf { it.second.optInt("correct", 0) }
+                                                    val categoryIncorrect = categoryRecords.sumOf { it.second.optInt("incorrect", 0) }
+                                                    val categoryCompleted = categoryRecords.sumOf { it.second.optInt("completed", 0) }
+                                                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                                        Text(category, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                                        Text("${percentage(categoryCorrect, categoryAttempts)} de acierto · $categoryAttempts intentos · $categoryCompleted completados", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        Text("$categoryCorrect aciertos · $categoryIncorrect errores", fontSize = 12.sp, color = Color(0xFF667085))
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-                        item { Text("Resultados por categoría", fontSize = 17.sp, fontWeight = FontWeight.Bold) }
-                        val categoryGroups = records.groupBy { "${it.third.directoryName} · ${it.first.metadata.category}" }
-                        categoryGroups.forEach { (category, subset) ->
-                            val attempts = subset.sumOf { it.second.optInt("attempts", 0) }
-                            val correct = subset.sumOf { it.second.optInt("correct", 0) }
-                            val completed = subset.sumOf { it.second.optInt("completed", 0) }
-                            item {
-                                Text("$category: ${percentage(correct, attempts)} de acierto · $attempts intentos · $completed completados", fontSize = 13.sp, color = Color(0xFF475467))
-                            }
-                        }
-                        val sequenceRecords = records.filter { it.third == ContentStorage.Modality.SECUENCIAS }
-                        val sequenceGroups = sequenceRecords.groupBy { (it.first.content as? SequenceExerciseContent)?.type?.displayName ?: "Tipo no identificado" }
-                        sequenceGroups.forEach { (type, subset) ->
-                            val attempts = subset.sumOf { it.second.optInt("attempts", 0) }
-                            val correct = subset.sumOf { it.second.optInt("correct", 0) }
-                            item {
-                                Text("$type · ${percentage(correct, attempts)} de acierto ($attempts intentos)", fontSize = 14.sp, color = Color(0xFF344054))
-                            }
-                        }
+
                         item {
                             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F4F8))) {
                                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("Comprensión lectora", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                    Text("Todavía no se puede valorar con rigor: las modalidades actuales registran asociación de imágenes, construcción de palabras y ordenación de secuencias, pero no incluyen una batería específica de preguntas sobre significado y comprensión de textos.", fontSize = 13.sp, color = Color(0xFF475467))
+                                    Text("Cómo interpretar estos datos", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                    Text("Esta aplicación no diagnostica, no realiza evaluaciones clínicas ni determina lo que un niño es o no es capaz de hacer. Solo ofrece actividades y recoge cómo interactúa con ellas. Los resultados dependen de los ejercicios disponibles, de su diseño, de la experiencia previa, de cómo el niño interpreta la actividad y de factores como la atención, la motivación, la memoria o la familiaridad con los patrones y símbolos.", fontSize = 13.sp, color = Color(0xFF667085))
+                                    Text("Un acierto o un error aislado no demuestra que una capacidad esté adquirida o ausente. El niño puede encontrar estrategias, asociaciones o soluciones que el ejercicio no había previsto, e incluso descubrir relaciones que a un adulto podrían pasarle inadvertidas. Conviene observar el proceso, escuchar sus explicaciones y no limitar sus posibilidades a lo que reflejan estas cifras.", fontSize = 13.sp, color = Color(0xFF667085))
+                                    Text("Estas estadísticas son únicamente orientativas y descriptivas. No son pruebas estandarizadas, diagnósticos ni conclusiones pedagógicas definitivas, y no sustituyen la valoración de profesionales cuando sea necesaria.", fontSize = 13.sp, color = Color(0xFF667085))
                                 }
                             }
-                        }
-                        item {
-                            Text("Cómo interpretar estos datos", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                            Text("Esta aplicación no diagnostica, no realiza evaluaciones clínicas ni determina lo que un niño es o no es capaz de hacer. Solo ofrece actividades y recoge cómo interactúa con ellas. Los resultados dependen de los ejercicios disponibles, de su diseño, de la experiencia previa, de cómo el niño interpreta la actividad y de factores como la atención, la motivación, la memoria o la familiaridad con los patrones y símbolos.", fontSize = 13.sp, color = Color(0xFF667085))
-                            Text("Un acierto o un error aislado no demuestra que una capacidad esté adquirida o ausente. El niño puede encontrar estrategias, asociaciones o soluciones que el ejercicio no había previsto, e incluso descubrir relaciones que a un adulto podrían pasarle inadvertidas. Conviene observar el proceso, escuchar sus explicaciones y no limitar sus posibilidades a lo que reflejan estas cifras.", fontSize = 13.sp, color = Color(0xFF667085))
-                            Text("Estas estadísticas son únicamente orientativas y descriptivas. No son pruebas estandarizadas, diagnósticos ni conclusiones pedagógicas definitivas, y no sustituyen la valoración de profesionales cuando sea necesaria.", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         item { Text("Ejercicios con estadísticas legibles: ${records.size}. Si no aparecen datos, completa ejercicios para generar registros.", fontSize = 12.sp, color = Color(0xFF667085)) }
                     }
