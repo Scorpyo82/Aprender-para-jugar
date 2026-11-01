@@ -706,10 +706,12 @@ private fun AprenderApp() {
     var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup) "device-setup" else "menu") }
     var transferExportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferExportStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
+    var transferExportUsageStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
     var transferImportStatistics by remember { mutableStateOf(false) }
+    var transferImportUsageStatistics by remember { mutableStateOf(false) }
     var transferMessage by remember { mutableStateOf("") }
     var deleteSelectedItems by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteExpandedCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -842,7 +844,7 @@ private fun AprenderApp() {
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             transferMessage = try {
-                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics, emptySet())
+                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics, transferExportUsageStatistics)
                 "Exportación completada correctamente.".also { parentSection = "library-transfer" }
             } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
         }
@@ -1363,7 +1365,11 @@ private fun AprenderApp() {
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(checked = false, onCheckedChange = null, enabled = false)
-                                        Text("Incluir estadísticas de uso (próximamente)", color = Color(0xFF98A2B3))
+                                        Checkbox(
+                                            checked = modality in transferExportUsageStatistics,
+                                            onCheckedChange = { checked -> transferExportUsageStatistics = transferExportUsageStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
+                                        )
+                                        Text("Incluir estadísticas de uso")
                                     }
                                 }
                             }
@@ -1716,8 +1722,11 @@ private fun AprenderApp() {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(checked = false, onCheckedChange = null, enabled = false)
                                         Column {
-                                            Text("Importar estadísticas de uso", fontWeight = FontWeight.SemiBold, color = Color(0xFF98A2B3))
-                                            Text("Próximamente.", fontSize = 12.sp, color = Color(0xFF98A2B3))
+                                            Checkbox(checked = transferImportUsageStatistics, onCheckedChange = { transferImportUsageStatistics = it })
+                                            Column {
+                                                Text("Importar estadísticas de uso", fontWeight = FontWeight.SemiBold)
+                                                Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de uso del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
+                                            }
                                         }
                                     }
                                 }
@@ -1735,7 +1744,7 @@ private fun AprenderApp() {
                             item {
                                 Button(onClick = {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, false)
+                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics)
                                         transferPackage = null
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)
