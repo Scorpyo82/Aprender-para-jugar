@@ -889,7 +889,7 @@ private fun AprenderApp() {
                 }
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
-                "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "statistics-menu" -> parentSection = "menu"
+                "active-games", "music", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu" -> parentSection = "menu"
                 "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
                 "learning-stats", "usage-stats" -> parentSection = "statistics-menu"
                 "game-modes" -> parentSection = "menu"
@@ -1161,9 +1161,9 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "typography" -> "Tipografía de los ejercicios"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "statistics-menu" -> "Estadísticas"; "learning-stats" -> "Estadísticas de aprendizaje"; "usage-stats" -> "Estadísticas de uso"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "typography" -> "Tipografía de los ejercicios"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "basic-library" -> "Descargar biblioteca básica"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "statistics-menu" -> "Estadísticas"; "learning-stats" -> "Estadísticas de aprendizaje"; "usage-stats" -> "Estadísticas de uso"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
                 Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "typography" -> "Tipografía de los ejercicios"; "game-modes" -> "Configurar modos de juego"; "active-games" -> "Juegos activos"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "statistics-menu" -> "Estadísticas"; "learning-stats" -> "Estadísticas de aprendizaje"; "usage-stats" -> "Estadísticas de uso"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "typography" -> "Elige la letra que se utilizará en los ejercicios"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; "library-delete" -> "Elimina de forma permanente una o varias bibliotecas"; "statistics-menu" -> "Consulta el aprendizaje y el uso de las modalidades"; "learning-stats" -> "Observaciones orientativas basadas en los intentos registrados"; "usage-stats" -> "Partidas completadas por modalidad, tipo y dificultad"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
+                Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "typography" -> "Elige la letra que se utilizará en los ejercicios"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "basic-library" -> "Descarga e instalación del contenido inicial"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; "library-delete" -> "Elimina de forma permanente una o varias bibliotecas"; "statistics-menu" -> "Consulta el aprendizaje y el uso de las modalidades"; "learning-stats" -> "Observaciones orientativas basadas en los intentos registrados"; "usage-stats" -> "Partidas completadas por modalidad, tipo y dificultad"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
                 item {
@@ -1204,6 +1204,17 @@ private fun AprenderApp() {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("🎵", fontSize = 30.sp)
                             Column { Text("Música de fondo", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Elige un MP3 y configura el sonido", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
+                item {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "basic-library" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("⬇️", fontSize = 30.sp)
+                            Column {
+                                Text("Descargar biblioteca básica", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Obtener ejercicios iniciales para las tres modalidades", color = Color(0xFF667085))
+                            }
                         }
                     }
                 }
@@ -1281,6 +1292,33 @@ private fun AprenderApp() {
                     }
                     "usage-stats" -> {
                         item { UsageStatisticsScreen(context) }
+                    }
+                    "basic-library" -> {
+                        item {
+                            Text("Biblioteca básica", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text("Puedes descargar un paquete inicial con ejercicios de Tarjetas, Secuencias y Palabras. La descarga se realizará desde GitHub en el navegador.", fontSize = 14.sp, color = Color(0xFF667085))
+                        }
+                        item {
+                            Button(
+                                onClick = {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Scorpyo82/Aprender-para-jugar/releases/download/biblioteca-v1.0/APJ-biblioteca.zip")))
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("⬇️ Descargar biblioteca básica (7,65 MB)") }
+                        }
+                        item {
+                            Text("Cómo instalarla", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("1. Pulsa el botón de descarga. Si Android pregunta con qué aplicación abrir el enlace, elige tu navegador.", fontSize = 14.sp)
+                            Text("2. Espera a que termine la descarga. El archivo se llamará APJ-biblioteca.zip y normalmente quedará en la carpeta Descargas.", fontSize = 14.sp)
+                            Text("3. Vuelve a Aprender para jugar y entra en Control parental → Configuración general → Importar y exportar bibliotecas → Importar bibliotecas.", fontSize = 14.sp)
+                            Text("4. Selecciona APJ-biblioteca.zip en Descargas. La aplicación comprobará el archivo y mostrará las modalidades y categorías incluidas.", fontSize = 14.sp)
+                            Text("5. Deja seleccionadas todas las categorías de Tarjetas, Secuencias y Palabras para instalar la biblioteca completa.", fontSize = 14.sp)
+                            Text("6. No actives la importación de estadísticas si aparece. Deja también desmarcada «Sustituir ejercicios existentes con el mismo nombre» para no sobrescribir contenido que ya tengas.", fontSize = 14.sp)
+                            Text("7. Pulsa «Importar selección». Al terminar, volverás a la pantalla de Importar y exportar bibliotecas.", fontSize = 14.sp)
+                        }
+                        item {
+                            Text("La dificultad indicada en los ejercicios es orientativa. Adapta la selección y el acompañamiento al ritmo y las características de cada niño o niña.", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
                     }
                     "library-transfer" -> {
                         item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
