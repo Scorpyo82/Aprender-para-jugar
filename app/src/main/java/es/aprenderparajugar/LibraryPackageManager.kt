@@ -21,7 +21,8 @@ internal object LibraryPackageManager {
     data class ModalityInfo(
         val modality: ContentStorage.Modality,
         val categories: List<CategoryInfo>,
-        val includesStatistics: Boolean
+        val includesLearningStatistics: Boolean,
+        val includesUsageStatistics: Boolean
     )
     data class PackageInfo(val modalities: List<ModalityInfo>, internal val staging: File)
 
@@ -37,7 +38,8 @@ internal object LibraryPackageManager {
         context: Context,
         target: Uri,
         selectedCategories: Map<ContentStorage.Modality, Set<String>>,
-        statisticsModalities: Set<ContentStorage.Modality>
+        learningStatisticsModalities: Set<ContentStorage.Modality>,
+        usageStatisticsModalities: Set<ContentStorage.Modality>
     ) {
         require(selectedCategories.values.any { it.isNotEmpty() }) { "Selecciona al menos una categoría." }
         val resolver = context.contentResolver
@@ -58,14 +60,26 @@ internal object LibraryPackageManager {
                         require(validExercises.isNotEmpty()) { "La categoría ${categoryDir.name} no contiene ejercicios válidos." }
                         validExercises.forEach { exercise ->
                             val relative = "${modality.directoryName}/${categoryDir.name}/${exercise.directory.name}"
-                            addDirectory(zip, exercise.directory, relative, statisticsModalities.contains(modality))
+                            addDirectory(zip, exercise.directory, relative, learningStatisticsModalities.contains(modality))
                         }
                         categoriesJson.put(JSONObject().put("directory", categoryDir.name)
                             .put("name", validExercises.first().metadata.category)
                             .put("exerciseCount", validExercises.size))
                     }
+                    val includeLearning = learningStatisticsModalities.contains(modality)
+                    val includeUsage = usageStatisticsModalities.contains(modality)
+                    if (includeUsage) {
+                        val usageFile = File(ContentStorage.modalityDirectory(context, modality), UsageStatisticsRepository.FILE_NAME)
+                        if (usageFile.isFile) {
+                            UsageStatisticsRepository.validateFile(usageFile, modality)
+                            zip.putNextEntry(ZipEntry("${modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}"))
+                            usageFile.inputStream().buffered().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                    }
                     modalitiesJson.put(JSONObject().put("id", modality.directoryName)
-                        .put("includesStatistics", statisticsModalities.contains(modality))
+                        .put("includesLearningStatistics", includeLearning)
+                        .put("includesUsageStatistics", includeUsage)
                         .put("categories", categoriesJson))
                 }
             }
@@ -135,14 +149,20 @@ internal object LibraryPackageManager {
                         validateAssets(stored.content, exerciseDir)
                         val stats = File(exerciseDir, STATISTICS_FILE)
                         if (stats.exists()) {
-                            require(item.optBoolean("includesStatistics")) { "El paquete contiene estadísticas no declaradas." }
+                            require(item.optBoolean("includesLearningStatistics")) { "El paquete contiene estadísticas de aprendizaje no declaradas." }
                             val json = JSONObject(stats.readText(Charsets.UTF_8))
                             require(json.optInt("schemaVersion", -1) == 1) { "Las estadísticas de ${stored.metadata.title} no son compatibles." }
                         }
                     }
                     CategoryInfo(directory, name, exerciseDirs.size)
                 }
-                ModalityInfo(modality, categories, item.optBoolean("includesStatistics"))
+                val includesUsage = item.optBoolean("includesUsageStatistics")
+                val usageFile = File(staging, "${modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}")
+                if (usageFile.exists()) {
+                    require(includesUsage) { "El paquete contiene estadísticas de uso no declaradas." }
+                    UsageStatisticsRepository.validateFile(usageFile, modality)
+                }
+                ModalityInfo(modality, categories, item.optBoolean("includesLearningStatistics"), includesUsage)
             }
             return PackageInfo(result, staging)
         } catch (error: Exception) {
@@ -156,7 +176,8 @@ internal object LibraryPackageManager {
         packageInfo: PackageInfo,
         selectedCategories: Map<ContentStorage.Modality, Set<String>>,
         replaceSameName: Boolean,
-        importStatistics: Boolean
+        importLearningStatistics: Boolean,
+        importUsageStatistics: Boolean
     ): Int {
         var imported = 0
         try {
@@ -178,7 +199,7 @@ internal object LibraryPackageManager {
                         val stagingExercise = File(targetCategory, ".import-${System.nanoTime()}")
                         copyDirectory(incoming, stagingExercise)
                         val incomingStatistics = File(stagingExercise, STATISTICS_FILE)
-                        if (!importStatistics) {
+                        if (!importLearningStatistics) {
                             // El ZIP no debe sobrescribir las estadísticas locales si el usuario
                             // ha decidido importar únicamente los ejercicios.
                             incomingStatistics.delete()
@@ -201,6 +222,23 @@ internal object LibraryPackageManager {
                             check(stagingExercise.renameTo(target)) { "No se pudo incorporar ${incomingStored.metadata.title}." }
                         }
                         imported++
+                    }
+                }
+                if (selected.isNotEmpty() && importUsageStatistics && modalityInfo.includesUsageStatistics) {
+                    val incomingUsage = File(packageInfo.staging, "${modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}")
+                    if (incomingUsage.isFile) {
+                        UsageStatisticsRepository.validateFile(incomingUsage, modality)
+                        val targetUsage = File(ContentStorage.modalityDirectory(context, modality), UsageStatisticsRepository.FILE_NAME)
+                        val temporaryUsage = File(targetUsage.parentFile, ".${targetUsage.name}.import-${System.nanoTime()}")
+                        incomingUsage.copyTo(temporaryUsage, overwrite = true)
+                        if (targetUsage.exists() && !targetUsage.delete()) {
+                            temporaryUsage.delete()
+                            throw IllegalStateException("No se pudieron sustituir las estadísticas de uso de ${modality.directoryName}.")
+                        }
+                        if (!temporaryUsage.renameTo(targetUsage)) {
+                            temporaryUsage.delete()
+                            throw IllegalStateException("No se pudieron guardar las estadísticas de uso de ${modality.directoryName}.")
+                        }
                     }
                 }
             }
