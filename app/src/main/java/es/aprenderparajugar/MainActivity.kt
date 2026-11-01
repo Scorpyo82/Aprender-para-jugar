@@ -1359,20 +1359,20 @@ private fun AprenderApp() {
                                             }
                                         }
                                     }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = modality in transferExportLearningStatistics,
-                                            onCheckedChange = { checked -> transferExportLearningStatistics = transferExportLearningStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
-                                        )
-                                        Text("Incluir estadísticas de aprendizaje")
-                                    }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = modality in transferExportUsageStatistics,
-                                            onCheckedChange = { checked -> transferExportUsageStatistics = transferExportUsageStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
-                                        )
-                                        Text("Incluir estadísticas de uso")
-                                    }
+                                    StatisticsExportOptions(
+                                        includeLearning = modality in transferExportLearningStatistics,
+                                        includeUsage = modality in transferExportUsageStatistics,
+                                        onLearningChange = { checked ->
+                                            transferExportLearningStatistics = transferExportLearningStatistics.toMutableSet().also {
+                                                if (checked) it.add(modality) else it.remove(modality)
+                                            }
+                                        },
+                                        onUsageChange = { checked ->
+                                            transferExportUsageStatistics = transferExportUsageStatistics.toMutableSet().also {
+                                                if (checked) it.add(modality) else it.remove(modality)
+                                            }
+                                        }
+                                    )
                                 }
                             }
                             item { androidx.compose.material3.HorizontalDivider() }
@@ -1708,26 +1708,16 @@ private fun AprenderApp() {
                                     Text("El paquete incluye estadísticas de aprendizaje: ${if (modalityInfo.includesLearningStatistics) "Sí" else "No"} · de uso: ${if (modalityInfo.includesUsageStatistics) "Sí" else "No"}.", fontSize = 12.sp, color = Color(0xFF667085))
                                 }
                             }
-                            if (info.modalities.any { it.includesLearningStatistics }) {
+                            if (info.modalities.any { it.includesLearningStatistics || it.includesUsageStatistics }) {
                                 item {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = transferImportLearningStatistics, onCheckedChange = { transferImportLearningStatistics = it })
-                                        Column {
-                                            Text("Importar estadísticas de aprendizaje", fontWeight = FontWeight.SemiBold)
-                                            Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de aprendizaje del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
-                                        }
-                                    }
-                                }
-                            }
-                            if (info.modalities.any { it.includesUsageStatistics }) {
-                                item {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = transferImportUsageStatistics, onCheckedChange = { transferImportUsageStatistics = it })
-                                        Column {
-                                            Text("Importar estadísticas de uso", fontWeight = FontWeight.SemiBold)
-                                            Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de uso del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
-                                        }
-                                    }
+                                    StatisticsImportOptions(
+                                        showLearning = info.modalities.any { it.includesLearningStatistics },
+                                        showUsage = info.modalities.any { it.includesUsageStatistics },
+                                        importLearning = transferImportLearningStatistics,
+                                        importUsage = transferImportUsageStatistics,
+                                        onLearningChange = { transferImportLearningStatistics = it },
+                                        onUsageChange = { transferImportUsageStatistics = it }
+                                    )
                                 }
                             }
                             item {
