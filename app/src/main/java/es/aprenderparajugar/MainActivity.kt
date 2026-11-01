@@ -1266,8 +1266,7 @@ private fun AprenderApp() {
                         }
                     }
                     "usage-stats" -> {
-                        item { Text("Estadísticas de uso", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Esta pantalla se incorporará en el siguiente paso.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { UsageStatisticsScreen(context) }
                     }
                     "library-transfer" -> {
                         item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
