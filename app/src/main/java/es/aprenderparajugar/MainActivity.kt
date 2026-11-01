@@ -705,11 +705,13 @@ private fun AprenderApp() {
     var pinError by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup) "device-setup" else "menu") }
     var transferExportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
-    var transferExportStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
+    var transferExportLearningStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
+    var transferExportUsageStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
-    var transferImportStatistics by remember { mutableStateOf(false) }
+    var transferImportLearningStatistics by remember { mutableStateOf(false) }
+    var transferImportUsageStatistics by remember { mutableStateOf(false) }
     var transferMessage by remember { mutableStateOf("") }
     var deleteSelectedItems by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteExpandedCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -842,7 +844,7 @@ private fun AprenderApp() {
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             transferMessage = try {
-                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics)
+                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportLearningStatistics, transferExportUsageStatistics)
                 "Exportación completada correctamente.".also { parentSection = "library-transfer" }
             } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
         }
@@ -856,7 +858,8 @@ private fun AprenderApp() {
                 transferPackage = inspected
                 transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
                 transferReplaceDuplicates = false
-                transferImportStatistics = false
+                transferImportLearningStatistics = false
+                transferImportUsageStatistics = false
                 transferMessage = "Archivo válido. Selecciona las categorías que deseas importar."
                 parentSection = "library-import"
             } catch (e: Exception) {
@@ -1173,7 +1176,8 @@ private fun AprenderApp() {
                 item {
                     Card(Modifier.fillMaxWidth().clickable {
                         transferExportCategories = ContentStorage.Modality.entries.associateWith { modality -> LibraryPackageManager.categories(context, modality).map { it.directory }.toSet() }
-                        transferExportStatistics = emptySet()
+                        transferExportLearningStatistics = emptySet()
+                        transferExportUsageStatistics = emptySet()
                         transferMessage = ""
                         parentSection = "library-transfer"
                     }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
