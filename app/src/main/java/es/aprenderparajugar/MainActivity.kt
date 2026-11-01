@@ -859,6 +859,7 @@ private fun AprenderApp() {
                 transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
                 transferReplaceDuplicates = false
                 transferImportStatistics = false
+                transferImportUsageStatistics = false
                 transferMessage = "Archivo válido. Selecciona las categorías que deseas importar."
                 parentSection = "library-import"
             } catch (e: Exception) {
