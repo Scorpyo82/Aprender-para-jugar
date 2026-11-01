@@ -1149,6 +1149,17 @@ private fun AprenderApp() {
                 } else if (screen == "home") {
                     screen = "play-time"
                 }
+            } else if (deadline > 0L) {
+                // A positive deadline that has already passed is authoritative: the
+                // persisted balance may still contain the previous tick's stale value.
+                preferences.edit()
+                    .putLong("play_deadline_ms", 0L)
+                    .putInt("balance_seconds", 0)
+                    .putBoolean("play_session_authorized", false)
+                    .putBoolean("play_paused_for_screen_lock", false)
+                    .commit()
+                balanceSeconds = 0
+                if (screen == "play-time") screen = "home"
             } else {
                 // Refresh Compose state from the persisted balance whenever the app returns.
                 val savedBalance = preferences.getInt("balance_seconds", 0).coerceAtLeast(0)
