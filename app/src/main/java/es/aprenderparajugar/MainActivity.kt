@@ -474,6 +474,7 @@ private fun AprenderApp() {
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
+    var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
     var wordExercises by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)) }
@@ -1795,7 +1796,7 @@ private fun AprenderApp() {
                         val totalCompleted = records.sumOf { it.second.optInt("completed", 0) }
                         fun percentage(correct: Int, attempts: Int): String =
                             if (attempts > 0) "${(correct * 100.0 / attempts).toInt()}%" else "Sin datos"
-                        var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
+
 
                         item { Text("Resumen de actividad", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
