@@ -1365,7 +1365,6 @@ private fun AprenderApp() {
                                         Text("Incluir estadísticas de aprendizaje")
                                     }
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = false, onCheckedChange = null, enabled = false)
                                         Checkbox(
                                             checked = modality in transferExportUsageStatistics,
                                             onCheckedChange = { checked -> transferExportUsageStatistics = transferExportUsageStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
@@ -1721,13 +1720,10 @@ private fun AprenderApp() {
                             if (info.modalities.any { it.includesUsageStatistics }) {
                                 item {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = false, onCheckedChange = null, enabled = false)
+                                        Checkbox(checked = transferImportUsageStatistics, onCheckedChange = { transferImportUsageStatistics = it })
                                         Column {
-                                            Checkbox(checked = transferImportUsageStatistics, onCheckedChange = { transferImportUsageStatistics = it })
-                                            Column {
-                                                Text("Importar estadísticas de uso", fontWeight = FontWeight.SemiBold)
-                                                Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de uso del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
-                                            }
+                                            Text("Importar estadísticas de uso", fontWeight = FontWeight.SemiBold)
+                                            Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de uso del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
                                         }
                                     }
                                 }
