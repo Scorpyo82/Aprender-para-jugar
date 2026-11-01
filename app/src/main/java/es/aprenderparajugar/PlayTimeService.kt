@@ -36,13 +36,19 @@ class PlayTimeService : Service() {
         prefs.edit()
             .putInt("balance_seconds", remaining)
             .putLong("play_deadline_ms", 0L)
-            .putBoolean("play_paused_for_screen_lock", true)
+            .putBoolean("play_session_authorized", remaining > 0)
+            .putBoolean("play_paused_for_screen_lock", remaining > 0)
             .commit()
         handler.removeCallbacks(tick)
-        getSystemService(NotificationManager::class.java).notify(
-            NOTIFICATION_ID,
-            buildNotification("Tiempo pausado: tablet bloqueada", true)
-        )
+        if (remaining > 0) {
+            getSystemService(NotificationManager::class.java).notify(
+                NOTIFICATION_ID,
+                buildNotification("Tiempo pausado: tablet bloqueada", true)
+            )
+        } else {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
     }
 
     private fun resumeAfterScreenUnlock() {
@@ -51,13 +57,14 @@ class PlayTimeService : Service() {
         prefs.edit()
             .putBoolean("play_paused_for_screen_lock", false)
             .putLong("play_deadline_ms", if (remaining > 0) System.currentTimeMillis() + remaining.toLong() * 1000L else 0L)
+            .putBoolean("play_session_authorized", remaining > 0)
+            .putInt("balance_seconds", remaining)
             .commit()
         if (remaining > 0) {
             expiryHandled = false
             handler.removeCallbacks(tick)
             handler.post(tick)
         } else {
-            prefs.edit().putBoolean("play_session_authorized", false).commit()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
