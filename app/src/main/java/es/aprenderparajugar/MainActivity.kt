@@ -3897,7 +3897,9 @@ private fun AprenderApp() {
                             Text("Tiempo acumulado", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF79501C))
                             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("$balanceMinutes", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
-                                Text("minutos", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
+                                Text("min", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
+                                Text("$balanceRemainderSeconds", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF59357D))
+                                Text("s", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
                             }
                         }
                         
