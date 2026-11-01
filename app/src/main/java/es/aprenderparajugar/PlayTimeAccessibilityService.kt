@@ -26,11 +26,13 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         // Start the countdown as soon as the app loses focus with earned time.
         if (deadline <= 0L) {
             val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
-            if (balance > 0) {
+            val minimum = prefs.getInt("minimum_play_minutes", 5).coerceIn(0, 60) * 60
+            val sessionAuthorized = prefs.getBoolean("play_session_authorized", false)
+            if (sessionAuthorized || balance >= minimum && balance > 0) {
                 prefs.edit()
                     .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
                     .putLong("expiry_last_launch_ms", 0L)
-                    .apply()
+                    .commit()
                 try {
                     androidx.core.content.ContextCompat.startForegroundService(
                         this,
@@ -39,8 +41,8 @@ class PlayTimeAccessibilityService : AccessibilityService() {
                 } catch (_: Exception) { }
                 return
             }
-            // Accessibility can report Home before Activity.onStop() has persisted the
-            // newly earned balance. Wait briefly before acting on a zero-balance read.
+            // Recheck after the Activity lifecycle has persisted its latest balance,
+            // then bring the app back if the minimum for leaving has not been met.
             handler.removeCallbacks(zeroBalanceCheck)
             handler.postDelayed(zeroBalanceCheck, 800L)
             return
@@ -72,7 +74,9 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         if (deadline > now) return
 
         val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
-        if (balance > 0) {
+        val minimum = prefs.getInt("minimum_play_minutes", 5).coerceIn(0, 60) * 60
+        val sessionAuthorized = prefs.getBoolean("play_session_authorized", false)
+        if (sessionAuthorized || balance >= minimum && balance > 0) {
             // The reward arrived during the lifecycle transition. Start consuming it once.
             prefs.edit()
                 .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
