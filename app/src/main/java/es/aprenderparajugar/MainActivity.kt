@@ -106,14 +106,24 @@ class MainActivity : ComponentActivity() {
 
         val now = System.currentTimeMillis()
         val deadline = prefs.getLong("play_deadline_ms", 0L)
-        val balance = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
+        val remaining = if (deadline > now) {
+            ((deadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
+        } else {
+            prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
+        }
+        val sessionAuthorized = prefs.getBoolean("play_session_authorized", false)
+        val minimumSeconds = prefs.getInt("minimum_play_minutes", 5).coerceIn(0, 60) * 60
+
+        // The minimum is a restriction on leaving the app, not on playing its activities.
+        // Never start the external-play countdown when the child has not met that minimum.
+        if (!sessionAuthorized && remaining < minimumSeconds) return
+
         if (deadline > now) {
-            val remaining = ((deadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
             prefs.edit().putInt("balance_seconds", remaining).commit()
-        } else if (balance > 0) {
+        } else if (remaining > 0) {
             // Save synchronously so Home/Back cannot race a pending SharedPreferences write.
             prefs.edit()
-                .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
+                .putLong("play_deadline_ms", now + remaining.toLong() * 1000L)
                 .putLong("expiry_last_launch_ms", 0L)
                 .commit()
         } else {
@@ -1122,9 +1132,28 @@ private fun AprenderApp() {
                     balanceSeconds = remaining
                 }
             }
+            val now = System.currentTimeMillis()
             val deadline = preferences.getLong("play_deadline_ms", 0L)
-            if (deadline > System.currentTimeMillis() && screen == "home") {
-                screen = "play-time"
+            if (deadline > now) {
+                val remaining = ((deadline - now + 999L) / 1000L).toInt().coerceAtLeast(0)
+                balanceSeconds = remaining
+                preferences.edit().putInt("balance_seconds", remaining).commit()
+                if (remaining <= 0) {
+                    preferences.edit()
+                        .putLong("play_deadline_ms", 0L)
+                        .putInt("balance_seconds", 0)
+                        .putBoolean("play_session_authorized", false)
+                        .putBoolean("play_paused_for_screen_lock", false)
+                        .commit()
+                    screen = "home"
+                } else if (screen == "home") {
+                    screen = "play-time"
+                }
+            } else {
+                // Refresh Compose state from the persisted balance whenever the app returns.
+                val savedBalance = preferences.getInt("balance_seconds", 0).coerceAtLeast(0)
+                balanceSeconds = savedBalance
+                if (screen == "play-time" && savedBalance <= 0) screen = "home"
             }
         }
     }
@@ -3431,6 +3460,7 @@ private fun AprenderApp() {
                 preferences.edit()
                     .putLong("play_deadline_ms", 0L)
                     .putInt("balance_seconds", remaining)
+                    .putBoolean("play_session_authorized", false)
                     .commit()
                 context.stopService(Intent(context, PlayTimeService::class.java))
                 balanceSeconds = remaining
