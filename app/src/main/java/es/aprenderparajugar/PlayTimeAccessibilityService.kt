@@ -30,8 +30,17 @@ class PlayTimeAccessibilityService : AccessibilityService() {
             val sessionAuthorized = prefs.getBoolean("play_session_authorized", false)
             if (sessionAuthorized || balance >= minimum && balance > 0) {
                 prefs.edit()
+
                     .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
+
+                    .putInt("balance_seconds", balance)
+
                     .putLong("expiry_last_launch_ms", 0L)
+
+                    .putBoolean("play_session_authorized", true)
+
+                    .putBoolean("play_paused_for_screen_lock", false)
+
                     .commit()
                 try {
                     androidx.core.content.ContextCompat.startForegroundService(
@@ -51,7 +60,13 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         val lastAttempt = prefs.getLong("expiry_last_launch_ms", 0L)
         if (now - lastAttempt < 1500L) return
 
-        prefs.edit().putInt("balance_seconds", 0).putLong("expiry_last_launch_ms", now).apply()
+        prefs.edit()
+            .putInt("balance_seconds", 0)
+            .putLong("play_deadline_ms", 0L)
+            .putBoolean("play_session_authorized", false)
+            .putBoolean("play_paused_for_screen_lock", false)
+            .putLong("expiry_last_launch_ms", now)
+            .commit()
         val launch = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra("play_time_expired", true)
@@ -79,8 +94,17 @@ class PlayTimeAccessibilityService : AccessibilityService() {
         if (sessionAuthorized || balance >= minimum && balance > 0) {
             // The reward arrived during the lifecycle transition. Start consuming it once.
             prefs.edit()
+
                 .putLong("play_deadline_ms", now + balance.toLong() * 1000L)
+
+                .putInt("balance_seconds", balance)
+
                 .putLong("expiry_last_launch_ms", 0L)
+
+                .putBoolean("play_session_authorized", true)
+
+                .putBoolean("play_paused_for_screen_lock", false)
+
                 .commit()
             try {
                 androidx.core.content.ContextCompat.startForegroundService(
@@ -91,6 +115,8 @@ class PlayTimeAccessibilityService : AccessibilityService() {
             return
         }
 
+        // No eligible session remains: revoke stale authorization before relaunching.
+        prefs.edit().putBoolean("play_session_authorized", false).commit()
         val lastAttempt = prefs.getLong("expiry_last_launch_ms", 0L)
         if (now - lastAttempt < 2000L) return
         prefs.edit().putLong("expiry_last_launch_ms", now).apply()
