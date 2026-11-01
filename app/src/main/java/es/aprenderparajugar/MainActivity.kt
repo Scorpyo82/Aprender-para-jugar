@@ -1359,7 +1359,11 @@ private fun AprenderApp() {
                                             checked = modality in transferExportStatistics,
                                             onCheckedChange = { checked -> transferExportStatistics = transferExportStatistics.toMutableSet().also { if (checked) it.add(modality) else it.remove(modality) } }
                                         )
-                                        Text("Incluir estadísticas de $label")
+                                        Text("Incluir estadísticas de aprendizaje")
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = false, onCheckedChange = null, enabled = false)
+                                        Text("Incluir estadísticas de uso (próximamente)", color = Color(0xFF98A2B3))
                                     }
                                 }
                             }
@@ -1696,13 +1700,24 @@ private fun AprenderApp() {
                                     Text(if (modalityInfo.includesLearningStatistics || modalityInfo.includesUsageStatistics) "El paquete incluye estadísticas." else "El paquete no incluye estadísticas.", fontSize = 12.sp, color = Color(0xFF667085))
                                 }
                             }
-                            if (info.modalities.any { it.includesLearningStatistics || it.includesUsageStatistics }) {
+                            if (info.modalities.any { it.includesLearningStatistics }) {
                                 item {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(checked = transferImportStatistics, onCheckedChange = { transferImportStatistics = it })
                                         Column {
-                                            Text("Importar también las estadísticas del paquete", fontWeight = FontWeight.SemiBold)
-                                            Text("Desactivado por defecto. Si lo dejas sin marcar, se importarán solo los ejercicios y se conservarán las estadísticas que ya tengas en el dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
+                                            Text("Importar estadísticas de aprendizaje", fontWeight = FontWeight.SemiBold)
+                                            Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de aprendizaje del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
+                                        }
+                                    }
+                                }
+                            }
+                            if (info.modalities.any { it.includesUsageStatistics }) {
+                                item {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = false, onCheckedChange = null, enabled = false)
+                                        Column {
+                                            Text("Importar estadísticas de uso", fontWeight = FontWeight.SemiBold, color = Color(0xFF98A2B3))
+                                            Text("Próximamente.", fontSize = 12.sp, color = Color(0xFF98A2B3))
                                         }
                                     }
                                 }
