@@ -588,19 +588,31 @@ private fun AprenderApp() {
         }
     }
     val firstLaunchNeedsSetup = remember { !preferences.getBoolean("first_launch_setup_seen", false) }
-    if (firstLaunchNeedsSetup) {
-        preferences.edit()
-            .putBoolean("first_launch_setup_seen", true)
-            .putBoolean("sound_enabled", false)
-            .apply()
+    val initialPinSetupPending = remember {
+        firstLaunchNeedsSetup && !preferences.getBoolean("parent_pin_configured", false)
     }
-    var screen by remember { mutableStateOf(if (firstLaunchNeedsSetup) "parent" else "home") }
+    if (firstLaunchNeedsSetup) {
+        preferences.edit().putBoolean("sound_enabled", false).apply()
+    }
+    var screen by remember {
+        mutableStateOf(
+            when {
+                initialPinSetupPending -> "pin-setup"
+                firstLaunchNeedsSetup -> "parent"
+                else -> "home"
+            }
+        )
+    }
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
     var soundEnabled by remember { mutableStateOf(if (firstLaunchNeedsSetup) false else preferences.getBoolean("sound_enabled", true)) }
     androidx.compose.runtime.LaunchedEffect(screen) {
-        if (screen == "home" && firstLaunchNeedsSetup && !preferences.getBoolean("first_home_sound_activation_done", false)) {
+        if (screen == "home" && firstLaunchNeedsSetup) {
             soundEnabled = true
-            preferences.edit().putBoolean("sound_enabled", true).putBoolean("first_home_sound_activation_done", true).apply()
+            preferences.edit()
+                .putBoolean("sound_enabled", true)
+                .putBoolean("first_home_sound_activation_done", true)
+                .putBoolean("first_launch_setup_seen", true)
+                .apply()
         }
     }
     var musicMessage by remember { mutableStateOf("") }
@@ -725,8 +737,17 @@ private fun AprenderApp() {
     var hardRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_hard_minutes", 7).coerceIn(0, 120)) }
     var wrongAnswerPenalty by remember { mutableStateOf(preferences.getString("wrong_answer_penalty", "half") ?: "half") }
     var penaltyMenuExpanded by remember { mutableStateOf(false) }
-    var pinStored by remember { mutableStateOf(preferences.getString("parent_pin", "1234") ?: "1234") }
+    var pinStored by remember {
+        mutableStateOf(
+            preferences.getString(
+                "parent_pin",
+                if (initialPinSetupPending) "" else "1234"
+            ) ?: ""
+        )
+    }
     var newPinDraft by remember { mutableStateOf("") }
+    var initialPinConfirmDraft by remember { mutableStateOf("") }
+    var initialPinError by remember { mutableStateOf("") }
     var categoryDraftName by remember { mutableStateOf("") }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var categoryNames by remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
@@ -889,7 +910,7 @@ private fun AprenderApp() {
                 }
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
-                "active-games", "music", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu" -> parentSection = "menu"
+                "active-games", "music", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
                 "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
                 "learning-stats", "usage-stats" -> parentSection = "statistics-menu"
                 "game-modes" -> parentSection = "menu"
@@ -913,6 +934,7 @@ private fun AprenderApp() {
             "sequence-difficulty" -> { screen = "sequences" }
             "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "sequence-result" -> { screen = "home" }
+            "pin-setup" -> Unit
             "parent-pin", "exit-pin" -> { screen = "home"; pinEntry = ""; pinError = false }
             "exercise" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
             "result" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
@@ -1118,7 +1140,63 @@ private fun AprenderApp() {
         }
     }
 
-    if (screen == "exit-pin") {
+    if (screen == "pin-setup") {
+        BackHandler(enabled = true) { }
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("🔐 Protege el control parental", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Antes de continuar, crea un PIN personal de 4 cifras. Lo necesitarás para acceder a la configuración parental.",
+                fontSize = 16.sp,
+                color = Color(0xFF667085)
+            )
+            Spacer(Modifier.height(18.dp))
+            OutlinedTextField(
+                value = newPinDraft,
+                onValueChange = { newPinDraft = it.filter(Char::isDigit).take(4); initialPinError = "" },
+                label = { Text("Nuevo PIN de 4 cifras") },
+                singleLine = true
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = initialPinConfirmDraft,
+                onValueChange = { initialPinConfirmDraft = it.filter(Char::isDigit).take(4); initialPinError = "" },
+                label = { Text("Confirmar PIN") },
+                singleLine = true
+            )
+            if (initialPinError.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(initialPinError, color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    when {
+                        newPinDraft.length != 4 -> initialPinError = "El PIN debe tener exactamente 4 cifras."
+                        initialPinConfirmDraft.length != 4 -> initialPinError = "Confirma el PIN de 4 cifras."
+                        newPinDraft != initialPinConfirmDraft -> initialPinError = "Los PIN no coinciden."
+                        else -> {
+                            pinStored = newPinDraft
+                            preferences.edit()
+                                .putString("parent_pin", pinStored)
+                                .putBoolean("parent_pin_configured", true)
+                                .commit()
+                            newPinDraft = ""
+                            initialPinConfirmDraft = ""
+                            initialPinError = ""
+                            parentSection = "device-setup"
+                            screen = "parent"
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Guardar PIN y continuar") }
+        }
+    } else if (screen == "exit-pin") {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text("🔒 Salir de la aplicación", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
             Spacer(Modifier.height(8.dp))
