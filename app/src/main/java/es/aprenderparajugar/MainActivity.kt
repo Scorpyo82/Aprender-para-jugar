@@ -114,21 +114,29 @@ class MainActivity : ComponentActivity() {
         val sessionAuthorized = prefs.getBoolean("play_session_authorized", false)
         val minimumSeconds = prefs.getInt("minimum_play_minutes", 5).coerceIn(0, 60) * 60
 
-        // The minimum is a restriction on leaving the app, not on playing its activities.
-        // Never start the external-play countdown when the child has not met that minimum.
-        if (!sessionAuthorized && remaining < minimumSeconds) return
-
-        if (deadline > now) {
-            prefs.edit().putInt("balance_seconds", remaining).commit()
-        } else if (remaining > 0) {
-            // Save synchronously so Home/Back cannot race a pending SharedPreferences write.
+        // The minimum is checked only when creating a new session. Once authorized,
+        // returning to the app does not revoke permission to leave again with the remainder.
+        if (remaining <= 0) {
             prefs.edit()
-                .putLong("play_deadline_ms", now + remaining.toLong() * 1000L)
-                .putLong("expiry_last_launch_ms", 0L)
+                .putInt("balance_seconds", 0)
+                .putLong("play_deadline_ms", 0L)
+                .putBoolean("play_session_authorized", false)
+                .putBoolean("play_paused_for_screen_lock", false)
                 .commit()
-        } else {
             return
         }
+        if (!sessionAuthorized && remaining < minimumSeconds) return
+
+        val nextDeadline = if (deadline > now) deadline else now + remaining.toLong() * 1000L
+        // Persist authorization and deadline together so lifecycle and Accessibility
+        // cannot observe a running session without its authorization flag.
+        prefs.edit()
+            .putInt("balance_seconds", remaining)
+            .putLong("play_deadline_ms", nextDeadline)
+            .putLong("expiry_last_launch_ms", 0L)
+            .putBoolean("play_session_authorized", true)
+            .putBoolean("play_paused_for_screen_lock", false)
+            .commit()
 
         try {
             androidx.core.content.ContextCompat.startForegroundService(
@@ -1120,16 +1128,21 @@ private fun AprenderApp() {
             // the app proves the screen is unlocked, so restart the saved countdown.
             if (preferences.getBoolean("play_paused_for_screen_lock", false)) {
                 val remaining = preferences.getInt("balance_seconds", 0).coerceAtLeast(0)
+                val resumeDeadline = if (remaining > 0) System.currentTimeMillis() + remaining.toLong() * 1000L else 0L
                 preferences.edit()
                     .putBoolean("play_paused_for_screen_lock", false)
-                    .putLong("play_deadline_ms", if (remaining > 0) System.currentTimeMillis() + remaining.toLong() * 1000L else 0L)
+                    .putLong("play_deadline_ms", resumeDeadline)
+                    .putBoolean("play_session_authorized", remaining > 0)
+                    .putInt("balance_seconds", remaining)
                     .commit()
+                balanceSeconds = remaining
                 if (remaining > 0) {
                     androidx.core.content.ContextCompat.startForegroundService(
                         context,
                         Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
                     )
-                    balanceSeconds = remaining
+                } else {
+                    screen = "home"
                 }
             }
             val now = System.currentTimeMillis()
@@ -3466,12 +3479,13 @@ private fun AprenderApp() {
             Button(onClick = {
                 val deadline = preferences.getLong("play_deadline_ms", 0L)
                 val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else balanceSeconds.coerceAtLeast(0)
-                // Explicitly choosing this button pauses play time and banks only the
-                // actual remaining seconds. Leaving the app with Home does not pause it.
+                // Returning to learning pauses the countdown but keeps this session
+                // authorized while any earned time remains. A later exit resumes it.
                 preferences.edit()
                     .putLong("play_deadline_ms", 0L)
                     .putInt("balance_seconds", remaining)
-                    .putBoolean("play_session_authorized", false)
+                    .putBoolean("play_session_authorized", remaining > 0)
+                    .putBoolean("play_paused_for_screen_lock", false)
                     .commit()
                 context.stopService(Intent(context, PlayTimeService::class.java))
                 balanceSeconds = remaining
