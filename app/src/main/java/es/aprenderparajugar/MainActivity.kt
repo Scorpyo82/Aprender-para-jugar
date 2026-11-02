@@ -2002,7 +2002,6 @@ private fun AprenderApp() {
                                 }
                             }
                         }
-                    }
                                             item {
                             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2012,6 +2011,7 @@ private fun AprenderApp() {
                                 }
                             }
                         }
+                    }
 "game-modes" -> {
                         item { Text("Actividades disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
