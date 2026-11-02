@@ -30,10 +30,21 @@ Las bibliotecas se almacenan de forma privada en el dispositivo, separadas por m
 
 Conserva una copia externa de tus bibliotecas antes de realizar cambios importantes o eliminar contenido.
 
+## Estado del repositorio y punto de partida
+
+La rama **main** se ha actualizado para contener exactamente el mismo código que **refactor/arquitectura-almacenamiento-contenidos**. Ambas ramas apuntan al mismo commit:
+
+- Commit de referencia: `bf63cc791e0311d55d4def3191350a8179963c64`
+- Comparación entre ramas: idénticas, sin diferencias.
+- La integración se realizó conservando el historial de cambios, sin modificar ni eliminar la rama `refactor`.
+- La compilación de GitHub Actions correspondiente a este commit finalizó correctamente: [Build Android APK — ejecución 352](https://github.com/Scorpyo82/Aprender-para-jugar/actions/runs/41293585125).
+
+Se ha acordado identificar este punto de partida mediante la etiqueta **`v0.4.1-beta-estable`**. La etiqueta está pendiente de creación en GitHub; por tanto, todavía no debe considerarse publicada.
+
 ## Versión
 
-- Versión de la aplicación: **0.4.0-beta**
-- Código de versión Android: **39**
+- Versión de la aplicación: **0.4.1-beta**
+- Código de versión Android: **40**
 - Paquete: `es.aprenderparajugar`
 - Tecnología: Kotlin y Jetpack Compose.
 
