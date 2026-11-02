@@ -608,7 +608,7 @@ private fun AprenderApp() {
             }
         }
     }
-    val firstLaunchNeedsSetup = remember { !preferences.getBoolean("first_launch_setup_seen", false) }
+    var firstLaunchNeedsSetup by remember { mutableStateOf(!preferences.getBoolean("first_launch_setup_seen", false)) }
     val initialPinSetupPending = remember {
         firstLaunchNeedsSetup && !preferences.getBoolean("parent_pin_configured", false)
     }
@@ -634,6 +634,7 @@ private fun AprenderApp() {
                 .putBoolean("first_home_sound_activation_done", true)
                 .putBoolean("first_launch_setup_seen", true)
                 .apply()
+            firstLaunchNeedsSetup = false
         }
     }
     var musicMessage by remember { mutableStateOf("") }
