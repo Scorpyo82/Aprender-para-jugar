@@ -4022,23 +4022,6 @@ private fun AprenderApp() {
             }
             item {
                 Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveStories) { if (gameActiveStories) screen = "stories" },
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE5D2)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B28D))
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(modeCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Image(painter = painterResource(id = R.drawable.home_header_fox), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.width(modeImageSize).height(modeImageSize), contentScale = ContentScale.Fit)
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Cuentos", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF87451F))
-                            Text("Leer, escuchar y descubrir historias", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
-                            Text(if (gameActiveStories) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveStories) Color(0xFF87451F) else Color(0xFFB3261E))
-                        }
-                    }
-                }
-            }
-            item {
-                Card(
                     Modifier.fillMaxWidth().clickable(enabled = gameActiveWords) {
                         wordSelectedDifficulty = "Fácil"
                         wordStartMessage = ""
@@ -4058,6 +4041,23 @@ private fun AprenderApp() {
                             Text("Palabras", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
                             Text("Ordenar letras y completar palabras", fontSize = modeDescriptionSize, color = Color(0xFF42647D))
                             Text(if (gameActiveWords) "¡JUGAR!" else "🔒 BLOQUEADO", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveWords) Color(0xFF285F94) else Color(0xFFB3261E))
+                        }
+                    }
+                }
+            }
+            item {
+                Card(
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveStories) { if (gameActiveStories) screen = "stories" },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE5D2)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B28D))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(modeCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Image(painter = painterResource(id = R.drawable.activity_stories), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.width(modeImageSize).height(modeImageSize), contentScale = ContentScale.Fit)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Cuentos", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF87451F))
+                            Text("Leer, escuchar y descubrir historias", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
+                            Text(if (gameActiveStories) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveStories) Color(0xFF87451F) else Color(0xFFB3261E))
                         }
                     }
                 }
@@ -4123,27 +4123,16 @@ private fun AprenderApp() {
 
 @Composable
 private fun ModeCardImage(index: Int, description: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val image = remember(context, index) {
-        // The sprite is stored as one complete Base64 resource. Do not append the
-        // old temporary chunks: doing so corrupts the JPEG and crashes on the home screen.
-        val bitmap = runCatching {
-            val encoded = context.resources.openRawResource(R.raw.cards_sprite_b64)
-                .bufferedReader().use { it.readText().filterNot(Char::isWhitespace) }
-            val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        }.getOrNull()
-        val sheet = bitmap ?: Bitmap.createBitmap(1, 3, Bitmap.Config.ARGB_8888)
-        val tileHeight = (sheet.height / 3).coerceAtLeast(1)
-        val tile = Bitmap.createBitmap(
-            sheet,
-            0,
-            (index.coerceIn(0, 2) * tileHeight).coerceAtMost(sheet.height - tileHeight),
-            sheet.width,
-            tileHeight
-        )
-        tile.asImageBitmap()
+    val imageResource = when (index) {
+        0 -> R.drawable.activity_cards
+        1 -> R.drawable.activity_sequences
+        else -> R.drawable.activity_words
     }
-    Image(bitmap = image, contentDescription = description, modifier = modifier, contentScale = ContentScale.Fit)
+    Image(
+        painter = painterResource(id = imageResource),
+        contentDescription = description,
+        modifier = modifier,
+        contentScale = ContentScale.Fit
+    )
 }
 
