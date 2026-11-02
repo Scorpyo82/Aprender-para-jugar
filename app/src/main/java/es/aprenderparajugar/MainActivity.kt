@@ -3845,7 +3845,7 @@ private fun AprenderApp() {
                 OutlinedButton(onClick = { screen = "home" }) { Text("← Volver al inicio") }
                 Text("Cuentos", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                 Text("Muy pronto podrás explorar historias ilustradas con nuestro zorro como protagonista.", fontSize = 16.sp, color = Color(0xFF667085))
-                Image(painter = painterResource(id = R.drawable.fox_reading), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp), contentScale = ContentScale.Fit)
+                Image(painter = painterResource(id = R.drawable.home_header_fox), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp), contentScale = ContentScale.Fit)
                 Text("Estamos preparando esta actividad. Todavía no hay cuentos disponibles.", fontSize = 14.sp, color = Color(0xFF667085))
             }
         }
@@ -4028,7 +4028,7 @@ private fun AprenderApp() {
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B28D))
                 ) {
                     Row(Modifier.fillMaxWidth().padding(modeCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Image(painter = painterResource(id = R.drawable.fox_reading), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.width(modeImageSize).height(modeImageSize), contentScale = ContentScale.Fit)
+                        Image(painter = painterResource(id = R.drawable.home_header_fox), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.width(modeImageSize).height(modeImageSize), contentScale = ContentScale.Fit)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Cuentos", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF87451F))
                             Text("Leer, escuchar y descubrir historias", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
