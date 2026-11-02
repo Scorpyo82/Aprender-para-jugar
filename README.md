@@ -32,20 +32,20 @@ Conserva una copia externa de tus bibliotecas antes de realizar cambios importan
 
 ## Estado del repositorio y punto de partida
 
-La rama **main** se ha actualizado para contener exactamente el mismo código que **refactor/arquitectura-almacenamiento-contenidos**. Ambas ramas apuntan al mismo commit:
+La rama **main** se actualizó para incorporar íntegramente el estado de **refactor/arquitectura-almacenamiento-contenidos**, mediante una actualización que conservó el historial de cambios y sin modificar ni eliminar la rama refactor.
 
-- Commit de referencia: `bf63cc791e0311d55d4def3191350a8179963c64`
-- Comparación entre ramas: idénticas, sin diferencias.
-- La integración se realizó conservando el historial de cambios, sin modificar ni eliminar la rama `refactor`.
-- La compilación de GitHub Actions correspondiente a este commit finalizó correctamente: [Build Android APK — ejecución 352](https://github.com/Scorpyo82/Aprender-para-jugar/actions/runs/41293585125).
+- Commit de integración del código: **bf63cc791e0311d55d4def3191350a8179963c64**.
+- En el momento de la integración, ambas ramas quedaron idénticas.
+- La compilación de GitHub Actions correspondiente a ese commit finalizó correctamente: [Build Android APK — ejecución 352](https://github.com/Scorpyo82/Aprender-para-jugar/actions/runs/41293585125).
+- Posteriormente, este README se ha actualizado en main para documentar el estado del proyecto. Por ello, main contiene ahora un commit adicional exclusivamente documental; la rama refactor permanece intacta.
 
-Se ha acordado identificar este punto de partida mediante la etiqueta **`v0.4.1-beta-estable`**. La etiqueta está pendiente de creación en GitHub; por tanto, todavía no debe considerarse publicada.
+Se ha acordado identificar este punto de partida mediante la etiqueta **v0.4.1-beta-estable**. La etiqueta está pendiente de creación en GitHub; por tanto, todavía no debe considerarse publicada. Cuando se cree, deberá señalar el commit de main que contiene esta documentación actualizada.
 
 ## Versión
 
 - Versión de la aplicación: **0.4.1-beta**
 - Código de versión Android: **40**
-- Paquete: `es.aprenderparajugar`
+- Paquete: es.aprenderparajugar
 - Tecnología: Kotlin y Jetpack Compose.
 
 ## Compilar APK
