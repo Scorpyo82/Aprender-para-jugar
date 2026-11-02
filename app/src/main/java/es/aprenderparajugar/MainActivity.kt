@@ -481,6 +481,7 @@ private fun AprenderApp() {
     var gameActiveCards by remember { mutableStateOf(preferences.getBoolean("game_active_cards", true)) }
     var gameActiveSequences by remember { mutableStateOf(preferences.getBoolean("game_active_sequences", true)) }
     var gameActiveWords by remember { mutableStateOf(preferences.getBoolean("game_active_words", true)) }
+    var gameActiveStories by remember { mutableStateOf(preferences.getBoolean("game_active_stories", true)) }
     var wordExerciseCategories by remember {
         mutableStateOf((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct())
     }
@@ -929,7 +930,7 @@ private fun AprenderApp() {
                     else parentSection = "words-settings"
                 }
                 "words", "categories" -> parentSection = "cards-settings"
-                "cards-settings", "sequences-settings", "words-settings" -> parentSection = "game-modes"
+                "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> parentSection = "game-modes"
                 "active-games", "music", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
                 "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
                 "learning-stats", "usage-stats" -> parentSection = "statistics-menu"
@@ -944,6 +945,7 @@ private fun AprenderApp() {
                 else -> { screen = "home"; parentSection = "menu" }
             }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
+            "stories" -> { screen = "home" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
             "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
@@ -1294,7 +1296,7 @@ private fun AprenderApp() {
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar actividades"; "active-games" -> "Actividades activas"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "typography" -> "Tipografía de los ejercicios"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "basic-library" -> "Descargar biblioteca básica"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "statistics-menu" -> "Estadísticas"; "learning-stats" -> "Estadísticas de aprendizaje"; "usage-stats" -> "Estadísticas de uso"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
+                Text("Control parental  ›  ${if (parentSection == "menu") "Menú principal" else when (parentSection) { "game-modes" -> "Configurar actividades"; "active-games" -> "Actividades activas"; "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"; "stories-settings" -> "Cuentos"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "typography" -> "Tipografía de los ejercicios"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "basic-library" -> "Descargar biblioteca básica"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "statistics-menu" -> "Estadísticas"; "learning-stats" -> "Estadísticas de aprendizaje"; "usage-stats" -> "Estadísticas de uso"; else -> "Configuración" }}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF667085))
                 Text(if (parentSection == "menu") "Control parental" else when (parentSection) { "typography" -> "Tipografía de los ejercicios"; "game-modes" -> "Configurar actividades"; "active-games" -> "Actividades activas"; "cards-settings" -> "Tarjetas"; "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"; "music" -> "Música de fondo"; "security" -> "Cambiar PIN"; "device-setup" -> "Configuración del dispositivo"; "about" -> "Acerca de esta app"; "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"; "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"; "statistics-menu" -> "Estadísticas"; "learning-stats" -> "Estadísticas de aprendizaje"; "usage-stats" -> "Estadísticas de uso"; else -> "Configuración" }, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                 Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "music" -> "Configura la música y el sonido"; "typography" -> "Elige la letra que se utilizará en los ejercicios"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "basic-library" -> "Descarga e instalación del contenido inicial"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; "library-delete" -> "Elimina de forma permanente una o varias bibliotecas"; "statistics-menu" -> "Consulta el aprendizaje y el uso de las modalidades"; "learning-stats" -> "Observaciones orientativas basadas en los intentos registrados"; "usage-stats" -> "Partidas completadas por modalidad, tipo y dificultad"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
@@ -1402,7 +1404,7 @@ private fun AprenderApp() {
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "typography" -> "menu"; "library-export", "library-import", "library-delete" -> "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "typography" -> "menu"; "library-export", "library-import", "library-delete" -> "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "statistics-menu" -> {
                         item { Text("Estadísticas disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -2001,7 +2003,16 @@ private fun AprenderApp() {
                             }
                         }
                     }
-                    "game-modes" -> {
+                                            item {
+                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Checkbox(checked = gameActiveStories, onCheckedChange = { gameActiveStories = it; preferences.edit().putBoolean("game_active_stories", it).apply() })
+                                    Column(Modifier.weight(1f)) { Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Historias ilustradas e interactivas", fontSize = 14.sp, color = Color(0xFF667085)) }
+                                    Text(if (gameActiveStories) "Activo" else "🔒", color = if (gameActiveStories) Color(0xFF24733B) else Color(0xFFB3261E))
+                                }
+                            }
+                        }
+"game-modes" -> {
                         item { Text("Actividades disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
                             Card(Modifier.fillMaxWidth().clickable { parentSection = "cards-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -2027,6 +2038,10 @@ private fun AprenderApp() {
                                 }
                             }
                         }
+                    }
+                    "stories-settings" -> {
+                        item { Text("Configurar Cuentos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("La creación de cuentos, las bibliotecas y las opciones de lectura se desarrollarán en las siguientes fases.", fontSize = 14.sp, color = Color(0xFF667085)) }
                     }
                     "sequences-settings" -> {
                         item { Text("Configurar Secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -3824,6 +3839,16 @@ private fun AprenderApp() {
                 }
             }
         }
+    } else if (screen == "stories") {
+        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                OutlinedButton(onClick = { screen = "home" }) { Text("← Volver al inicio") }
+                Text("Cuentos", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Muy pronto podrás explorar historias ilustradas con nuestro zorro como protagonista.", fontSize = 16.sp, color = Color(0xFF667085))
+                Image(painter = painterResource(id = R.drawable.fox_reading), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp), contentScale = ContentScale.Fit)
+                Text("Estamos preparando esta actividad. Todavía no hay cuentos disponibles.", fontSize = 14.sp, color = Color(0xFF667085))
+            }
+        }
     } else if (screen == "cards-options") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -3991,6 +4016,23 @@ private fun AprenderApp() {
                             Text("Secuencias", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
                             Text("Ordenar y razonar", fontSize = modeDescriptionSize, color = Color(0xFF476C51))
                             Text(if (gameActiveSequences) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveSequences) Color(0xFF39713A) else Color(0xFFB3261E))
+                        }
+                    }
+                }
+            }
+            item {
+                Card(
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveStories) { if (gameActiveStories) screen = "stories" },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE5D2)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B28D))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(modeCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Image(painter = painterResource(id = R.drawable.fox_reading), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.width(modeImageSize).height(modeImageSize), contentScale = ContentScale.Fit)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Cuentos", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF87451F))
+                            Text("Leer, escuchar y descubrir historias", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
+                            Text(if (gameActiveStories) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveStories) Color(0xFF87451F) else Color(0xFFB3261E))
                         }
                     }
                 }
