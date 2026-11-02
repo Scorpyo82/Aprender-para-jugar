@@ -2039,6 +2039,14 @@ private fun AprenderApp() {
                                 }
                             }
                         }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "stories-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE3))) {
+                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("📖", fontSize = 30.sp)
+                                    Column { Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar y crear cuentos ilustrados", color = Color(0xFF667085)) }
+                                }
+                            }
+                        }
                     }
                     "stories-settings" -> {
                         item { Text("Configurar Cuentos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
