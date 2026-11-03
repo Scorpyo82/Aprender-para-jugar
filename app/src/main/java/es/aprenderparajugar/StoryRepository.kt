@@ -202,9 +202,11 @@ object StoryRepository {
         val collectionDirectory = ensureDirectory(File(root, safeCollection)).canonicalFile
         val target = File(collectionDirectory, safeFolder).canonicalFile
         require(target.toPath().startsWith(root.toPath())) { "La ubicación del cuento no es válida." }
+        ensureDirectory(target)
         val encoded = StoryJsonCodec.encode(metadata).toString(2)
         writeAtomically(File(target, STORY_JSON), encoded)
-        ensureDirectory(File(target, SCENES_DIRECTORY))
+        val scenesRoot = ensureDirectory(File(target, SCENES_DIRECTORY))
+        metadata.scenes.forEach { scene -> ensureDirectory(File(scenesRoot, safeSegment(scene, "La escena"))) }
         return read(target)
     }
 
