@@ -2344,7 +2344,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             Column {
                                 Text("Colección", fontWeight = FontWeight.SemiBold)
                                 Box {
-                                    OutlinedButton(onClick = { storyObjectCollectionMenuExpanded = true }, enabled = storyObjectCollections.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                                    OutlinedButton(onClick = { storyObjectCollectionMenuExpanded = true }, enabled = storyObjectCollections.isNotEmpty() && storyObjectEditingFolder == null, modifier = Modifier.fillMaxWidth()) {
                                         Text(storyObjectSelectedCollection.ifBlank { "Seleccionar colección" })
                                     }
                                     DropdownMenu(expanded = storyObjectCollectionMenuExpanded && storyObjectCollections.isNotEmpty(), onDismissRequest = { storyObjectCollectionMenuExpanded = false }) {
@@ -2462,7 +2462,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                 Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Column(Modifier.padding(12.dp)) {
                                         Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                        val collectionObjects = storedStoryObjects.filter { it.collection == name }
+                                        val collectionObjects = storedStoryObjects.filter { it.collection == ObjectRepository.collectionFolderName(name) }
                                         Text("${collectionObjects.size} objetos", color = Color(0xFF667085))
                                         collectionObjects.forEach { stored ->
                                             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2493,7 +2493,10 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                                 preferences.edit().putString("story_object_collections", storyObjectCollections.joinToString("|")).apply()
                                                 storyObjectCollectionToDelete = ""
                                                 storyObjectCollectionMessage = "Colección eliminada."
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección") }
+                                            }, enabled = collectionObjects.isEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección") }
+                                            if (collectionObjects.isNotEmpty()) {
+                                                Text("No se puede eliminar: primero hay que reasignar o retirar sus objetos.", fontSize = 13.sp, color = Color(0xFFB3261E))
+                                            }
                                             OutlinedButton(onClick = { storyObjectCollectionToDelete = ""; storyObjectCollectionMessage = "Operación cancelada." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                                         } else {
                                             OutlinedButton(onClick = { storyObjectCollectionToDelete = name; storyObjectCollectionMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar") }
