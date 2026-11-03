@@ -525,6 +525,10 @@ private fun AprenderApp() {
     var storyCollectionDraft by remember { mutableStateOf("") }
     var storyCollectionMessage by remember { mutableStateOf("") }
     var storyEditorTitle by remember { mutableStateOf("") }
+    var editingStoryFolder by remember { mutableStateOf<String?>(null) }
+    var editingStoryCollectionFolder by remember { mutableStateOf<String?>(null) }
+    var storedStories by remember { mutableStateOf(StoryRepository.list(context)) }
+    var storyEditorMessage by remember { mutableStateOf("") }
     var storyEditorCollection by remember { mutableStateOf("") }
     var storyEditorSummary by remember { mutableStateOf("") }
     var storyEditorScenes by remember { mutableStateOf(listOf("Escena 1")) }
@@ -535,6 +539,51 @@ private fun AprenderApp() {
     var storyEditorCollectionMenuExpanded by remember { mutableStateOf(false) }
     var storyCollectionToDelete by remember { mutableStateOf("") }
     var disabledStoryCollections by remember { mutableStateOf(preferences.getStringSet("disabled_story_collections", emptySet())?.toSet() ?: emptySet()) }
+
+    fun persistStoryDraft(): StoredStory? {
+        return runCatching {
+            require(storyEditorTitle.isNotBlank()) { "Escribe el título del cuento." }
+            require(storyEditorCollection.isNotBlank()) { "Selecciona una colección." }
+            val collectionFolder = StoryRepository.collectionFolderName(storyEditorCollection)
+            val sceneFolders = storyEditorScenes.map { StoryRepository.sceneFolderName(it) }
+            require(sceneFolders.distinct().size == sceneFolders.size) { "Hay nombres de escena duplicados." }
+            val storyFolder = editingStoryFolder ?: StoryRepository.storyFolderName(storyEditorTitle)
+            val connections = sceneFolders.mapIndexed { index, scene ->
+                scene to listOfNotNull(sceneFolders.getOrNull(index + 1))
+            }.toMap()
+            val metadata = StoryMetadata(
+                title = storyEditorTitle.trim(),
+                collection = collectionFolder,
+                startScene = sceneFolders.first(),
+                scenes = sceneFolders,
+                connections = connections
+            )
+            var stored = StoryRepository.save(context, collectionFolder, storyFolder, metadata)
+            sceneFolders.forEachIndexed { index, sceneFolder ->
+                val existing = runCatching { StoryRepository.readScene(stored, sceneFolder).metadata }.getOrNull()
+                val isSelected = storyEditorSelectedScene == storyEditorScenes[index]
+                val sceneMetadata = if (isSelected) {
+                    StorySceneMetadata(
+                        title = storyEditorSelectedScene,
+                        illustrationSummary = storyEditorSummary,
+                        text = storyEditorSceneText,
+                        keepPreviousAmbient = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
+                        awardTiming = if (storyEditorObjectTiming == "Al entrar") "onEnter" else "onExit"
+                    )
+                } else existing ?: StorySceneMetadata(title = storyEditorScenes[index])
+                StoryRepository.saveScene(stored, sceneFolder, sceneMetadata)
+            }
+            editingStoryFolder = storyFolder
+            editingStoryCollectionFolder = collectionFolder
+            stored = StoryRepository.read(File(File(StoryRepository.rootDirectory(context), collectionFolder), storyFolder))
+            storedStories = StoryRepository.list(context)
+            storyEditorMessage = "Cuento guardado."
+            stored
+        }.getOrElse {
+            storyEditorMessage = it.message ?: "No se pudo guardar el cuento."
+            null
+        }
+    }
 var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
@@ -2117,14 +2166,35 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                     }
                     "stories-library" -> {
                         item { Text("Biblioteca de cuentos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Aquí se podrán crear, editar y organizar los cuentos ilustrados.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Cuentos guardados en este dispositivo.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        items(storedStories) { stored ->
+                            Card(Modifier.fillMaxWidth().clickable {
+                                storyEditorTitle = stored.metadata.title
+                                storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
+                                storyEditorScenes = stored.metadata.scenes.map { it.replace('_', ' ') }
+                                editingStoryFolder = stored.folderName
+                                editingStoryCollectionFolder = stored.collection
+                                storyEditorSelectedScene = ""
+                                storyEditorMessage = ""
+                                parentSection = "stories-editor"
+                            }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
+                                Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                                    Text(stored.metadata.title, fontWeight = FontWeight.Bold)
+                                    Text(storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
+                                }
+                            }
+                        }
                         item {
                             Button(onClick = {
                                 storyEditorTitle = ""
                                 storyEditorCollection = ""
                                 storyEditorSummary = ""
+                                storyEditorSceneText = ""
                                 storyEditorScenes = listOf("Escena 1")
                                 storyEditorSelectedScene = ""
+                                editingStoryFolder = null
+                                editingStoryCollectionFolder = null
+                                storyEditorMessage = ""
                                 parentSection = "stories-editor"
                             }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear nuevo cuento") }
                         }
@@ -2158,8 +2228,15 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         items(storyEditorScenes.size) { index ->
                             Card(Modifier.fillMaxWidth().clickable {
                                 storyEditorSelectedScene = storyEditorScenes[index]
-                                storyEditorSummary = ""
-                                storyEditorSceneText = ""
+                                val folder = runCatching { StoryRepository.sceneFolderName(storyEditorScenes[index]) }.getOrNull()
+                                val stored = storedStories.firstOrNull { it.folderName == editingStoryFolder && it.collection == editingStoryCollectionFolder }
+                                val savedScene = if (folder != null && stored != null) runCatching { StoryRepository.readScene(stored, folder).metadata }.getOrNull() else null
+                                storyEditorSummary = savedScene?.illustrationSummary.orEmpty()
+                                storyEditorSceneText = savedScene?.text.orEmpty()
+                                storyEditorObjectTiming = if (savedScene?.awardTiming == "onEnter") "Al entrar" else "Al salir"
+                                storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
+                                    put(storyEditorScenes[index], savedScene?.keepPreviousAmbient ?: false)
+                                }
                                 parentSection = "stories-scene-editor"
                             }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -2182,7 +2259,11 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             Text("La organización de las ramas se habilitará al implementar la estructura del cuento.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                         item {
-                            OutlinedButton(onClick = { parentSection = "stories-library" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                            Button(onClick = {
+                                if (persistStoryDraft() != null) parentSection = "stories-library"
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar cuento") }
+                            if (storyEditorMessage.isNotBlank()) item { Text(storyEditorMessage, color = if (storyEditorMessage == "Cuento guardado.") Color(0xFF24733B) else Color(0xFFB3261E)) }
+                            item { OutlinedButton(onClick = { parentSection = "stories-library" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
                         }
                     }
                     "stories-scene-editor" -> {
@@ -2222,7 +2303,9 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             }
                         }
                         item {
-                            Button(onClick = { parentSection = "stories-editor" }, modifier = Modifier.fillMaxWidth()) { Text("Guardar escena y volver al mapa") }
+                            Button(onClick = {
+                                if (persistStoryDraft() != null) parentSection = "stories-editor"
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar escena y volver al mapa") }
                         }
                     }
                     "stories-collections" -> {
