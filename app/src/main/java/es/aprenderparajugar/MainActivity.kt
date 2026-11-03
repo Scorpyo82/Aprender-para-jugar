@@ -2414,8 +2414,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         item {
                             OutlinedButton(onClick = {
-                                val nextNumber = (storyEditorScenes.size + 1)
-                                val newScene = "Escena $nextNumber"
+                                var nextNumber = storyEditorScenes.size + 1
+                                var newScene = "Escena $nextNumber"
+                                val usedSceneFolders = storyEditorScenes.mapNotNull { runCatching { StoryRepository.sceneFolderName(it) }.getOrNull() }.toSet()
+                                while (newScene in storyEditorScenes || runCatching { StoryRepository.sceneFolderName(newScene) }.getOrNull()?.let { it in usedSceneFolders } == true) {
+                                    nextNumber++
+                                    newScene = "Escena $nextNumber"
+                                }
                                 val previous = storyEditorScenes.lastOrNull()
                                 storyEditorScenes = storyEditorScenes + newScene
                                 storyEditorConnections = storyEditorConnections.toMutableMap().apply {
@@ -2434,22 +2439,18 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     } else if (storyEditorConnections[origin].orEmpty().size > 0) {
                                         storyEditorMessage = "Esta escena ya tiene salidas. Edita primero sus conexiones para crear otra bifurcación."
                                     } else {
-                                        fun nextParallelName(suffix: String): String {
-                                            var number = storyEditorScenes.size + 1
-                                            var candidate = "$suffix $number"
-                                            while (candidate in storyEditorScenes || runCatching { StoryRepository.sceneFolderName(candidate) }.getOrNull() in storyEditorScenes.mapNotNull { runCatching { StoryRepository.sceneFolderName(it) }.getOrNull() }) {
+                                        val usedSceneFolders = storyEditorScenes.mapNotNull { runCatching { StoryRepository.sceneFolderName(it) }.getOrNull() }.toSet()
+                                        fun nextParallelName(prefix: String): String {
+                                            var number = 1
+                                            var candidate = "$prefix $number"
+                                            while (candidate in storyEditorScenes || runCatching { StoryRepository.sceneFolderName(candidate) }.getOrNull()?.let { it in usedSceneFolders } == true) {
                                                 number++
-                                                candidate = "$suffix $number"
+                                                candidate = "$prefix $number"
                                             }
                                             return candidate
                                         }
                                         val left = nextParallelName("Rama A")
-                                        var number = storyEditorScenes.size + 2
-                                        var right = "Rama B $number"
-                                        while (right in storyEditorScenes || runCatching { StoryRepository.sceneFolderName(right) }.getOrNull() in storyEditorScenes.mapNotNull { runCatching { StoryRepository.sceneFolderName(it) }.getOrNull() }) {
-                                            number++
-                                            right = "Rama B $number"
-                                        }
+                                        val right = nextParallelName("Rama B")
                                         storyEditorScenes = storyEditorScenes + listOf(left, right)
                                         storyEditorConnections = storyEditorConnections.toMutableMap().apply {
                                             put(origin, listOf(left, right))
