@@ -69,6 +69,9 @@ object ObjectRepository {
     private const val ROOT_DIRECTORY = "objetos"
     private const val JSON_FILE = "objeto.json"
 
+    fun collectionFolderName(value: String): String =
+        safePathSegment(value, "La colección")
+
     fun rootDirectory(context: Context): File =
         ensureDirectory(File(context.filesDir, ROOT_DIRECTORY))
 
