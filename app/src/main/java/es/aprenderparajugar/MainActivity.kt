@@ -2480,7 +2480,12 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             }, modifier = Modifier.fillMaxWidth()) { Text("Añadir colección") }
                         }
                         if (storyObjectCollectionMessage.isNotBlank()) {
-                            item { Text(storyObjectCollectionMessage, color = Color(0xFF24733B)) }
+                            item {
+                                Text(
+                                    storyObjectCollectionMessage,
+                                    color = if (storyObjectCollectionMessage.contains("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)
+                                )
+                            }
                         }
                         if (storyObjectCollections.isEmpty()) {
                             item { Text("Todavía no hay colecciones.", color = Color(0xFF667085)) }
@@ -2521,6 +2526,11 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                                                     InventoryRepository.remove(context, stored.folderName)
                                                                 } else {
                                                                     InventoryRepository.add(context, stored.folderName)
+                                                                }
+                                                                storyObjectCollectionMessage = if (isInInventory) {
+                                                                    "${stored.metadata.name} retirado del inventario."
+                                                                } else {
+                                                                    "${stored.metadata.name} añadido al inventario."
                                                                 }
                                                             } catch (error: Exception) {
                                                                 storyObjectCollectionMessage = error.message ?: "No se pudo actualizar el inventario."
