@@ -470,6 +470,19 @@ private fun currentDayKey(): String {
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
 }
 
+private fun nextUniqueStorySceneName(prefix: String, existingNames: List<String>): String {
+    val usedFolders = existingNames.mapNotNull { name ->
+        runCatching { StoryRepository.sceneFolderName(name) }.getOrNull()
+    }.toSet()
+    var number = 1
+    var candidate = "$prefix $number"
+    while (candidate in existingNames || runCatching { StoryRepository.sceneFolderName(candidate) }.getOrNull() in usedFolders) {
+        number++
+        candidate = "$prefix $number"
+    }
+    return candidate
+}
+
 @Composable
 private fun StoryImagePreview(file: File?, label: String) {
     val bitmap = remember(file?.absolutePath, file?.lastModified()) {
@@ -2439,18 +2452,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     } else if (storyEditorConnections[origin].orEmpty().size > 0) {
                                         storyEditorMessage = "Esta escena ya tiene salidas. Edita primero sus conexiones para crear otra bifurcación."
                                     } else {
-                                        val usedSceneFolders = storyEditorScenes.mapNotNull { runCatching { StoryRepository.sceneFolderName(it) }.getOrNull() }.toSet()
-                                        fun nextParallelName(prefix: String): String {
-                                            var number = 1
-                                            var candidate = "$prefix $number"
-                                            while (candidate in storyEditorScenes || runCatching { StoryRepository.sceneFolderName(candidate) }.getOrNull()?.let { it in usedSceneFolders } == true) {
-                                                number++
-                                                candidate = "$prefix $number"
-                                            }
-                                            return candidate
-                                        }
-                                        val left = nextParallelName("Rama A")
-                                        val right = nextParallelName("Rama B")
+                                        val left = nextUniqueStorySceneName("Rama A", storyEditorScenes)
+                                        val right = nextUniqueStorySceneName("Rama B", storyEditorScenes + left)
                                         storyEditorScenes = storyEditorScenes + listOf(left, right)
                                         storyEditorConnections = storyEditorConnections.toMutableMap().apply {
                                             put(origin, listOf(left, right))
