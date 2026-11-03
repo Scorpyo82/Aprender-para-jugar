@@ -612,6 +612,8 @@ private fun AprenderApp() {
     var storyEditorSelectedScene by remember { mutableStateOf("") }
     var storyEditorSceneText by remember { mutableStateOf("") }
     var storyEditorObjectTiming by remember { mutableStateOf("Al salir") }
+    var storyEditorAwardedObjectByScene by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
+    var storyEditorObjectMenuExpanded by remember { mutableStateOf(false) }
     var storyEditorKeepAmbientByScene by remember { mutableStateOf(emptyMap<String, Boolean>()) }
     var storyEditorCollectionMenuExpanded by remember { mutableStateOf(false) }
     var storyCollectionToDelete by remember { mutableStateOf("") }
@@ -649,6 +651,7 @@ private fun AprenderApp() {
                         ambientAudio = storyEditorAmbientAudio[storyEditorSelectedScene] ?: existing?.ambientAudio,
                         keepPreviousAmbient = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
                         narrationAudio = storyEditorNarrationAudio[storyEditorSelectedScene] ?: existing?.narrationAudio,
+                        awardedObject = if (storyEditorAwardedObjectByScene.containsKey(scene)) storyEditorAwardedObjectByScene[scene] else existing?.awardedObject,
                         awardTiming = if (storyEditorObjectTiming == "Al entrar") "onEnter" else "onExit"
                     )
                 } else existing ?: StorySceneMetadata(title = storyEditorScenes[index])
@@ -2305,6 +2308,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
                                 storyEditorAmbientAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.ambientAudio }.getOrNull() }
                                 storyEditorNarrationAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.narrationAudio }.getOrNull() }
+                                storyEditorAwardedObjectByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObject }.getOrNull() }
+                                storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
                                 storyEditorScenes = stored.metadata.scenes.map { it.replace('_', ' ') }
                                 editingStoryFolder = stored.folderName
@@ -2326,6 +2331,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorIllustrations = emptyMap()
                                 storyEditorAmbientAudio = emptyMap()
                                 storyEditorNarrationAudio = emptyMap()
+                                storyEditorAwardedObjectByScene = emptyMap()
+                                storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorCollection = ""
                                 storyEditorSummary = ""
                                 storyEditorSceneText = ""
@@ -2383,6 +2390,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.ambientAudio) }
                                 storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.narrationAudio) }
                                 storyEditorObjectTiming = if (savedScene?.awardTiming == "onEnter") "Al entrar" else "Al salir"
+                                storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.awardedObject) }
+                                storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
                                     put(storyEditorScenes[index], savedScene?.keepPreviousAmbient ?: false)
                                 }
@@ -2474,7 +2483,55 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             StoryAudioPreview(narrationFile, "Audio de narración")
                         }
                         item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
-                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objeto") } }
+                        item {
+                            val selectedObjectFolder = storyEditorAwardedObjectByScene[storyEditorSelectedScene]
+                            val selectedObject = storedStoryObjects.firstOrNull { it.folderName == selectedObjectFolder }
+                            Box {
+                                OutlinedButton(onClick = {
+                                    storedStoryObjects = ObjectRepository.list(context)
+                                    storyEditorObjectMenuExpanded = true
+                                }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(if (selectedObject == null) "Seleccionar objeto" else "Cambiar objeto: " + selectedObject.metadata.name)
+                                }
+                                DropdownMenu(expanded = storyEditorObjectMenuExpanded, onDismissRequest = { storyEditorObjectMenuExpanded = false }) {
+                                    DropdownMenuItem(text = { Text("Sin objeto") }, onClick = {
+                                        storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorSelectedScene, null) }
+                                        storyEditorObjectMenuExpanded = false
+                                    })
+                                    storedStoryObjects.forEach { storedObject ->
+                                        DropdownMenuItem(
+                                            text = { Text(storedObject.metadata.name + " · " + storedObject.collection) },
+                                            onClick = {
+                                                storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorSelectedScene, storedObject.folderName) }
+                                                storyEditorObjectMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            if (selectedObject != null) {
+                                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        AndroidView(
+                                            factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                            update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(selectedObject.directory, selectedObject.metadata.image))) } },
+                                            modifier = Modifier.width(64.dp).height(64.dp)
+                                        )
+                                        Column(Modifier.weight(1f)) {
+                                            Text(selectedObject.metadata.name, fontWeight = FontWeight.SemiBold)
+                                            Text(selectedObject.collection, fontSize = 12.sp, color = Color(0xFF667085))
+                                        }
+                                        OutlinedButton(onClick = {
+                                            storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorSelectedScene, null) }
+                                        }) { Text("Quitar") }
+                                    }
+                                }
+                            } else if (selectedObjectFolder != null) {
+                                Text("El objeto guardado ya no está disponible. Puedes seleccionar otro o quitar la referencia.", fontSize = 12.sp, color = Color(0xFFB3261E))
+                            } else if (storedStoryObjects.isEmpty()) {
+                                Text("Todavía no hay objetos en la biblioteca. Puedes crearlos desde Gestión de objetos.", fontSize = 12.sp, color = Color(0xFF667085))
+                            }
+                        }
                         item {
                             Text("Momento de obtención", fontWeight = FontWeight.SemiBold)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
