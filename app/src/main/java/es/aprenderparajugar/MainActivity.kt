@@ -525,6 +525,10 @@ private fun AprenderApp() {
     var storyCollectionDraft by remember { mutableStateOf("") }
     var storyCollectionMessage by remember { mutableStateOf("") }
     var storyEditorTitle by remember { mutableStateOf("") }
+    var storyEditorCover by remember { mutableStateOf<String?>(null) }
+    var storyEditorIllustrations by remember { mutableStateOf(emptyMap<String, String?>()) }
+    var storyEditorAmbientAudio by remember { mutableStateOf(emptyMap<String, String?>()) }
+    var storyEditorNarrationAudio by remember { mutableStateOf(emptyMap<String, String?>()) }
     var editingStoryFolder by remember { mutableStateOf<String?>(null) }
     var editingStoryCollectionFolder by remember { mutableStateOf<String?>(null) }
     var storedStories by remember { mutableStateOf(StoryRepository.list(context)) }
@@ -554,6 +558,7 @@ private fun AprenderApp() {
             val metadata = StoryMetadata(
                 title = storyEditorTitle.trim(),
                 collection = collectionFolder,
+                cover = storyEditorCover,
                 startScene = sceneFolders.first(),
                 scenes = sceneFolders,
                 connections = connections
@@ -567,7 +572,10 @@ private fun AprenderApp() {
                         title = storyEditorSelectedScene,
                         illustrationSummary = storyEditorSummary,
                         text = storyEditorSceneText,
+                        illustration = storyEditorIllustrations[storyEditorSelectedScene] ?: existing?.illustration,
+                        ambientAudio = storyEditorAmbientAudio[storyEditorSelectedScene] ?: existing?.ambientAudio,
                         keepPreviousAmbient = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
+                        narrationAudio = storyEditorNarrationAudio[storyEditorSelectedScene] ?: existing?.narrationAudio,
                         awardTiming = if (storyEditorObjectTiming == "Al entrar") "onEnter" else "onExit"
                     )
                 } else existing ?: StorySceneMetadata(title = storyEditorScenes[index])
@@ -652,7 +660,45 @@ var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context
             storyObjectImageChanged = true
         }
     }
-val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) runCatching {
+            val stored = persistStoryDraft() ?: error(storyEditorMessage)
+            storyEditorCover = StoryRepository.importMedia(context, uri, stored.directory, "portada")
+            persistStoryDraft()
+        }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la portada." }
+    }
+    val storyIllustrationPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) runCatching {
+            val stored = persistStoryDraft() ?: error(storyEditorMessage)
+            val scene = StoryRepository.sceneFolderName(storyEditorSelectedScene)
+            val fileName = StoryRepository.importMedia(context, uri, File(File(stored.directory, "escenas"), scene), "ilustracion")
+            storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(storyEditorSelectedScene, fileName) }
+            persistStoryDraft()
+        }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la ilustración." }
+    }
+    val storyAmbientPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) runCatching {
+            val stored = persistStoryDraft() ?: error(storyEditorMessage)
+            val scene = StoryRepository.sceneFolderName(storyEditorSelectedScene)
+            val fileName = StoryRepository.importMedia(context, uri, File(File(stored.directory, "escenas"), scene), "ambiente")
+            storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(storyEditorSelectedScene, fileName) }
+            persistStoryDraft()
+        }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar el audio ambiental." }
+    }
+    val storyNarrationPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) runCatching {
+            val stored = persistStoryDraft() ?: error(storyEditorMessage)
+            val scene = StoryRepository.sceneFolderName(storyEditorSelectedScene)
+            val fileName = StoryRepository.importMedia(context, uri, File(File(stored.directory, "escenas"), scene), "narracion")
+            storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(storyEditorSelectedScene, fileName) }
+            persistStoryDraft()
+        }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la narración." }
+    }
+    val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
         val index = pendingSequencePictureIndex
         if (uri != null && index >= 0) {
@@ -2182,6 +2228,10 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         items(storedStories) { stored ->
                             Card(Modifier.fillMaxWidth().clickable {
                                 storyEditorTitle = stored.metadata.title
+                                storyEditorCover = stored.metadata.cover
+                                storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
+                                storyEditorAmbientAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.ambientAudio }.getOrNull() }
+                                storyEditorNarrationAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.narrationAudio }.getOrNull() }
                                 storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
                                 storyEditorScenes = stored.metadata.scenes.map { it.replace('_', ' ') }
                                 editingStoryFolder = stored.folderName
@@ -2199,6 +2249,10 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         item {
                             Button(onClick = {
                                 storyEditorTitle = ""
+                                storyEditorCover = null
+                                storyEditorIllustrations = emptyMap()
+                                storyEditorAmbientAudio = emptyMap()
+                                storyEditorNarrationAudio = emptyMap()
                                 storyEditorCollection = ""
                                 storyEditorSummary = ""
                                 storyEditorSceneText = ""
@@ -2233,7 +2287,10 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             }
                         }
                         item {
-                            OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir portada") }
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).apply()
+                                storyCoverPicker.launch(arrayOf("image/*"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorCover == null) "＋ Añadir portada" else "Cambiar portada") }
                         }
                         item { Spacer(Modifier.height(8.dp)); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -2245,6 +2302,9 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                 val savedScene = if (folder != null && stored != null) runCatching { StoryRepository.readScene(stored, folder).metadata }.getOrNull() else null
                                 storyEditorSummary = savedScene?.illustrationSummary.orEmpty()
                                 storyEditorSceneText = savedScene?.text.orEmpty()
+                                storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.illustration) }
+                                storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.ambientAudio) }
+                                storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.narrationAudio) }
                                 storyEditorObjectTiming = if (savedScene?.awardTiming == "onEnter") "Al entrar" else "Al salir"
                                 storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
                                     put(storyEditorScenes[index], savedScene?.keepPreviousAmbient ?: false)
@@ -2290,8 +2350,18 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         item {
                             OutlinedTextField(value = storyEditorSceneText, onValueChange = { storyEditorSceneText = it }, label = { Text("Texto de la escena") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
                         }
-                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ilustración") } }
-                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio ambiental") } }
+                        item {
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).apply()
+                                storyIllustrationPicker.launch(arrayOf("image/*"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorIllustrations[storyEditorSelectedScene] == null) "＋ Añadir ilustración" else "Cambiar ilustración") }
+                        }
+                        item {
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).apply()
+                                storyAmbientPicker.launch(arrayOf("audio/*"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorAmbientAudio[storyEditorSelectedScene] == null) "♫ Elegir audio ambiental" else "Cambiar audio ambiental") }
+                        }
                         item {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Column(Modifier.weight(1f)) {
@@ -2308,7 +2378,12 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                 )
                             }
                         }
-                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio de narración") } }
+                        item {
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).apply()
+                                storyNarrationPicker.launch(arrayOf("audio/*"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorNarrationAudio[storyEditorSelectedScene] == null) "♫ Elegir audio de narración" else "Cambiar audio de narración") }
+                        }
                         item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objeto") } }
                         item {
