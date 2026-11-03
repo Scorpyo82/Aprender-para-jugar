@@ -2438,7 +2438,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorScenes = storyEditorScenes + newScene
                                 storyEditorConnections = storyEditorConnections.toMutableMap().apply {
                                     putIfAbsent(newScene, emptyList())
-                                    if (previous != null && get(previous).isNullOrEmpty()) put(previous, listOf(newScene))
+                                    if (previous != null && (this[previous].isNullOrEmpty())) this[previous] = listOf(newScene)
                                 }
                             }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
                         }
