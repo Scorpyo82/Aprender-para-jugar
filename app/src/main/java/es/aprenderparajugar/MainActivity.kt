@@ -468,6 +468,57 @@ private fun currentDayKey(): String {
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.DAY_OF_YEAR)}"
 }
 
+@Composable
+private fun StoryImagePreview(file: File?, label: String) {
+    val bitmap = remember(file?.absolutePath) {
+        file?.takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
+    }
+    if (bitmap != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Image(bitmap = bitmap.asImageBitmap(), contentDescription = label,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp), contentScale = ContentScale.Fit)
+            Text(label, fontSize = 12.sp, color = Color(0xFF667085))
+        }
+    }
+}
+
+@Composable
+private fun StoryAudioPreview(file: File?, label: String) {
+    val context = LocalContext.current
+    val player = remember(file?.absolutePath) {
+        file?.takeIf { it.isFile }?.let { runCatching { MediaPlayer.create(context, Uri.fromFile(it)) }.getOrNull() }
+    }
+    var playing by remember(file?.absolutePath) { mutableStateOf(false) }
+    DisposableEffect(player) {
+        player?.setOnCompletionListener { playing = false }
+        onDispose {
+            runCatching { if (player?.isPlaying == true) player.pause() }
+            player?.release()
+        }
+    }
+    if (file != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("${label}: ${file.name}", fontSize = 12.sp, color = Color(0xFF667085))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    player?.let {
+                        if (it.isPlaying) { it.pause(); playing = false }
+                        else { if (it.currentPosition >= it.duration) it.seekTo(0); it.start(); playing = true }
+                    }
+                }, enabled = player != null) { Text(if (playing) "Pausar" else "Reproducir") }
+                OutlinedButton(onClick = {
+                    player?.let {
+                        if (it.isPlaying) it.pause()
+                        it.seekTo(0)
+                        playing = false
+                    }
+                }, enabled = player != null) { Text("Detener") }
+            }
+            if (player == null) Text("No se pudo cargar este audio.", color = Color(0xFFB3261E), fontSize = 12.sp)
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AprenderApp() {
@@ -2291,6 +2342,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 preferences.edit().putBoolean("content_picker_active", true).apply()
                                 storyCoverPicker.launch(arrayOf("image/*"))
                             }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorCover == null) "＋ Añadir portada" else "Cambiar portada") }
+                            val coverFile = if (storyEditorCover != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
+                                File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), storyEditorCover!!)
+                            else null
+                            StoryImagePreview(coverFile, "Vista previa de portada")
                         }
                         item { Spacer(Modifier.height(8.dp)); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
@@ -2355,12 +2410,20 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 preferences.edit().putBoolean("content_picker_active", true).apply()
                                 storyIllustrationPicker.launch(arrayOf("image/*"))
                             }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorIllustrations[storyEditorSelectedScene] == null) "＋ Añadir ilustración" else "Cambiar ilustración") }
+                            val illustrationFile = if (storyEditorIllustrations[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
+                                File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorIllustrations[storyEditorSelectedScene]!!) }
+                            else null
+                            StoryImagePreview(illustrationFile, "Vista previa de ilustración")
                         }
                         item {
                             OutlinedButton(onClick = {
                                 preferences.edit().putBoolean("content_picker_active", true).apply()
                                 storyAmbientPicker.launch(arrayOf("audio/*"))
                             }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorAmbientAudio[storyEditorSelectedScene] == null) "♫ Elegir audio ambiental" else "Cambiar audio ambiental") }
+                            val ambientFile = if (storyEditorAmbientAudio[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
+                                File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorAmbientAudio[storyEditorSelectedScene]!!) }
+                            else null
+                            StoryAudioPreview(ambientFile, "Audio ambiental")
                         }
                         item {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2383,6 +2446,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 preferences.edit().putBoolean("content_picker_active", true).apply()
                                 storyNarrationPicker.launch(arrayOf("audio/*"))
                             }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorNarrationAudio[storyEditorSelectedScene] == null) "♫ Elegir audio de narración" else "Cambiar audio de narración") }
+                            val narrationFile = if (storyEditorNarrationAudio[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
+                                File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorNarrationAudio[storyEditorSelectedScene]!!) }
+                            else null
+                            StoryAudioPreview(narrationFile, "Audio de narración")
                         }
                         item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objeto") } }
