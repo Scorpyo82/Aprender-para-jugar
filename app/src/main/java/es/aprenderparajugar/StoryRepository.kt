@@ -12,7 +12,16 @@ data class StoryMetadata(
     val cover: String? = null,
     val startScene: String,
     val scenes: List<String>,
-    val connections: Map<String, List<String>>
+    val connections: Map<String, List<String>>,
+    val connectionConditions: List<StoryConnectionCondition> = emptyList()
+)
+
+/** Condición configurada en una conexión; el compositor solo almacena estos datos. */
+data class StoryConnectionCondition(
+    val fromScene: String,
+    val toScene: String,
+    val requiredObject: String? = null,
+    val consumeRequiredObject: Boolean = false
 )
 
 /** Contenido independiente de una escena. Las referencias a objetos son nombres de carpeta. */
@@ -50,6 +59,14 @@ object StoryJsonCodec {
         metadata.scenes.forEach { scene ->
             connectionsJson.put(scene, JSONArray(metadata.connections[scene].orEmpty()))
         }
+        val conditionsJson = JSONArray()
+        metadata.connectionConditions.forEach { condition ->
+            conditionsJson.put(JSONObject()
+                .put("fromScene", condition.fromScene)
+                .put("toScene", condition.toScene)
+                .put("requiredObject", condition.requiredObject ?: JSONObject.NULL)
+                .put("consumeRequiredObject", condition.consumeRequiredObject))
+        }
         return JSONObject()
             .put("title", metadata.title.trim())
             .put("collection", metadata.collection)
@@ -57,6 +74,7 @@ object StoryJsonCodec {
             .put("startScene", metadata.startScene)
             .put("scenes", JSONArray(metadata.scenes))
             .put("connections", connectionsJson)
+            .put("connectionConditions", conditionsJson)
     }
 
     fun decode(json: JSONObject): StoryMetadata {
@@ -68,13 +86,24 @@ object StoryJsonCodec {
             (0 until destinations.length()).map { destinations.getString(it) }
         }
         val cover = json.optString("cover").takeIf { it.isNotBlank() && it != "null" }
+        val rawConditions = json.optJSONArray("connectionConditions") ?: JSONArray()
+        val conditions = (0 until rawConditions.length()).mapNotNull { index ->
+            val item = rawConditions.optJSONObject(index) ?: return@mapNotNull null
+            StoryConnectionCondition(
+                fromScene = item.optString("fromScene"),
+                toScene = item.optString("toScene"),
+                requiredObject = item.optString("requiredObject").takeIf { it.isNotBlank() && it != "null" },
+                consumeRequiredObject = item.optBoolean("consumeRequiredObject", false)
+            )
+        }
         return StoryMetadata(
             title = json.optString("title").trim(),
             collection = json.optString("collection"),
             cover = cover,
             startScene = json.optString("startScene"),
             scenes = scenes,
-            connections = connections
+            connections = connections,
+            connectionConditions = conditions
         ).also(::validateStoryMetadata)
     }
 
@@ -92,6 +121,26 @@ object StoryJsonCodec {
             require(destinations.distinct().size == destinations.size) { "Una escena no puede conectarse dos veces con el mismo destino." }
             require(destinations.all { it in metadata.scenes }) { "Una conexión apunta a una escena inexistente." }
             require(origin !in destinations) { "Una escena no puede conectarse consigo misma." }
+        }
+        val edges = metadata.connections.flatMap { (origin, destinations) -> destinations.map { origin to it } }.toSet()
+        require(metadata.connectionConditions.map { it.fromScene to it.toScene }.distinct().size == metadata.connectionConditions.size) {
+            "Una conexión no puede tener condiciones duplicadas."
+        }
+        metadata.connectionConditions.forEach { condition ->
+            require((condition.fromScene to condition.toScene) in edges) { "Hay una condición asociada a una conexión inexistente." }
+            require(condition.requiredObject == null || isSafeSegment(condition.requiredObject)) { "La referencia al objeto requerido no es válida." }
+            require(condition.requiredObject != null || !condition.consumeRequiredObject) { "No se puede consumir un objeto si no se ha seleccionado ninguno." }
+        }
+        metadata.connections.forEach { (origin, destinations) ->
+            if (destinations.size == 2) {
+                val branchConditions = destinations.map { destination ->
+                    metadata.connectionConditions.firstOrNull { it.fromScene == origin && it.toScene == destination }?.requiredObject
+                }
+                require(branchConditions.any { it != null }) { "Una bifurcación debe tener al menos una salida condicionada por un objeto." }
+                require(branchConditions.filterNotNull().distinct().size == branchConditions.filterNotNull().size) {
+                    "Las dos salidas de una bifurcación deben utilizar objetos distintos."
+                }
+            }
         }
         require(metadata.cover == null || isSafeFileName(metadata.cover)) { "El nombre de portada no es válido." }
     }
