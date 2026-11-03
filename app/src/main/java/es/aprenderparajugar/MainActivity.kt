@@ -519,6 +519,14 @@ private fun AprenderApp() {
     var storyCollections by remember { mutableStateOf((preferences.getString("story_collections", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }) }
     var storyCollectionDraft by remember { mutableStateOf("") }
     var storyCollectionMessage by remember { mutableStateOf("") }
+    var storyEditorTitle by remember { mutableStateOf("") }
+    var storyEditorCollection by remember { mutableStateOf("") }
+    var storyEditorSummary by remember { mutableStateOf("") }
+    var storyEditorScenes by remember { mutableStateOf(listOf("Escena 1")) }
+    var storyEditorSelectedScene by remember { mutableStateOf("") }
+    var storyEditorSceneText by remember { mutableStateOf("") }
+    var storyEditorObjectTiming by remember { mutableStateOf("Al salir") }
+    var storyEditorCollectionMenuExpanded by remember { mutableStateOf(false) }
     var storyCollectionToDelete by remember { mutableStateOf("") }
     var disabledStoryCollections by remember { mutableStateOf(preferences.getStringSet("disabled_story_collections", emptySet())?.toSet() ?: emptySet()) }
 var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
@@ -953,7 +961,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                 }
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> parentSection = "game-modes"
-                "stories-library", "stories-collections", "stories-objects" -> parentSection = "stories-settings"
+                "stories-library", "stories-collections", "stories-objects" -> parentSection = "stories-settings"\n                "stories-editor", "stories-scene-editor" -> parentSection = "stories-library"
                 "stories-object-create", "stories-object-collection", "stories-object-inventory" -> parentSection = "stories-objects"
                 "active-games", "music", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
                 "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
@@ -1428,7 +1436,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "typography" -> "menu"; "library-export", "library-import", "library-delete" -> "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-library", "stories-collections", "stories-objects" -> "stories-settings"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection == "stories-settings") "← Volver a los modos de juego" else if (parentSection == "stories-library" || parentSection == "stories-collections" || parentSection == "stories-objects") "← Volver a Cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Volver a Objetos" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "typography" -> "menu"; "library-export", "library-import", "library-delete" -> "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-library", "stories-collections", "stories-objects" -> "stories-settings"; "stories-editor" -> "Crear cuento"; "stories-scene-editor" -> "Editar escena"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection == "stories-settings") "← Volver a los modos de juego" else if (parentSection == "stories-library" || parentSection == "stories-collections" || parentSection == "stories-objects") "← Volver a Cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Volver a Objetos" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "statistics-menu" -> {
                         item { Text("Estadísticas disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -2101,6 +2109,96 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                     "stories-library" -> {
                         item { Text("Biblioteca de cuentos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Aquí se podrán crear, editar y organizar los cuentos ilustrados.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            Button(onClick = {
+                                storyEditorTitle = ""
+                                storyEditorCollection = ""
+                                storyEditorSummary = ""
+                                storyEditorScenes = listOf("Escena 1")
+                                storyEditorSelectedScene = ""
+                                parentSection = "stories-editor"
+                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear nuevo cuento") }
+                        }
+                    }
+                    "stories-editor" -> {
+                        item { Text("Crear cuento", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
+                        item {
+                            OutlinedTextField(value = storyEditorTitle, onValueChange = { storyEditorTitle = it }, label = { Text("Título del cuento") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        }
+                        item {
+                            Column {
+                                Text("Colección", fontWeight = FontWeight.SemiBold)
+                                Box {
+                                    OutlinedButton(onClick = { storyEditorCollectionMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(storyEditorCollection.ifBlank { "Seleccionar colección" })
+                                    }
+                                    DropdownMenu(expanded = storyEditorCollectionMenuExpanded, onDismissRequest = { storyEditorCollectionMenuExpanded = false }) {
+                                        storyCollections.forEach { name ->
+                                            DropdownMenuItem(text = { Text(name) }, onClick = { storyEditorCollection = name; storyEditorCollectionMenuExpanded = false })
+                                        }
+                                    }
+                                }
+                                if (storyCollections.isEmpty()) Text("Todavía no hay colecciones de cuentos.", fontSize = 12.sp, color = Color(0xFF667085))
+                            }
+                        }
+                        item {
+                            OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir portada") }
+                        }
+                        item { Divider(); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                        items(storyEditorScenes.size) { index ->
+                            Card(Modifier.fillMaxWidth().clickable {
+                                storyEditorSelectedScene = storyEditorScenes[index]
+                                storyEditorSummary = ""
+                                storyEditorSceneText = ""
+                                parentSection = "stories-scene-editor"
+                            }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = Color(0xFF87451F))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(storyEditorScenes[index], fontWeight = FontWeight.SemiBold)
+                                    Spacer(Modifier.weight(1f))
+                                    Text("›", fontSize = 24.sp, color = Color(0xFF87451F))
+                                }
+                            }
+                        }
+                        item {
+                            OutlinedButton(onClick = { storyEditorScenes = storyEditorScenes + "Escena ${storyEditorScenes.size + 1}" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
+                        }
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑂ Bifurcar") }
+                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑃ Converger") }
+                            }
+                            Text("La organización de las ramas se habilitará al implementar la estructura del cuento.", fontSize = 12.sp, color = Color(0xFF667085))
+                        }
+                        item {
+                            OutlinedButton(onClick = { parentSection = "stories-library" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                        }
+                    }
+                    "stories-scene-editor" -> {
+                        item { Text(storyEditorSelectedScene.ifBlank { "Editar escena" }, fontSize = 23.sp, fontWeight = FontWeight.Bold) }
+                        item {
+                            OutlinedTextField(value = storyEditorSummary, onValueChange = { storyEditorSummary = it }, label = { Text("Resumen de ilustración") }, supportingText = { Text("Descripción breve que aparecerá en la tarjeta y en el mapa conceptual.") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                        }
+                        item {
+                            OutlinedTextField(value = storyEditorSceneText, onValueChange = { storyEditorSceneText = it }, label = { Text("Texto de la escena") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
+                        }
+                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ilustración") } }
+                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio ambiental") } }
+                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio de narración") } }
+                        item { Divider(); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
+                        item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objeto") } }
+                        item {
+                            Text("Momento de obtención", fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = storyEditorObjectTiming == "Al entrar", onClick = { storyEditorObjectTiming = "Al entrar" }, label = { Text("Al entrar") })
+                                FilterChip(selected = storyEditorObjectTiming == "Al salir", onClick = { storyEditorObjectTiming = "Al salir" }, label = { Text("Al salir") })
+                            }
+                        }
+                        item {
+                            Button(onClick = { parentSection = "stories-editor" }, modifier = Modifier.fillMaxWidth()) { Text("Guardar escena y volver al mapa") }
+                        }
                     }
                     "stories-collections" -> {
                         item { Text("Colecciones", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
