@@ -470,23 +470,38 @@ private fun currentDayKey(): String {
 
 @Composable
 private fun StoryImagePreview(file: File?, label: String) {
-    val bitmap = remember(file?.absolutePath) {
-        file?.takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
+    val bitmap = remember(file?.absolutePath, file?.lastModified()) {
+        file?.takeIf { it.isFile && it.length() > 0L }?.let { runCatching { BitmapFactory.decodeFile(it.absolutePath) }.getOrNull() }
     }
-    if (bitmap != null) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .border(1.dp, Color(0xFFD8D0C7), RoundedCornerShape(12.dp))
+            .background(Color(0xFFFFFDF8), RoundedCornerShape(12.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color(0xFF667085))
+        if (bitmap != null) {
             Image(bitmap = bitmap.asImageBitmap(), contentDescription = label,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp), contentScale = ContentScale.Fit)
-            Text(label, fontSize = 12.sp, color = Color(0xFF667085))
+                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 240.dp), contentScale = ContentScale.Fit)
+        } else {
+            Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                Text(
+                    if (file == null) "Aquí aparecerá la vista previa de la imagen." else "No se ha podido cargar la imagen seleccionada.",
+                    color = if (file == null) Color(0xFF667085) else Color(0xFFB3261E),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
+        if (file != null) Text(file.name, fontSize = 11.sp, color = Color(0xFF667085))
     }
 }
 
 @Composable
 private fun StoryAudioPreview(file: File?, label: String) {
     val context = LocalContext.current
-    val player = remember(file?.absolutePath) {
-        file?.takeIf { it.isFile }?.let { runCatching { MediaPlayer.create(context, Uri.fromFile(it)) }.getOrNull() }
+    val player = remember(file?.absolutePath, file?.lastModified()) {
+        file?.takeIf { it.isFile && it.length() > 0L }?.let { runCatching { MediaPlayer.create(context, Uri.fromFile(it)) }.getOrNull() }
     }
     var playing by remember(file?.absolutePath) { mutableStateOf(false) }
     DisposableEffect(player) {
@@ -496,26 +511,31 @@ private fun StoryAudioPreview(file: File?, label: String) {
             player?.release()
         }
     }
-    if (file != null) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("${label}: ${file.name}", fontSize = 12.sp, color = Color(0xFF667085))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = {
-                    player?.let {
-                        if (it.isPlaying) { it.pause(); playing = false }
-                        else { if (it.currentPosition >= it.duration) it.seekTo(0); it.start(); playing = true }
-                    }
-                }, enabled = player != null) { Text(if (playing) "Pausar" else "Reproducir") }
-                OutlinedButton(onClick = {
-                    player?.let {
-                        if (it.isPlaying) it.pause()
-                        it.seekTo(0)
-                        playing = false
-                    }
-                }, enabled = player != null) { Text("Detener") }
-            }
-            if (player == null) Text("No se pudo cargar este audio.", color = Color(0xFFB3261E), fontSize = 12.sp)
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .border(1.dp, Color(0xFFD8D0C7), RoundedCornerShape(12.dp))
+            .background(Color(0xFFFFFDF8), RoundedCornerShape(12.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color(0xFF667085))
+        Text(file?.name ?: "Todavía no hay ningún audio seleccionado.", fontSize = 12.sp, color = Color(0xFF667085))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = {
+                player?.let {
+                    if (it.isPlaying) { it.pause(); playing = false }
+                    else { if (it.currentPosition >= it.duration) it.seekTo(0); it.start(); playing = true }
+                }
+            }, enabled = player != null) { Text(if (playing) "Pausar" else "Reproducir") }
+            OutlinedButton(onClick = {
+                player?.let {
+                    if (it.isPlaying) it.pause()
+                    it.seekTo(0)
+                    playing = false
+                }
+            }, enabled = player != null) { Text("Detener") }
         }
+        if (file != null && player == null) Text("No se pudo cargar este audio.", color = Color(0xFFB3261E), fontSize = 12.sp)
     }
 }
 
