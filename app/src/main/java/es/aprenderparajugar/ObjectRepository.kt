@@ -92,8 +92,6 @@ object ObjectRepository {
     fun read(directory: File): StoredObject {
         require(directory.isDirectory) { "La carpeta del objeto no existe." }
         val root = directory.canonicalFile
-        val libraryRoot = rootDirectory(directory.contextNotAvailable()).canonicalFile
-        // La pertenencia a la biblioteca se valida en las operaciones que reciben Context.
         val jsonFile = File(root, JSON_FILE)
         require(jsonFile.isFile) { "La carpeta no contiene $JSON_FILE." }
 
