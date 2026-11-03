@@ -2143,17 +2143,30 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                             Text(if (name in disabledStoryCollections) "Activar colección" else "Desactivar colección")
                                         }
                                         if (storyCollectionToDelete == name) {
-                                            Text("¿Eliminar esta colección?", fontWeight = FontWeight.SemiBold)
+                                            Text("¿Cómo quieres eliminar esta colección?", fontWeight = FontWeight.SemiBold)
+                                            Text("Eliminar colección y cuentos", fontWeight = FontWeight.SemiBold)
+                                            Text("Se eliminarán también todos los cuentos que pertenezcan a esta colección.", fontSize = 13.sp, color = Color(0xFFB3261E))
                                             Button(onClick = {
                                                 storyCollections = storyCollections.filterNot { it == name }
                                                 disabledStoryCollections = disabledStoryCollections - name
                                                 preferences.edit().putString("story_collections", storyCollections.joinToString("|")).putStringSet("disabled_story_collections", disabledStoryCollections).apply()
                                                 storyCollectionToDelete = ""
                                                 storyCollectionMessage = "Colección eliminada."
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección") }
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección y cuentos") }
+                                            Text("Eliminar colección y reasignar cuentos a:", fontWeight = FontWeight.SemiBold)
+                                            storyCollections.filterNot { it == name }.forEach { destination ->
+                                                OutlinedButton(onClick = {
+                                                    storyCollectionMessage = "La reasignación estará disponible cuando se implemente el almacenamiento de cuentos."
+                                                }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                            }
+                                            if (storyCollections.size <= 1) {
+                                                Text("No hay otra colección a la que reasignar los cuentos.", fontSize = 13.sp, color = Color(0xFF667085))
+                                            } else {
+                                                Text("La reasignación se habilitará cuando existan cuentos vinculados a estas colecciones.", fontSize = 13.sp, color = Color(0xFF667085))
+                                            }
                                             OutlinedButton(onClick = { storyCollectionToDelete = ""; storyCollectionMessage = "Operación cancelada." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                                         } else {
-                                            OutlinedButton(onClick = { storyCollectionToDelete = name; storyCollectionMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar") }
+                                            OutlinedButton(onClick = { storyCollectionToDelete = name; storyCollectionMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                         }
                                     }
                                 }
