@@ -2262,8 +2262,12 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             Button(onClick = {
                                 if (persistStoryDraft() != null) parentSection = "stories-library"
                             }, modifier = Modifier.fillMaxWidth()) { Text("Guardar cuento") }
-                            if (storyEditorMessage.isNotBlank()) item { Text(storyEditorMessage, color = if (storyEditorMessage == "Cuento guardado.") Color(0xFF24733B) else Color(0xFFB3261E)) }
-                            item { OutlinedButton(onClick = { parentSection = "stories-library" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
+                        }
+                        if (storyEditorMessage.isNotBlank()) item {
+                            Text(storyEditorMessage, color = if (storyEditorMessage == "Cuento guardado.") Color(0xFF24733B) else Color(0xFFB3261E))
+                        }
+                        item {
+                            OutlinedButton(onClick = { parentSection = "stories-library" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                         }
                     }
                     "stories-scene-editor" -> {
