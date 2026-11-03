@@ -526,6 +526,7 @@ private fun AprenderApp() {
     var storyEditorSelectedScene by remember { mutableStateOf("") }
     var storyEditorSceneText by remember { mutableStateOf("") }
     var storyEditorObjectTiming by remember { mutableStateOf("Al salir") }
+    var storyEditorKeepAmbientByScene by remember { mutableStateOf(emptyMap<String, Boolean>()) }
     var storyEditorCollectionMenuExpanded by remember { mutableStateOf(false) }
     var storyCollectionToDelete by remember { mutableStateOf("") }
     var disabledStoryCollections by remember { mutableStateOf(preferences.getStringSet("disabled_story_collections", emptySet())?.toSet() ?: emptySet()) }
@@ -2186,6 +2187,22 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ilustración") } }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio ambiental") } }
+                        item {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Mantener sonido ambiental de escena anterior", fontWeight = FontWeight.Medium)
+                                    Text("Continúa el audio anterior sin seleccionar el mismo archivo otra vez.", fontSize = 12.sp, color = Color(0xFF667085))
+                                }
+                                Switch(
+                                    checked = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
+                                    onCheckedChange = { enabled ->
+                                        storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
+                                            put(storyEditorSelectedScene, enabled)
+                                        }
+                                    }
+                                )
+                            }
+                        }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio de narración") } }
                         item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objeto") } }
