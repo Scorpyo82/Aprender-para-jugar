@@ -223,6 +223,45 @@ object StoryRepository {
         return StoredStoryScene(sceneDirectory, safeScene, StorySceneJsonCodec.decode(JSONObject(file.readText(Charsets.UTF_8))))
     }
 
+    /** Copia un recurso elegido por el usuario a la carpeta privada del cuento o escena. */
+    fun importMedia(context: Context, source: android.net.Uri, targetDirectory: File, baseName: String): String {
+        require(baseName.matches(Regex("[a-zA-Z0-9_-]+"))) { "El nombre del recurso no es válido." }
+        val resolver = context.contentResolver
+        val mime = resolver.getType(source).orEmpty()
+        val extension = when {
+            mime.equals("image/png", true) -> "png"
+            mime.equals("image/webp", true) -> "webp"
+            mime.equals("image/jpeg", true) -> "jpg"
+            mime.equals("audio/mpeg", true) -> "mp3"
+            mime.equals("audio/mp4", true) || mime.equals("audio/x-m4a", true) -> "m4a"
+            mime.equals("audio/wav", true) || mime.equals("audio/x-wav", true) -> "wav"
+            mime.equals("audio/ogg", true) -> "ogg"
+            else -> {
+                val name = resolver.query(source, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+                name?.substringAfterLast('.', "")?.lowercase()?.takeIf { it.matches(Regex("[a-z0-9]{2,5}")) }
+                    ?: throw IllegalArgumentException("Formato de archivo no compatible.")
+            }
+        }
+        if (baseName == "portada" || baseName == "ilustracion") {
+            require(mime.startsWith("image/")) { "Selecciona un archivo de imagen." }
+        } else {
+            require(mime.startsWith("audio/")) { "Selecciona un archivo de audio." }
+        }
+        ensureDirectory(targetDirectory)
+        val fileName = "$baseName.$extension"
+        val target = File(targetDirectory, fileName)
+        val temporary = File(targetDirectory, ".$fileName.tmp")
+        resolver.openInputStream(source)?.use { input ->
+            temporary.outputStream().use { output -> input.copyTo(output) }
+        } ?: throw IllegalArgumentException("No se pudo abrir el archivo seleccionado.")
+        if (!temporary.renameTo(target)) {
+            temporary.delete()
+            throw IllegalStateException("No se pudo guardar el recurso multimedia.")
+        }
+        return fileName
+    }
+
     fun saveScene(story: StoredStory, sceneFolderName: String, metadata: StorySceneMetadata): StoredStoryScene {
         val safeScene = safeSegment(sceneFolderName, "La escena")
         require(safeScene in story.metadata.scenes) { "La escena no pertenece a este cuento." }
