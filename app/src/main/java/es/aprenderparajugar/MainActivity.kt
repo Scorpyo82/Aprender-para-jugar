@@ -609,6 +609,7 @@ private fun AprenderApp() {
     var storyEditorCollection by remember { mutableStateOf("") }
     var storyEditorSummary by remember { mutableStateOf("") }
     var storyEditorScenes by remember { mutableStateOf(listOf("Escena 1")) }
+    var storyEditorConnections by remember { mutableStateOf<Map<String, List<String>>>(mapOf("Escena 1" to emptyList())) }
     var storyEditorSelectedScene by remember { mutableStateOf("") }
     var storyEditorSceneText by remember { mutableStateOf("") }
     var storyEditorObjectTiming by remember { mutableStateOf("Al salir") }
@@ -627,8 +628,8 @@ private fun AprenderApp() {
             val sceneFolders = storyEditorScenes.map { StoryRepository.sceneFolderName(it) }
             require(sceneFolders.distinct().size == sceneFolders.size) { "Hay nombres de escena duplicados." }
             val storyFolder = editingStoryFolder ?: StoryRepository.storyFolderName(storyEditorTitle)
-            val connections = sceneFolders.mapIndexed { index, scene ->
-                scene to listOfNotNull(sceneFolders.getOrNull(index + 1))
+            val connections = storyEditorScenes.mapIndexed { index, scene ->
+                StoryRepository.sceneFolderName(scene) to storyEditorConnections[scene].orEmpty().map { StoryRepository.sceneFolderName(it) }
             }.toMap()
             val metadata = StoryMetadata(
                 title = storyEditorTitle.trim(),
@@ -2312,6 +2313,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
                                 storyEditorScenes = stored.metadata.scenes.map { it.replace('_', ' ') }
+                                val displaySceneNames = stored.metadata.scenes.associateWith { it.replace('_', ' ') }
+                                storyEditorConnections = stored.metadata.scenes.associate { scene ->
+                                    displaySceneNames.getValue(scene) to stored.metadata.connections[scene].orEmpty().mapNotNull { displaySceneNames[it] }
+                                }
                                 editingStoryFolder = stored.folderName
                                 editingStoryCollectionFolder = stored.collection
                                 storyEditorSelectedScene = ""
@@ -2337,6 +2342,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorSummary = ""
                                 storyEditorSceneText = ""
                                 storyEditorScenes = listOf("Escena 1")
+                                storyEditorConnections = mapOf("Escena 1" to emptyList())
                                 storyEditorSelectedScene = ""
                                 editingStoryFolder = null
                                 editingStoryCollectionFolder = null
@@ -2407,14 +2413,55 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
-                            OutlinedButton(onClick = { storyEditorScenes = storyEditorScenes + "Escena ${storyEditorScenes.size + 1}" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
+                            OutlinedButton(onClick = {
+                                val nextNumber = (storyEditorScenes.size + 1)
+                                val newScene = "Escena $nextNumber"
+                                val previous = storyEditorScenes.lastOrNull()
+                                storyEditorScenes = storyEditorScenes + newScene
+                                storyEditorConnections = storyEditorConnections.toMutableMap().apply {
+                                    put(newScene, emptyList())
+                                    if (previous != null && this[previous].orEmpty().isEmpty()) put(previous, listOf(newScene))
+                                }
+                                storyEditorMessage = "Escena añadida."
+                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑂ Bifurcar") }
-                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑃ Converger") }
+                                OutlinedButton(onClick = {
+                                    val origin = storyEditorSelectedScene
+                                    if (origin.isBlank()) {
+                                        storyEditorMessage = "Selecciona primero la escena desde la que quieres bifurcar."
+                                    } else if (storyEditorConnections[origin].orEmpty().size > 0) {
+                                        storyEditorMessage = "Esta escena ya tiene salidas. Edita primero sus conexiones para crear otra bifurcación."
+                                    } else {
+                                        fun nextParallelName(suffix: String): String {
+                                            var number = storyEditorScenes.size + 1
+                                            var candidate = "$suffix $number"
+                                            while (candidate in storyEditorScenes || runCatching { StoryRepository.sceneFolderName(candidate) }.getOrNull() in storyEditorScenes.mapNotNull { runCatching { StoryRepository.sceneFolderName(it) }.getOrNull() }) {
+                                                number++
+                                                candidate = "$suffix $number"
+                                            }
+                                            return candidate
+                                        }
+                                        val left = nextParallelName("Rama A")
+                                        var number = storyEditorScenes.size + 2
+                                        var right = "Rama B $number"
+                                        while (right in storyEditorScenes || runCatching { StoryRepository.sceneFolderName(right) }.getOrNull() in storyEditorScenes.mapNotNull { runCatching { StoryRepository.sceneFolderName(it) }.getOrNull() }) {
+                                            number++
+                                            right = "Rama B $number"
+                                        }
+                                        storyEditorScenes = storyEditorScenes + listOf(left, right)
+                                        storyEditorConnections = storyEditorConnections.toMutableMap().apply {
+                                            put(origin, listOf(left, right))
+                                            put(left, emptyList())
+                                            put(right, emptyList())
+                                        }
+                                        storyEditorMessage = "Bifurcación creada: $left y $right son escenas paralelas. Ahora puedes editar su contenido."
+                                    }
+                                }, enabled = storyEditorSelectedScene.isNotBlank(), modifier = Modifier.weight(1f)) { Text("⑂ Bifurcar") }
+                                OutlinedButton(onClick = { storyEditorMessage = "La convergencia se habilitará en el siguiente paso de la estructura narrativa." }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑃ Converger") }
                             }
-                            Text("La organización de las ramas se habilitará al implementar la estructura del cuento.", fontSize = 12.sp, color = Color(0xFF667085))
+                            Text("Selecciona una escena y pulsa Bifurcar para crear dos escenas paralelas conectadas a ella. Las conexiones se conservan al guardar.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                         item {
                             Button(onClick = {
