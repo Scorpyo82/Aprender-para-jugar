@@ -508,7 +508,10 @@ private fun AprenderApp() {
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
     var libraryPage by remember { mutableStateOf("list") }
-    var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
+        var storyObjectNameDraft by remember { mutableStateOf("") }
+    var storyObjectPictureDraft by remember { mutableStateOf("") }
+    var storyObjectCollectionMenuExpanded by remember { mutableStateOf(false) }
+var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceMaxCards by remember { mutableIntStateOf(preferences.getInt("sequence_max_cards_v1", 6).coerceIn(2, 6)) }
@@ -568,7 +571,14 @@ private fun AprenderApp() {
             wordLibraryMessage = "Imagen seleccionada."
         }
     }
-    val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val storyObjectImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        preferences.edit().putBoolean("content_picker_active", false).apply()
+        if (uri != null) {
+            try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+            storyObjectPictureDraft = uri.toString()
+        }
+    }
+val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
         val index = pendingSequencePictureIndex
         if (uri != null && index >= 0) {
@@ -599,6 +609,7 @@ private fun AprenderApp() {
                             it[index] = savedPicture
                         }
                     }
+                    "story-object" -> { storyObjectPictureDraft = savedPicture }
                     else -> { pictureDraft = savedPicture; libraryMessage = "Foto añadida y comprimida para ocupar poco espacio." }
                 }
             } catch (_: Exception) {
@@ -2126,8 +2137,47 @@ private fun AprenderApp() {
                         }
                     }
                     "stories-object-create" -> {
-                        item { Text("Creación de objetos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Aquí se crearán y editarán los objetos de la biblioteca común. Cada objeto tendrá una identidad propia y podrá reutilizarse en distintos cuentos.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Añadir objeto", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Completa los datos del objeto y guarda. Podrás reutilizarlo en distintos cuentos.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            OutlinedTextField(value = storyObjectNameDraft, onValueChange = { storyObjectNameDraft = it }, label = { Text("Nombre del objeto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        }
+                        item {
+                            Column {
+                                Text("Colección", fontWeight = FontWeight.SemiBold)
+                                OutlinedButton(onClick = { storyObjectCollectionMenuExpanded = true }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("No hay colecciones disponibles") }
+                                Text("Primero debes crear una colección para poder guardar objetos.", fontSize = 13.sp, color = Color(0xFF667085))
+                            }
+                        }
+                        item {
+                            if (storyObjectPictureDraft.startsWith("content://") || storyObjectPictureDraft.startsWith("file://")) {
+                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 320) } }, update = { view -> try { view.setImageURI(Uri.parse(storyObjectPictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(180.dp))
+                            } else Text(if (storyObjectPictureDraft.isBlank()) "Todavía no has elegido una imagen." else "Imagen: $storyObjectPictureDraft", fontSize = 18.sp)
+                        }
+                        item {
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                storyObjectImagePicker.launch(arrayOf("image/*"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
+                        }
+                        item {
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                pendingCameraTarget = "story-object"
+                                cameraLauncher.launch(null)
+                            }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
+                        }
+                        item {
+                            Button(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Guardar objeto") }
+                            Text("El guardado estará disponible cuando esté creada la biblioteca de colecciones y objetos.", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
+                        item {
+                            OutlinedButton(onClick = {
+                                storyObjectNameDraft = ""
+                                storyObjectPictureDraft = ""
+                                parentSection = "stories-objects"
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a Objetos") }
+                        }
                     }
                     "stories-object-collection" -> {
                         item { Text("Colección de objetos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
