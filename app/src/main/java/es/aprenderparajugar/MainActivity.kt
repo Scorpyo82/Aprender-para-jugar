@@ -514,6 +514,7 @@ private fun AprenderApp() {
     var storyObjectImageChanged by remember { mutableStateOf(false) }
     var storyObjectMessage by remember { mutableStateOf("") }
     var storedStoryObjects by remember { mutableStateOf(emptyList<StoredObject>()) }
+    var storedInventoryFolders by remember { mutableStateOf(InventoryRepository.list(context)) }
     var storyObjectCollectionMenuExpanded by remember { mutableStateOf(false) }
     var storyObjectCollections by remember { mutableStateOf((preferences.getString("story_object_collections", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }) }
     var storyObjectCollectionDraft by remember { mutableStateOf("") }
@@ -2322,7 +2323,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             }
                         }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "stories-object-inventory" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
+                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storedInventoryFolders = InventoryRepository.list(context); parentSection = "stories-object-inventory" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🎒", fontSize = 30.sp)
                                     Column(Modifier.weight(1f)) {
@@ -2337,6 +2338,33 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                     "stories-object-create" -> {
                         item { Text(if (storyObjectEditingFolder == null) "Añadir objeto" else "Editar objeto", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Completa los datos del objeto y guarda. Podrás reutilizarlo en distintos cuentos.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        if (storyObjectEditingFolder != null) {
+                            item {
+                                val isInInventory = storedInventoryFolders.contains(storyObjectEditingFolder)
+                                OutlinedButton(
+                                    onClick = {
+                                        try {
+                                            storedInventoryFolders = if (isInInventory) {
+                                                InventoryRepository.remove(context, storyObjectEditingFolder!!)
+                                            } else {
+                                                InventoryRepository.add(context, storyObjectEditingFolder!!)
+                                            }
+                                        } catch (error: Exception) {
+                                            storyObjectMessage = error.message ?: "No se pudo actualizar el inventario."
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (isInInventory) "Retirar del inventario" else "Añadir al inventario")
+                                }
+                                Text(
+                                    if (isInInventory) "Este objeto está actualmente en el inventario del niño."
+                                    else "Este objeto todavía no está en el inventario del niño.",
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF667085)
+                                )
+                            }
+                        }
                         item {
                             OutlinedTextField(value = storyObjectNameDraft, onValueChange = { storyObjectNameDraft = it }, label = { Text("Nombre del objeto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
@@ -2476,6 +2504,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                                 }
                                                 OutlinedButton(onClick = {
                                                     storyObjectEditingFolder = stored.folderName
+                                                    storedInventoryFolders = InventoryRepository.list(context)
                                                     storyObjectNameDraft = stored.metadata.name
                                                     storyObjectPictureDraft = Uri.fromFile(File(stored.directory, stored.metadata.image)).toString()
                                                     storyObjectSelectedCollection = stored.collection
@@ -2508,7 +2537,39 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                     }
                     "stories-object-inventory" -> {
                         item { Text("Inventario actual", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Aquí se consultarán y gestionarán los objetos que posee actualmente el niño. Esta pantalla de administración permanece protegida por el PIN parental.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Objetos que posee actualmente el niño. Los cambios realizados aquí también se reflejan en el editor de cada objeto.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        val inventoryObjects = storedStoryObjects.filter { storedInventoryFolders.contains(it.folderName) }
+                        if (inventoryObjects.isEmpty()) {
+                            item { Text("El inventario está vacío. Añade objetos desde «Editar objeto».", color = Color(0xFF667085)) }
+                        } else {
+                            inventoryObjects.forEach { stored ->
+                                item {
+                                    Card(
+                                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                                    ) {
+                                        Row(
+                                            Modifier.fillMaxWidth().padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            AndroidView(
+                                                factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                                update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
+                                                modifier = Modifier.width(64.dp).height(64.dp)
+                                            )
+                                            Column(Modifier.weight(1f)) {
+                                                Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
+                                                Text(stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
+                                            }
+                                            OutlinedButton(onClick = {
+                                                storedInventoryFolders = InventoryRepository.remove(context, stored.folderName)
+                                            }) { Text("Retirar") }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     "sequences-settings" -> {
                         item { Text("Configurar Secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
