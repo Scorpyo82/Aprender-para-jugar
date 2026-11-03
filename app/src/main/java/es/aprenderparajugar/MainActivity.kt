@@ -2311,7 +2311,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             }
                         }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); parentSection = "stories-object-collection" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
+                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storedInventoryFolders = InventoryRepository.list(context); storyObjectCollectionMessage = ""; parentSection = "stories-object-collection" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("📚", fontSize = 30.sp)
                                     Column(Modifier.weight(1f)) {
@@ -2502,16 +2502,34 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                                 Column(Modifier.weight(1f)) {
                                                     Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
                                                 }
-                                                OutlinedButton(onClick = {
-                                                    storyObjectEditingFolder = stored.folderName
-                                                    storedInventoryFolders = InventoryRepository.list(context)
-                                                    storyObjectNameDraft = stored.metadata.name
-                                                    storyObjectPictureDraft = Uri.fromFile(File(stored.directory, stored.metadata.image)).toString()
-                                                    storyObjectSelectedCollection = stored.collection
-                                                    storyObjectImageChanged = false
-                                                    storyObjectMessage = ""
-                                                    parentSection = "stories-object-create"
-                                                }) { Text("Editar") }
+                                                val isInInventory = storedInventoryFolders.contains(stored.folderName)
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    OutlinedButton(onClick = {
+                                                        storyObjectEditingFolder = stored.folderName
+                                                        storedInventoryFolders = InventoryRepository.list(context)
+                                                        storyObjectNameDraft = stored.metadata.name
+                                                        storyObjectPictureDraft = Uri.fromFile(File(stored.directory, stored.metadata.image)).toString()
+                                                        storyObjectSelectedCollection = stored.collection
+                                                        storyObjectImageChanged = false
+                                                        storyObjectMessage = ""
+                                                        parentSection = "stories-object-create"
+                                                    }) { Text("Editar") }
+                                                    OutlinedButton(
+                                                        onClick = {
+                                                            try {
+                                                                storedInventoryFolders = if (isInInventory) {
+                                                                    InventoryRepository.remove(context, stored.folderName)
+                                                                } else {
+                                                                    InventoryRepository.add(context, stored.folderName)
+                                                                }
+                                                            } catch (error: Exception) {
+                                                                storyObjectCollectionMessage = error.message ?: "No se pudo actualizar el inventario."
+                                                            }
+                                                        }
+                                                    ) {
+                                                        Text(if (isInInventory) "Retirar del inventario" else "Añadir al inventario")
+                                                    }
+                                                }
                                             }
                                         }
                                         if (storyObjectCollectionToDelete == name) {
