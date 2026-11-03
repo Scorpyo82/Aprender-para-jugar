@@ -2144,7 +2144,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         item {
                             OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir portada") }
                         }
-                        item { Divider(); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                        item { Spacer(Modifier.height(8.dp)); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
                         items(storyEditorScenes.size) { index ->
                             Card(Modifier.fillMaxWidth().clickable {
@@ -2154,7 +2154,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                 parentSection = "stories-scene-editor"
                             }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = Color(0xFF87451F))
+                                    Text("📖", fontSize = 22.sp)
                                     Spacer(Modifier.width(10.dp))
                                     Text(storyEditorScenes[index], fontWeight = FontWeight.SemiBold)
                                     Spacer(Modifier.weight(1f))
@@ -2187,7 +2187,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir ilustración") } }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio ambiental") } }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("♫ Elegir audio de narración") } }
-                        item { Divider(); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
+                        item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
                         item { OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objeto") } }
                         item {
                             Text("Momento de obtención", fontWeight = FontWeight.SemiBold)
