@@ -2462,7 +2462,29 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                 Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Column(Modifier.padding(12.dp)) {
                                         Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                        Text("0 objetos", color = Color(0xFF667085))
+                                        val collectionObjects = storedStoryObjects.filter { it.collection == name }
+                                        Text("${collectionObjects.size} objetos", color = Color(0xFF667085))
+                                        collectionObjects.forEach { stored ->
+                                            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                AndroidView(
+                                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                                    update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
+                                                    modifier = Modifier.width(64.dp).height(64.dp)
+                                                )
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
+                                                }
+                                                OutlinedButton(onClick = {
+                                                    storyObjectEditingFolder = stored.folderName
+                                                    storyObjectNameDraft = stored.metadata.name
+                                                    storyObjectPictureDraft = Uri.fromFile(File(stored.directory, stored.metadata.image)).toString()
+                                                    storyObjectSelectedCollection = stored.collection
+                                                    storyObjectImageChanged = false
+                                                    storyObjectMessage = ""
+                                                    parentSection = "stories-object-create"
+                                                }) { Text("Editar") }
+                                            }
+                                        }
                                         if (storyObjectCollectionToDelete == name) {
                                             Text("¿Eliminar esta colección?", fontWeight = FontWeight.SemiBold)
                                             Text("Solo se puede eliminar si no contiene objetos.", fontSize = 13.sp, color = Color(0xFF667085))
