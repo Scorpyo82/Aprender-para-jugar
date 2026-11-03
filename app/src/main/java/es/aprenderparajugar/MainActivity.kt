@@ -651,7 +651,7 @@ private fun AprenderApp() {
                         ambientAudio = storyEditorAmbientAudio[storyEditorSelectedScene] ?: existing?.ambientAudio,
                         keepPreviousAmbient = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
                         narrationAudio = storyEditorNarrationAudio[storyEditorSelectedScene] ?: existing?.narrationAudio,
-                        awardedObject = if (storyEditorAwardedObjectByScene.containsKey(scene)) storyEditorAwardedObjectByScene[scene] else existing?.awardedObject,
+                        awardedObject = if (storyEditorAwardedObjectByScene.containsKey(storyEditorSelectedScene)) storyEditorAwardedObjectByScene[storyEditorSelectedScene] else existing?.awardedObject,
                         awardTiming = if (storyEditorObjectTiming == "Al entrar") "onEnter" else "onExit"
                     )
                 } else existing ?: StorySceneMetadata(title = storyEditorScenes[index])
