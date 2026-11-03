@@ -513,6 +513,7 @@ private fun AprenderApp() {
     var storyObjectCollectionMenuExpanded by remember { mutableStateOf(false) }
     var storyObjectCollections by remember { mutableStateOf((preferences.getString("story_object_collections", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }) }
     var storyObjectCollectionDraft by remember { mutableStateOf("") }
+    var storyObjectSelectedCollection by remember { mutableStateOf("") }
     var storyObjectCollectionMessage by remember { mutableStateOf("") }
     var storyObjectCollectionToDelete by remember { mutableStateOf("") }
 var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
@@ -2150,11 +2151,11 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                                 Text("Colección", fontWeight = FontWeight.SemiBold)
                                 Box {
                                     OutlinedButton(onClick = { storyObjectCollectionMenuExpanded = true }, enabled = storyObjectCollections.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                                        Text(storyObjectCollectionDraft.ifBlank { "Seleccionar colección" })
+                                        Text(storyObjectSelectedCollection.ifBlank { "Seleccionar colección" })
                                     }
                                     DropdownMenu(expanded = storyObjectCollectionMenuExpanded && storyObjectCollections.isNotEmpty(), onDismissRequest = { storyObjectCollectionMenuExpanded = false }) {
                                         storyObjectCollections.forEach { name ->
-                                            DropdownMenuItem(text = { Text(name) }, onClick = { storyObjectCollectionDraft = name; storyObjectCollectionMenuExpanded = false })
+                                            DropdownMenuItem(text = { Text(name) }, onClick = { storyObjectSelectedCollection = name; storyObjectCollectionMenuExpanded = false })
                                         }
                                     }
                                 }
@@ -2189,6 +2190,7 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                             OutlinedButton(onClick = {
                                 storyObjectNameDraft = ""
                                 storyObjectPictureDraft = ""
+                                storyObjectSelectedCollection = ""
                                 parentSection = "stories-objects"
                             }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a Objetos") }
                         }
