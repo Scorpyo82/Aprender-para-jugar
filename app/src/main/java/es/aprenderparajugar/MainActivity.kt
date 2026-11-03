@@ -511,6 +511,10 @@ private fun AprenderApp() {
         var storyObjectNameDraft by remember { mutableStateOf("") }
     var storyObjectPictureDraft by remember { mutableStateOf("") }
     var storyObjectCollectionMenuExpanded by remember { mutableStateOf(false) }
+    var storyObjectCollections by remember { mutableStateOf((preferences.getString("story_object_collections", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }) }
+    var storyObjectCollectionDraft by remember { mutableStateOf("") }
+    var storyObjectCollectionMessage by remember { mutableStateOf("") }
+    var storyObjectCollectionToDelete by remember { mutableStateOf("") }
 var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
@@ -2144,8 +2148,19 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         item {
                             Column {
                                 Text("Colección", fontWeight = FontWeight.SemiBold)
-                                OutlinedButton(onClick = { storyObjectCollectionMenuExpanded = true }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("No hay colecciones disponibles") }
-                                Text("Primero debes crear una colección para poder guardar objetos.", fontSize = 13.sp, color = Color(0xFF667085))
+                                Box {
+                                    OutlinedButton(onClick = { storyObjectCollectionMenuExpanded = true }, enabled = storyObjectCollections.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                                        Text(storyObjectCollectionDraft.ifBlank { "Seleccionar colección" })
+                                    }
+                                    DropdownMenu(expanded = storyObjectCollectionMenuExpanded && storyObjectCollections.isNotEmpty(), onDismissRequest = { storyObjectCollectionMenuExpanded = false }) {
+                                        storyObjectCollections.forEach { name ->
+                                            DropdownMenuItem(text = { Text(name) }, onClick = { storyObjectCollectionDraft = name; storyObjectCollectionMenuExpanded = false })
+                                        }
+                                    }
+                                }
+                                if (storyObjectCollections.isEmpty()) {
+                                    Text("Todavía no existen colecciones. Crea una antes de añadir objetos.", fontSize = 13.sp, color = Color(0xFF667085))
+                                }
                             }
                         }
                         item {
@@ -2179,8 +2194,55 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                         }
                     }
                     "stories-object-collection" -> {
-                        item { Text("Colección de objetos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Aquí se consultarán y administrarán todos los objetos definidos en la biblioteca común, independientemente de que el niño los haya conseguido.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Colecciones", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
+                        item { Text("Organiza los objetos de la biblioteca común en colecciones.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item {
+                            OutlinedTextField(value = storyObjectCollectionDraft, onValueChange = { storyObjectCollectionDraft = it }, label = { Text("Nueva colección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        }
+                        item {
+                            Button(onClick = {
+                                val clean = storyObjectCollectionDraft.trim()
+                                when {
+                                    clean.isBlank() -> storyObjectCollectionMessage = "Escribe un nombre."
+                                    storyObjectCollections.any { it.equals(clean, ignoreCase = true) } -> storyObjectCollectionMessage = "Esa colección ya existe."
+                                    else -> {
+                                        storyObjectCollections = (storyObjectCollections + clean).sortedBy { it.lowercase() }
+                                        preferences.edit().putString("story_object_collections", storyObjectCollections.joinToString("|")).apply()
+                                        storyObjectCollectionDraft = ""
+                                        storyObjectCollectionMessage = "Colección creada."
+                                    }
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Añadir colección") }
+                        }
+                        if (storyObjectCollectionMessage.isNotBlank()) {
+                            item { Text(storyObjectCollectionMessage, color = Color(0xFF24733B)) }
+                        }
+                        if (storyObjectCollections.isEmpty()) {
+                            item { Text("Todavía no hay colecciones.", color = Color(0xFF667085)) }
+                        }
+                        storyObjectCollections.forEach { name ->
+                            item {
+                                Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                        Text("0 objetos", color = Color(0xFF667085))
+                                        if (storyObjectCollectionToDelete == name) {
+                                            Text("¿Eliminar esta colección?", fontWeight = FontWeight.SemiBold)
+                                            Text("Solo se puede eliminar si no contiene objetos.", fontSize = 13.sp, color = Color(0xFF667085))
+                                            Button(onClick = {
+                                                storyObjectCollections = storyObjectCollections.filterNot { it == name }
+                                                preferences.edit().putString("story_object_collections", storyObjectCollections.joinToString("|")).apply()
+                                                storyObjectCollectionToDelete = ""
+                                                storyObjectCollectionMessage = "Colección eliminada."
+                                            }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección") }
+                                            OutlinedButton(onClick = { storyObjectCollectionToDelete = ""; storyObjectCollectionMessage = "Operación cancelada." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                                        } else {
+                                            OutlinedButton(onClick = { storyObjectCollectionToDelete = name; storyObjectCollectionMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar") }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     "stories-object-inventory" -> {
                         item { Text("Inventario actual", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
