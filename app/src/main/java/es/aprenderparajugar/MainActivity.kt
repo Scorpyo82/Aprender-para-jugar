@@ -2098,7 +2098,6 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                     }
                     "stories-objects" -> {
                         item { Text("Objetos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Área de administración protegida por el PIN parental. La colección común y el inventario del niño se gestionan por separado.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
                             Card(Modifier.fillMaxWidth().clickable { parentSection = "stories-object-create" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
