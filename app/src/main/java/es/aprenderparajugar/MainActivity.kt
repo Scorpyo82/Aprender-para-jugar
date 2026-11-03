@@ -962,7 +962,9 @@ val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContra
                 }
                 "words", "categories" -> parentSection = "cards-settings"
                 "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> parentSection = "game-modes"
-                "stories-library", "stories-collections", "stories-objects" -> parentSection = "stories-settings"\n                "stories-editor", "stories-scene-editor" -> parentSection = "stories-library"
+                "stories-library", "stories-collections", "stories-objects" -> parentSection = "stories-settings"
+                "stories-editor" -> parentSection = "stories-library"
+                "stories-scene-editor" -> parentSection = "stories-editor"
                 "stories-object-create", "stories-object-collection", "stories-object-inventory" -> parentSection = "stories-objects"
                 "active-games", "music", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
                 "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
