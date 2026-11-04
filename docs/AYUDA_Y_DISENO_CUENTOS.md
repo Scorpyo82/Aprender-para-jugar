@@ -114,7 +114,7 @@ El selector obligatorio de resolución ofrece:
 
 Las decisiones se aplican a todas las referencias del cuento importado: condiciones de conexiones y objetos entregados por escenas. No se puede dejar ninguna referencia sin resolver.
 
-El estado del inventario es independiente de la definición del objeto. Importar o sobrescribir una definición no debe añadir ni retirar automáticamente ese objeto del inventario. Tampoco se importan compras ni se concede el objeto al niño por importar un cuento.
+El inventario actual del niño no se incluye en los paquetes: ni se exporta ni se importa. La transferencia de cuentos incluye las definiciones y los recursos de los objetos que esos cuentos necesitan, pero no el estado de posesión del jugador. El inventario es un estado de juego independiente, que permanece en el dispositivo de destino. Importar o sobrescribir una definición no debe añadir ni retirar automáticamente ese objeto del inventario. Tampoco se importan compras ni se concede el objeto al niño por importar un cuento.
 
 La resolución debe validarse antes de modificar la biblioteca. La operación debe ser transaccional: si se cancela o falla, no debe quedar una importación parcial ni una combinación de definiciones y referencias incoherente.
 
