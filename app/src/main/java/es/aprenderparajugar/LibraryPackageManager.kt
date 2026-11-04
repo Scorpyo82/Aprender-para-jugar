@@ -140,6 +140,13 @@ internal object LibraryPackageManager {
                     .put("title", story.metadata.title)
                     .put("sceneCount", story.metadata.scenes.size))
             }
+            selectedStoredStories.map { it.collection }.distinct().forEach { collection ->
+                StoryRepository.collectionCoverFile(context, collection)?.let { cover ->
+                    zip.putNextEntry(ZipEntry("cuentos/$collection/${cover.name}"))
+                    cover.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
+                }
+            }
             val objectsJson = JSONArray()
             objectDependencies.values.forEach { storedObject ->
                 addDirectory(zip, storedObject.directory,
@@ -501,6 +508,23 @@ internal object LibraryPackageManager {
                 } else {
                     check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
                     rollbackTargets.add(target to null)
+                }
+            }
+            // Las portadas viajan con los cuentos, pero nunca sustituyen una portada local.
+            selectedStoryInfos.map { it.collection }.distinct().forEach { collectionName ->
+                val sourceCollection = File(packageInfo.staging, "cuentos/$collectionName")
+                val incomingCover = sourceCollection.listFiles()
+                    ?.firstOrNull { it.isFile && it.name.startsWith("portada_coleccion.") }
+                if (incomingCover != null) {
+                    val targetCollection = File(StoryRepository.rootDirectory(context), collectionName)
+                    check(targetCollection.mkdirs() || targetCollection.isDirectory)
+                    if (StoryRepository.collectionCoverFile(context, collectionName) == null) {
+                        val targetCover = File(targetCollection, incomingCover.name)
+                        val temporaryCover = File(targetCollection, ".${incomingCover.name}.import-${System.nanoTime()}")
+                        incomingCover.copyTo(temporaryCover, overwrite = true)
+                        check(temporaryCover.renameTo(targetCover)) { "No se pudo importar la portada de la colección «$collectionName»." }
+                        rollbackTargets.add(targetCover to null)
+                    }
                 }
             }
             packageInfo.modalities.forEach { modalityInfo ->
