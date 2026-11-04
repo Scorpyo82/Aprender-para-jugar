@@ -12,7 +12,7 @@ import java.io.File
  * el borrador completo. La interfaz solo lee/modifica estas propiedades y llama
  * a persist() cuando necesita guardar antes de importar recursos o confirmar.
  */
-internal class StoryEditorState(context: Context) {
+internal class StoryEditorState(private val context: Context) {
     val title: MutableState<String> = mutableStateOf("")
     val cover: MutableState<String?> = mutableStateOf(null)
     val illustrations: MutableState<Map<String, String?>> = mutableStateOf(emptyMap())
