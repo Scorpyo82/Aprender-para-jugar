@@ -3168,8 +3168,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             Button(onClick = {
                                 val name = sequenceNewCategoryDraft.trim()
                                 when {
-                                    name.isBlank() -> sequenceCategoryMessage = "Escribe un nombre para la categoría."
-                                    sequenceCategories.any { it.equals(name, ignoreCase = true) } -> sequenceCategoryMessage = "Ya existe una categoría con ese nombre."
+                                    NameRules.validationError(name) != null -> sequenceCategoryMessage = NameRules.validationError(name)!!
+                                    sequenceCategories.any { NameRules.key(it) == NameRules.key(name) } -> sequenceCategoryMessage = "Ya existe una categoría con ese nombre."
                                     else -> {
                                         sequenceCategoryNames = (sequenceCategoryNames + name).distinct()
                                         preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
@@ -3217,16 +3217,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             val destinations = sequenceCategories.filterNot { it.equals(category, ignoreCase = true) }
                                             destinations.forEach { destination ->
                                                 OutlinedButton(onClick = {
-                                                    sequenceExercises = sequenceExercises.map {
-                                                        if (it.category.equals(category, ignoreCase = true)) it.copy(category = destination) else it
+                                                    val moving = sequenceExercises.filter { it.category.equals(category, ignoreCase = true) }
+                                                    val destinationItems = sequenceExercises.filter { it.category.equals(destination, ignoreCase = true) }
+                                                    val conflicts = NameRules.duplicates(moving.map { it.title }, destinationItems.map { it.title })
+                                                    if (conflicts.isNotEmpty()) {
+                                                        sequenceCategoryMessage = "No se han movido los ejercicios. Ya existen en «$destination»: ${conflicts.joinToString()}. Renombra o resuelve esos duplicados antes de reasignar."
+                                                    } else {
+                                                        sequenceExercises = sequenceExercises.map {
+                                                            if (it.category.equals(category, ignoreCase = true)) it.copy(category = destination) else it
+                                                        }
+                                                        sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
+                                                        sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
+                                                        preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
+                                                        disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
+                                                        preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
+                                                        sequenceCategoryToDelete = null
+                                                        sequenceCategoryMessage = "Categoría eliminada; ejercicios movidos a $destination."
                                                     }
-                                                    sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
-                                                    sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
-                                                    preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
-                                                    disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
-                                                    preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
-                                                    sequenceCategoryToDelete = null
-                                                    sequenceCategoryMessage = "Categoría eliminada; ejercicios movidos a $destination."
                                                 }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
                                             }
                                             OutlinedButton(onClick = {
@@ -3382,7 +3389,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         indexes.filterNotNull().distinct().size != cleanCards.size
                                 }
                                 when {
-                                    sequenceTitleDraft.isBlank() -> sequenceEditorMessage = "Escribe un nombre para el ejercicio."
+                                    NameRules.validationError(sequenceTitleDraft) != null -> sequenceEditorMessage = NameRules.validationError(sequenceTitleDraft)!!
                                     sequenceCategoryDraft.isBlank() -> sequenceEditorMessage = "Crea o selecciona una categoría antes de guardar el ejercicio."
                                     cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
@@ -3760,7 +3767,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
                             Button(onClick = {
                                 val clean = wordDraft.trim()
-                                if (clean.isBlank() || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
+                                if (NameRules.validationError(clean) != null || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
                                 else if (pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord }) libraryMessage = "Esa palabra ya existe."
                                 else {
                                     pairs = if (editingWord == null) pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft) else pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
@@ -3776,7 +3783,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Activa o desactiva categorías completas sin borrar sus palabras. También puedes mover o eliminar categorías.", fontSize = 14.sp, color = Color(0xFF667085))
                         OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = NameRules.filterInput(it) }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("|")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
+                        Button(onClick = { val clean = categoryDraftName.trim(); if (NameRules.validationError(clean) != null) categoryMessage = NameRules.validationError(clean)!!; else if (categories.any { NameRules.key(it) == NameRules.key(clean) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("|")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
                         if (categoryMessage.isNotBlank()) Text(categoryMessage, color = Color(0xFF24733B))
                         categories.forEach { name ->
                             Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -3810,12 +3817,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.SemiBold)
                                         categories.filterNot { it.equals(name, ignoreCase = true) }.forEach { destination ->
                                             OutlinedButton(onClick = {
-                                                pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }
-                                                pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
-                                                categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
-                                                preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
-                                                categoryToRemove = ""
-                                                categoryMessage = "Categoría eliminada; palabras movidas a $destination."
+                                                val moving = pairs.filter { it.category.equals(name, ignoreCase = true) }
+                                                val destinationItems = pairs.filter { it.category.equals(destination, ignoreCase = true) }
+                                                val conflicts = NameRules.duplicates(moving.map { it.word }, destinationItems.map { it.word })
+                                                if (conflicts.isNotEmpty()) {
+                                                    categoryMessage = "No se ha movido el contenido. Ya existen en «$destination»: ${conflicts.joinToString()}. Renombra o resuelve esos duplicados antes de reasignar."
+                                                } else {
+                                                    pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }
+                                                    pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
+                                                    categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
+                                                    preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
+                                                    categoryToRemove = ""
+                                                    categoryMessage = "Categoría eliminada; palabras movidas a $destination."
+                                                }
                                             }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
                                         }
                                         OutlinedButton(onClick = { categoryToRemove = ""; categoryMessage = "Operación cancelada. No se ha borrado nada." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
