@@ -585,6 +585,7 @@ private fun AprenderApp() {
     var storyObjectPictureDraft by storyObjectEditorState.pictureDraft
     var storyObjectEditingFolder by storyObjectEditorState.editingFolder
     var storyObjectImageChanged by storyObjectEditorState.imageChanged
+    var storyObjectAvailableInStore by storyObjectEditorState.availableInStore
     var storyObjectMessage by storyObjectEditorState.message
     var storedStoryObjects by remember { mutableStateOf(emptyList<StoredObject>()) }
     val storyObjectInventoryState = remember(context) { StoryObjectInventoryState(context) }
@@ -2850,6 +2851,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             if (storyObjectPictureDraft.startsWith("content://") || storyObjectPictureDraft.startsWith("file://")) {
                                 AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 320) } }, update = { view -> try { view.setImageURI(Uri.parse(storyObjectPictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(180.dp))
                             } else Text(if (storyObjectPictureDraft.isBlank()) "Todavía no has elegido una imagen." else "Imagen: $storyObjectPictureDraft", fontSize = 18.sp)
+                        }
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = storyObjectAvailableInStore, onCheckedChange = { storyObjectAvailableInStore = it })
+                                    Text("Aparece en la tienda", fontWeight = FontWeight.SemiBold)
+                                }
+                                Text("Indica si este objeto se ofrece en la tienda del juego.", fontSize = 12.sp, color = Color(0xFF667085))
+                            }
                         }
                         item {
                             OutlinedButton(onClick = {
