@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,9 +28,10 @@ internal fun StoryStructureScreen(
     scenes: List<String>,
     initialConnections: Map<String, List<String>>,
     initialConditions: List<StoryConnectionCondition>,
+    initialStartScene: String,
     availableObjects: List<StoredObject>,
     message: String,
-    onSave: (Map<String, List<String>>, List<StoryConnectionCondition>) -> Boolean,
+    onSave: (Map<String, List<String>>, List<StoryConnectionCondition>, String) -> Boolean,
     onCancel: () -> Unit
 ) {
     var connections by remember(scenes, initialConnections) {
@@ -37,13 +40,26 @@ internal fun StoryStructureScreen(
     var conditions by remember(scenes, initialConditions) {
         mutableStateOf(initialConditions.toList())
     }
+    var startScene by remember(scenes, initialStartScene) { mutableStateOf(initialStartScene) }
+    var startMenuExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Estructura narrativa", fontWeight = FontWeight.Bold)
-        Text("Define qué escenas pueden seguir a cada una. Puedes crear bifurcaciones condicionadas por objetos y hacer que varias ramas converjan.")
+        Text("Puedes configurar las conexiones en cualquier orden. El cuento siempre comienza en la escena inicial que selecciones aquí.")
+        Text("Escena inicial", fontWeight = FontWeight.SemiBold)
+        androidx.compose.foundation.layout.Box {
+            OutlinedButton(onClick = { startMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(startScene.ifBlank { "Seleccionar escena inicial" })
+            }
+            DropdownMenu(expanded = startMenuExpanded, onDismissRequest = { startMenuExpanded = false }) {
+                scenes.forEach { scene ->
+                    DropdownMenuItem(text = { Text(scene) }, onClick = { startScene = scene; startMenuExpanded = false })
+                }
+            }
+        }
         StoryStructureEditor(
             scenes = scenes,
             connections = connections,
@@ -64,7 +80,7 @@ internal fun StoryStructureScreen(
                 modifier = Modifier.weight(1f)
             ) { Text("Cancelar") }
             Button(
-                onClick = { onSave(connections, conditions) },
+                onClick = { onSave(connections, conditions, startScene) },
                 modifier = Modifier.weight(1f)
             ) { Text("Guardar estructura") }
         }
