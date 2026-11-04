@@ -581,11 +581,12 @@ private fun AprenderApp() {
     var editingWord by remember { mutableStateOf<String?>(null) }
     var libraryMessage by remember { mutableStateOf("") }
     var libraryPage by remember { mutableStateOf("list") }
-        var storyObjectNameDraft by remember { mutableStateOf("") }
-    var storyObjectPictureDraft by remember { mutableStateOf("") }
-    var storyObjectEditingFolder by remember { mutableStateOf<String?>(null) }
-    var storyObjectImageChanged by remember { mutableStateOf(false) }
-    var storyObjectMessage by remember { mutableStateOf("") }
+        val storyObjectEditorState = remember { StoryObjectEditorState() }
+    var storyObjectNameDraft by storyObjectEditorState.nameDraft
+    var storyObjectPictureDraft by storyObjectEditorState.pictureDraft
+    var storyObjectEditingFolder by storyObjectEditorState.editingFolder
+    var storyObjectImageChanged by storyObjectEditorState.imageChanged
+    var storyObjectMessage by storyObjectEditorState.message
     var storedStoryObjects by remember { mutableStateOf(emptyList<StoredObject>()) }
     var storedInventoryFolders by remember { mutableStateOf(InventoryRepository.list(context)) }
     var storyObjectCollectionMenuExpanded by remember { mutableStateOf(false) }
@@ -687,8 +688,7 @@ var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
-            storyObjectPictureDraft = uri.toString()
-            storyObjectImageChanged = true
+            storyObjectEditorState.markImageSelected(uri)
         }
     }
 val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -760,7 +760,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             it[index] = savedPicture
                         }
                     }
-                    "story-object" -> { storyObjectPictureDraft = savedPicture; storyObjectImageChanged = true }
+                    "story-object" -> storyObjectEditorState.markImageSelected(Uri.parse(savedPicture))
                     else -> { pictureDraft = savedPicture; libraryMessage = "Foto añadida y comprimida para ocupar poco espacio." }
                 }
             } catch (_: Exception) {
@@ -2558,7 +2558,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "stories-objects" -> {
                         item { Text("Objetos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { storyObjectEditingFolder = null; storyObjectNameDraft = ""; storyObjectPictureDraft = ""; storyObjectSelectedCollection = ""; storyObjectImageChanged = false; storyObjectMessage = ""; parentSection = "stories-object-create" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
+                            Card(Modifier.fillMaxWidth().clickable { storyObjectEditorState.reset(); parentSection = "stories-object-create" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("＋", fontSize = 30.sp, color = Color(0xFF87451F))
                                     Column(Modifier.weight(1f)) {
@@ -2665,54 +2665,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         item {
                             Button(onClick = {
-                                val cleanName = storyObjectNameDraft.trim()
-                                val collection = storyObjectSelectedCollection.trim()
-                                if (cleanName.isBlank() || collection.isBlank() || storyObjectPictureDraft.isBlank()) {
-                                    storyObjectMessage = "Completa el nombre, la colección y selecciona una imagen."
-                                } else {
-                                    try {
-                                        val existing = storyObjectEditingFolder?.let { folder -> storedStoryObjects.firstOrNull { it.folderName == folder } }
-                                        val imageBytes = if (existing != null && !storyObjectImageChanged) {
-                                            File(existing.directory, existing.metadata.image).readBytes()
-                                        } else {
-                                            context.contentResolver.openInputStream(Uri.parse(storyObjectPictureDraft))?.use { it.readBytes() }
-                                                ?: throw IllegalArgumentException("No se ha podido leer la imagen seleccionada.")
-                                        }
-                                        val mime = context.contentResolver.getType(Uri.parse(storyObjectPictureDraft))
-                                        val extension = when (mime?.lowercase()) {
-                                            "image/png" -> "png"
-                                            "image/webp" -> "webp"
-                                            "image/gif" -> "gif"
-                                            else -> "jpg"
-                                        }
-                                        val imageName = if (existing != null && !storyObjectImageChanged) existing.metadata.image else "imagen.$extension"
-                                        val folderName = existing?.folderName ?: cleanName.lowercase()
-                                            .replace(Regex("[^\\p{L}\\p{N}_-]+"), "_")
-                                            .trim('_')
-                                        ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName), imageBytes)
-                                        storedStoryObjects = ObjectRepository.list(context)
-                                        storyObjectMessage = "Objeto guardado correctamente."
-                                        storyObjectEditingFolder = null
-                                        storyObjectNameDraft = ""
-                                        storyObjectPictureDraft = ""
-                                        storyObjectSelectedCollection = ""
-                                        storyObjectImageChanged = false
-                                        parentSection = "stories-object-collection"
-                                    } catch (error: Exception) {
-                                        storyObjectMessage = error.message ?: "No se ha podido guardar el objeto."
-                                    }
+                                storyObjectEditorState.save(context)?.let { savedObjects ->
+                                    storedStoryObjects = savedObjects
+                                    parentSection = "stories-object-collection"
                                 }
                             }, enabled = storyObjectNameDraft.isNotBlank() && storyObjectSelectedCollection.isNotBlank() && storyObjectPictureDraft.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Guardar objeto") }
                             if (storyObjectMessage.isNotBlank()) Text(storyObjectMessage, color = if (storyObjectMessage.contains("correctamente")) Color(0xFF24733B) else Color(0xFFB3261E))
                         }
                         item {
                             OutlinedButton(onClick = {
-                                storyObjectNameDraft = ""
-                                storyObjectPictureDraft = ""
-                                storyObjectSelectedCollection = ""
-                                storyObjectEditingFolder = null
-                                storyObjectImageChanged = false
-                                storyObjectMessage = ""
+                                storyObjectEditorState.reset()
                                 parentSection = "stories-objects"
                             }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a Objetos") }
                         }
@@ -2757,13 +2719,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 val isInInventory = storedInventoryFolders.contains(stored.folderName)
                                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                     OutlinedButton(onClick = {
-                                                        storyObjectEditingFolder = stored.folderName
+                                                        storyObjectEditorState.beginEdit(stored)
                                                         storedInventoryFolders = InventoryRepository.list(context)
-                                                        storyObjectNameDraft = stored.metadata.name
-                                                        storyObjectPictureDraft = Uri.fromFile(File(stored.directory, stored.metadata.image)).toString()
                                                         storyObjectSelectedCollection = stored.collection
-                                                        storyObjectImageChanged = false
-                                                        storyObjectMessage = ""
                                                         parentSection = "stories-object-create"
                                                     }) { Text("Editar") }
                                                     OutlinedButton(
