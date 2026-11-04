@@ -2140,6 +2140,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                                         Text("Conflicto de objeto: ${dependency.name}", fontWeight = FontWeight.Bold)
+                                                        Text("Comparación de las dos definiciones:", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                                                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                Text("En el ZIP", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                                val incomingBitmap = BitmapFactory.decodeFile(File(incoming.directory, incoming.metadata.image).absolutePath)
+                                                                if (incomingBitmap != null) Image(incomingBitmap.asImageBitmap(), contentDescription = "Objeto del ZIP", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
+                                                                Text(incoming.metadata.name, fontSize = 12.sp)
+                                                            }
+                                                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                Text("En este dispositivo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                                val existingBitmap = BitmapFactory.decodeFile(File(existing.directory, existing.metadata.image).absolutePath)
+                                                                if (existingBitmap != null) Image(existingBitmap.asImageBitmap(), contentDescription = "Objeto existente", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
+                                                                Text(existing.metadata.name, fontSize = 12.sp)
+                                                            }
+                                                        }
                                                         Text("Ya existe un objeto con la misma identidad, pero sus datos o imagen son diferentes.", fontSize = 12.sp, color = Color(0xFF667085))
                                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                                             androidx.compose.material3.RadioButton(
