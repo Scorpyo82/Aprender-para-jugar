@@ -182,6 +182,16 @@ No se debe exigir que el autor termine el cuento en una única sesión. Guardar 
 - Ninguna de esas advertencias impide guardar o activar el cuento.
 - Las condiciones y el inventario se evalúan durante la reproducción, no en el editor.
 
-## 5. Alcance y cautelas
+## 5. Portadas de colecciones
+
+- Cada colección de cuentos puede tener una portada opcional e independiente.
+- La portada se selecciona desde la galería y puede cambiarse o quitarse.
+- La imagen se almacena en la carpeta de la colección, fuera de las carpetas de los cuentos.
+- Las portadas individuales de los cuentos no se modifican al cambiar la portada de una colección.
+- Las colecciones antiguas sin portada siguen siendo válidas y deben mostrar una ilustración genérica en la futura cartelera.
+- Las copias ZIP que incluyan cuentos transportan también la portada de su colección. Al importar, una portada local existente tiene prioridad y no se sobrescribe automáticamente.
+- Las colecciones de Objetos no utilizan portadas de colección.
+
+## 6. Alcance y cautelas
 
 Esta guía recoge el diseño funcional acordado. La presencia de una regla en esta documentación o en la ayuda no implica por sí sola que toda la ejecución del reproductor de cuentos esté implementada. La validación estructural es un diagnóstico estático y no sustituye las pruebas de reproducción, persistencia, inventario y consumo de objetos.
