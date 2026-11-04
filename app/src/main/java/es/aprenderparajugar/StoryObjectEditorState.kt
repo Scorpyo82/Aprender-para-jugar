@@ -46,15 +46,19 @@ internal class StoryObjectEditorState {
     fun save(context: Context): List<StoredObject>? {
         val cleanName = nameDraft.value.trim()
         val collection = selectedCollection.value.trim()
-        if (NameRules.validationError(cleanName) != null || NameRules.validationError(collection) != null || pictureDraft.value.isBlank()) {
-            message.value = NameRules.validationError(cleanName) ?: NameRules.validationError(collection) ?: "Selecciona una imagen."
+        val existing = editingFolder.value?.let { folder ->
+            ObjectRepository.list(context).firstOrNull { it.folderName == folder }
+        }
+        if ((NameRules.validationError(cleanName) != null && cleanName != existing?.metadata?.name) ||
+            (NameRules.validationError(collection) != null && collection != existing?.collection) ||
+            pictureDraft.value.isBlank()) {
+            message.value = NameRules.validationError(cleanName)?.takeIf { cleanName != existing?.metadata?.name }
+                ?: NameRules.validationError(collection)?.takeIf { collection != existing?.collection }
+                ?: "Selecciona una imagen."
             return null
         }
 
         return try {
-            val existing = editingFolder.value?.let { folder ->
-                ObjectRepository.list(context).firstOrNull { it.folderName == folder }
-            }
             val duplicateName = ObjectRepository.list(context).firstOrNull {
                 NameRules.key(it.metadata.name) == NameRules.key(cleanName) && it.folderName != editingFolder.value
             }
