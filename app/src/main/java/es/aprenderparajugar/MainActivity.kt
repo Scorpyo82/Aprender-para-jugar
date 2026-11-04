@@ -1093,6 +1093,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 "stories-content-settings", "stories-objects" -> parentSection = "stories-settings"
                 "stories-library", "stories-collections" -> parentSection = "stories-content-settings"
                 "stories-editor" -> parentSection = "stories-library"
+                "stories-structure" -> parentSection = "stories-editor"
                 "stories-scene-editor" -> parentSection = "stories-editor"
                 "stories-object-create", "stories-object-collection", "stories-object-inventory" -> parentSection = "stories-objects"
                 "active-games", "music", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
