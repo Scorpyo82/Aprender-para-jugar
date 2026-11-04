@@ -2344,6 +2344,26 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         // cuentos recién copiados aparezcan sin reiniciar la aplicación.
                                         storedStories = StoryRepository.list(context)
                                         storedStoryObjects = ObjectRepository.list(context)
+                                        // Registrar también las colecciones de objetos que llegan con
+                                        // las dependencias de los cuentos importados. La biblioteca de
+                                        // objetos se copia correctamente, pero la pantalla de colecciones
+                                        // solo muestra las carpetas presentes en estas preferencias.
+                                        val knownObjectCollectionFolders = storyObjectCollections.map {
+                                            ObjectRepository.collectionFolderName(it)
+                                        }.toSet()
+                                        val importedObjectCollectionNames = storedStoryObjects
+                                            .map { it.collection }
+                                            .distinct()
+                                            .filter { it !in knownObjectCollectionFolders }
+                                            .map { it.replace('_', ' ') }
+                                        if (importedObjectCollectionNames.isNotEmpty()) {
+                                            storyObjectCollections = (storyObjectCollections + importedObjectCollectionNames)
+                                                .distinctBy { ObjectRepository.collectionFolderName(it).lowercase() }
+                                                .sortedBy { it.lowercase() }
+                                            preferences.edit()
+                                                .putString("story_object_collections", storyObjectCollections.joinToString("|"))
+                                                .apply()
+                                        }
                                         // Las colecciones importadas pueden no existir todavía en las
                                         // preferencias de este dispositivo. Registrar un nombre visible
                                         // derivado del identificador de carpeta, sin modificar la ruta.
