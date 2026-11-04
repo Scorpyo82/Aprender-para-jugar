@@ -32,6 +32,49 @@ internal class StoryEditorState(private val context: Context) {
     val objectMenuExpanded: MutableState<Boolean> = mutableStateOf(false)
     val keepAmbientByScene: MutableState<Map<String, Boolean>> = mutableStateOf(emptyMap())
     val collectionMenuExpanded: MutableState<Boolean> = mutableStateOf(false)
+    val connections: MutableState<Map<String, List<String>>> = mutableStateOf(emptyMap())
+    val connectionConditions: MutableState<List<StoryConnectionCondition>> = mutableStateOf(emptyList())
+
+    /** Carga el grafo persistido usando los nombres visibles de las escenas en el editor. */
+    fun loadStructure(metadata: StoryMetadata) {
+        val visibleByFolder = metadata.scenes.associate { it to it.replace('_', ' ') }
+        connections.value = metadata.scenes.associate { folder ->
+            visibleByFolder.getValue(folder) to metadata.connections[folder].orEmpty().mapNotNull(visibleByFolder::get)
+        }
+        connectionConditions.value = metadata.connectionConditions.mapNotNull { condition ->
+            val from = visibleByFolder[condition.fromScene] ?: return@mapNotNull null
+            val to = visibleByFolder[condition.toScene] ?: return@mapNotNull null
+            condition.copy(fromScene = from, toScene = to)
+        }
+    }
+
+    /** Inicializa un cuento nuevo con el recorrido lineal que se utilizaba hasta ahora. */
+    fun resetStructure(sceneNames: List<String>) {
+        connections.value = sceneNames.mapIndexed { index, scene ->
+            scene to listOfNotNull(sceneNames.getOrNull(index + 1))
+        }.toMap()
+        connectionConditions.value = emptyList()
+    }
+
+    /** Añade nodos nuevos sin reconstruir ni destruir las bifurcaciones ya configuradas. */
+    private fun reconcileStructure(sceneNames: List<String>) {
+        val valid = sceneNames.toSet()
+        val next = connections.value
+            .filterKeys { it in valid }
+            .mapValues { (_, destinations) -> destinations.filter { it in valid }.distinct().take(2) }
+            .toMutableMap()
+        sceneNames.forEach { next.putIfAbsent(it, emptyList()) }
+        sceneNames.zipWithNext().forEach { (previous, current) ->
+            if (previous !in connections.value && next[previous].isNullOrEmpty()) {
+                next[previous] = listOf(current)
+            }
+        }
+        connections.value = next
+        val edges = next.flatMap { (from, destinations) -> destinations.map { from to it } }.toSet()
+        connectionConditions.value = connectionConditions.value.filter {
+            (it.fromScene to it.toScene) in edges
+        }
+    }
 
     fun persist(): StoredStory? {
         return runCatching {
@@ -41,16 +84,25 @@ internal class StoryEditorState(private val context: Context) {
             val sceneFolders = scenes.value.map { StoryRepository.sceneFolderName(it) }
             require(sceneFolders.distinct().size == sceneFolders.size) { "Hay nombres de escena duplicados." }
             val storyFolder = editingFolder.value ?: StoryRepository.storyFolderName(title.value)
-            val connections = sceneFolders.mapIndexed { index, scene ->
-                scene to listOfNotNull(sceneFolders.getOrNull(index + 1))
+            reconcileStructure(scenes.value)
+            val folderByVisible = scenes.value.zip(sceneFolders).toMap()
+            val persistedConnections = connections.value.mapNotNull { (from, destinations) ->
+                val folderFrom = folderByVisible[from] ?: return@mapNotNull null
+                folderFrom to destinations.mapNotNull(folderByVisible::get).distinct().take(2)
             }.toMap()
+            val persistedConditions = connectionConditions.value.mapNotNull { condition ->
+                val from = folderByVisible[condition.fromScene] ?: return@mapNotNull null
+                val to = folderByVisible[condition.toScene] ?: return@mapNotNull null
+                condition.copy(fromScene = from, toScene = to)
+            }
             val metadata = StoryMetadata(
                 title = title.value.trim(),
                 collection = collectionFolder,
                 cover = cover.value,
                 startScene = sceneFolders.first(),
                 scenes = sceneFolders,
-                connections = connections
+                connections = persistedConnections,
+                connectionConditions = persistedConditions
             )
             var stored = StoryRepository.save(context = context, collection = collectionFolder, folderName = storyFolder, metadata = metadata)
             sceneFolders.forEachIndexed { index, sceneFolder ->
