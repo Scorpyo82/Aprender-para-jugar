@@ -1214,6 +1214,33 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         feedback = ""; screen = "exercise"
     }
 
+    fun resolveCardsPair(word: String, picture: String) {
+        val resolution = cardsGameState.resolve(word, picture, exercisePairs, learningStats, learningTurn)
+        learningTurn = resolution.learningTurn
+        learningStats = resolution.learningStats
+        preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
+        saveLearningStats(preferences, learningStats)
+        if (resolution.resolvedCount == pairCount) {
+            val wrong = pairCount - resolution.correctCount
+            val netCorrectUnits = when (wrongAnswerPenalty) {
+                "none" -> resolution.correctCount * 2
+                "full" -> (resolution.correctCount * 2 - wrong * 2).coerceAtLeast(0)
+                else -> (resolution.correctCount * 2 - wrong).coerceAtLeast(0)
+            }
+            addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
+            runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.TARJETAS, difficulty) }
+            resultCorrectCount = resolution.correctCount
+            resultTotalCount = pairCount
+            exercisePairs.forEach { pair ->
+                pair.directory?.let { directory ->
+                    val wasCorrect = evaluatedPictures[pair.picture] == true
+                    runCatching { ExerciseRepository.recordResult(directory, if (wasCorrect) 1 else 0, if (wasCorrect) 0 else 1) }
+                }
+            }
+            screen = "result"
+        }
+    }
+
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
         while (screen == "play-time" && appInForeground) {
             val deadline = preferences.getLong("play_deadline_ms", 0L)
@@ -3920,30 +3947,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             feedback = "Ahora busca el dibujo de «" + item.word + "»."
                                         }
                                     } else {
-                                        val isCorrect = exercisePairs.first { it.word == item.word }.picture == pendingPicture
-                                        resolved = resolved + item.word
-                                        learningTurn += 1
-                                        val oldLearning = learningStats[item.word] ?: WordLearning()
-                                        learningStats = learningStats + (item.word to WordLearning(if (isCorrect) oldLearning.streak + 1 else 0, oldLearning.lastShownTurn, isCorrect))
-                                        preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
-                                        saveLearningStats(preferences, learningStats)
-                                        val newCorrect = correct + if (isCorrect) 1 else 0
-                                        correct = newCorrect
-                                        evaluatedPictures = evaluatedPictures + (pendingPicture to isCorrect)
-                                        feedback = if (isCorrect) "¡Muy bien! «" + item.word + "» corresponde a ese dibujo." else "No coincide. «" + item.word + "» queda resuelta; prueba con otra palabra."
-                                        selected = emptyMap()
-                                        selectedPicture = ""
-                                        if (resolved.size == pairCount) {
-                                            val wrong = pairCount - newCorrect
-                                            val netCorrectUnits = when (wrongAnswerPenalty) {
-                                                "none" -> newCorrect * 2
-                                                "full" -> (newCorrect * 2 - wrong * 2).coerceAtLeast(0)
-                                                else -> (newCorrect * 2 - wrong).coerceAtLeast(0)
-                                            }
-                                            addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
-                                            runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.TARJETAS, difficulty) }
-                                            screen = "result"
-                                        }
+                                        resolveCardsPair(item.word, pendingPicture)
                                     }
                                 }
                             },
@@ -3973,37 +3977,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     feedback = "Has elegido un dibujo. Ahora toca la palabra que le corresponde."
                                 }
                             } else if (word !in resolved) {
-                                val isCorrect = exercisePairs.first { it.word == word }.picture == item.picture
-                                resolved = resolved + word
-                                learningTurn += 1
-                                val oldLearning = learningStats[word] ?: WordLearning()
-                                learningStats = learningStats + (word to WordLearning(if (isCorrect) oldLearning.streak + 1 else 0, oldLearning.lastShownTurn, isCorrect))
-                                preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
-                                saveLearningStats(preferences, learningStats)
-                                if (isCorrect) correct += 1
-                                evaluatedPictures = evaluatedPictures + (item.picture to isCorrect)
-                                feedback = if (isCorrect) "¡Muy bien! «" + word + "» corresponde a ese dibujo." else "No coincide. «" + word + "» queda resuelta; prueba con otra palabra."
-                                selected = emptyMap()
-                                selectedPicture = ""
-                                if (resolved.size == pairCount) {
-                                    val wrong = pairCount - correct
-                                    val netCorrectUnits = when (wrongAnswerPenalty) {
-                                        "none" -> correct * 2
-                                        "full" -> (correct * 2 - wrong * 2).coerceAtLeast(0)
-                                        else -> (correct * 2 - wrong).coerceAtLeast(0)
-                                    }
-                                    addEarnedTime((rewardSeconds * netCorrectUnits) / (pairCount * 2))
-                                    runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.TARJETAS, difficulty) }
-                                    resultCorrectCount = correct
-                                    resultTotalCount = pairCount
-                                    exercisePairs.forEach { pair ->
-                                        pair.directory?.let { directory ->
-                                            val wasCorrect = evaluatedPictures[pair.picture] == true
-                                            runCatching { ExerciseRepository.recordResult(directory, if (wasCorrect) 1 else 0, if (wasCorrect) 0 else 1) }
-                                        }
-                                    }
-                                    screen = "result"
-                                }
+                                resolveCardsPair(word, item.picture)
                             }
                         }, colors = CardDefaults.cardColors(containerColor = when { selectedPicture == item.picture -> Color(0xFFFFD66B); evaluatedPictures[item.picture] == true -> Color(0xFFD9F2D9); evaluatedPictures[item.picture] == false -> Color(0xFFFFDAD6); else -> Color(0xFFF0E8F5) }), border = when { selectedPicture == item.picture -> androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)); evaluatedPictures.containsKey(item.picture) -> androidx.compose.foundation.BorderStroke(3.dp, if (evaluatedPictures[item.picture] == true) Color(0xFF24733B) else Color(0xFFB3261E)); else -> null }) {
                             if (item.picture.startsWith("content://") || item.picture.startsWith("file://")) {
