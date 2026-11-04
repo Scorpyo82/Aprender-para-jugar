@@ -2232,6 +2232,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item { Text("Cuentos guardados en este dispositivo.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         items(storedStories) { stored ->
                             Card(Modifier.fillMaxWidth().clickable {
+                                storyEditorState.loadStructure(stored.metadata)
                                 storyEditorTitle = stored.metadata.title
                                 storyEditorCover = stored.metadata.cover
                                 storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
@@ -2255,6 +2256,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         item {
                             Button(onClick = {
+                                storyEditorState.resetStructure(listOf("Escena 1"))
                                 storyEditorTitle = ""
                                 storyEditorCover = null
                                 storyEditorIllustrations = emptyMap()
