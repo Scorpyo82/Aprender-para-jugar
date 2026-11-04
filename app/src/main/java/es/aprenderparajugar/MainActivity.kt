@@ -609,8 +609,6 @@ private fun AprenderApp() {
     var storyEditorCollection by remember { mutableStateOf("") }
     var storyEditorSummary by remember { mutableStateOf("") }
     var storyEditorScenes by remember { mutableStateOf(listOf("Escena 1")) }
-    var storyEditorConnections by remember { mutableStateOf(mapOf("Escena 1" to emptyList<String>())) }
-    var storyEditorConnectionConditions by remember { mutableStateOf(emptyList<StoryConnectionCondition>()) }
     var storyEditorSelectedScene by remember { mutableStateOf("") }
     var storyEditorSceneText by remember { mutableStateOf("") }
     var storyEditorObjectTiming by remember { mutableStateOf("Al salir") }
@@ -629,27 +627,16 @@ private fun AprenderApp() {
             val sceneFolders = storyEditorScenes.map { StoryRepository.sceneFolderName(it) }
             require(sceneFolders.distinct().size == sceneFolders.size) { "Hay nombres de escena duplicados." }
             val storyFolder = editingStoryFolder ?: StoryRepository.storyFolderName(storyEditorTitle)
-            val displayToFolder = storyEditorScenes.zip(sceneFolders).toMap()
-            val connections = sceneFolders.associateWith { folder ->
-                val displayName = storyEditorScenes[sceneFolders.indexOf(folder)]
-                storyEditorConnections[displayName].orEmpty().mapNotNull { displayToFolder[it] }
-            }
-            val connectionConditions = storyEditorConnectionConditions.map { condition ->
-                StoryConnectionCondition(
-                    fromScene = displayToFolder[condition.fromScene] ?: condition.fromScene,
-                    toScene = displayToFolder[condition.toScene] ?: condition.toScene,
-                    requiredObject = condition.requiredObject,
-                    consumeRequiredObject = condition.consumeRequiredObject
-                )
-            }
+            val connections = sceneFolders.mapIndexed { index, scene ->
+                scene to listOfNotNull(sceneFolders.getOrNull(index + 1))
+            }.toMap()
             val metadata = StoryMetadata(
                 title = storyEditorTitle.trim(),
                 collection = collectionFolder,
                 cover = storyEditorCover,
                 startScene = sceneFolders.first(),
                 scenes = sceneFolders,
-                connections = connections,
-                connectionConditions = connectionConditions
+                connections = connections
             )
             var stored = StoryRepository.save(context, collectionFolder, storyFolder, metadata)
             sceneFolders.forEachIndexed { index, sceneFolder ->
@@ -2325,16 +2312,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
                                 storyEditorScenes = stored.metadata.scenes.map { it.replace('_', ' ') }
-                                val folderToDisplay = stored.metadata.scenes.associateWith { it.replace('_', ' ') }
-                                storyEditorConnections = stored.metadata.scenes.associate { folder ->
-                                    (folderToDisplay[folder] ?: folder) to stored.metadata.connections[folder].orEmpty().mapNotNull { folderToDisplay[it] }
-                                }
-                                storyEditorConnectionConditions = stored.metadata.connectionConditions.map { condition ->
-                                    condition.copy(
-                                        fromScene = folderToDisplay[condition.fromScene] ?: condition.fromScene,
-                                        toScene = folderToDisplay[condition.toScene] ?: condition.toScene
-                                    )
-                                }
                                 editingStoryFolder = stored.folderName
                                 editingStoryCollectionFolder = stored.collection
                                 storyEditorSelectedScene = ""
@@ -2360,8 +2337,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorSummary = ""
                                 storyEditorSceneText = ""
                                 storyEditorScenes = listOf("Escena 1")
-                                storyEditorConnections = mapOf("Escena 1" to emptyList())
-                                storyEditorConnectionConditions = emptyList()
                                 storyEditorSelectedScene = ""
                                 editingStoryFolder = null
                                 editingStoryCollectionFolder = null
@@ -2432,25 +2407,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
-                            OutlinedButton(onClick = {
-                                val newScene = "Escena ${storyEditorScenes.size + 1}"
-                                val previous = storyEditorScenes.lastOrNull()
-                                storyEditorScenes = storyEditorScenes + newScene
-                                storyEditorConnections = storyEditorConnections.toMutableMap().apply {
-                                    putIfAbsent(newScene, emptyList())
-                                    if (previous != null && (this[previous].isNullOrEmpty())) this[previous] = listOf(newScene)
-                                }
-                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
+                            OutlinedButton(onClick = { storyEditorScenes = storyEditorScenes + "Escena ${storyEditorScenes.size + 1}" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
                         }
                         item {
-                            StoryStructureEditor(
-                                scenes = storyEditorScenes,
-                                connections = storyEditorConnections,
-                                conditions = storyEditorConnectionConditions,
-                                availableObjects = storedStoryObjects,
-                                onConnectionsChange = { storyEditorConnections = it },
-                                onConditionsChange = { storyEditorConnectionConditions = it }
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑂ Bifurcar") }
+                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑃ Converger") }
+                            }
+                            Text("La organización de las ramas se habilitará al implementar la estructura del cuento.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                         item {
                             Button(onClick = {
