@@ -2445,7 +2445,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "stories-editor" -> {
                         item { Text("Crear cuento", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            OutlinedTextField(value = storyEditorTitle, onValueChange = { storyEditorTitle = NameRules.filterInput(it) }, label = { Text("Título del cuento") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = storyEditorTitle, onValueChange = { storyEditorTitle = if (editingStoryFolder == null) NameRules.filterInput(it) else it }, label = { Text("Título del cuento") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                         item {
                             Column {
@@ -2783,7 +2783,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
-                            OutlinedTextField(value = storyObjectNameDraft, onValueChange = { storyObjectNameDraft = NameRules.filterInput(it) }, label = { Text("Nombre del objeto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = storyObjectNameDraft, onValueChange = { storyObjectNameDraft = if (storyObjectEditingFolder == null) NameRules.filterInput(it) else it }, label = { Text("Nombre del objeto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                         item {
                             Column {
@@ -3250,7 +3250,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "sequence-editor-temporal" -> {
                         item { Text(if (sequenceEditingIndex < 0) "Nuevo ejercicio" else "Editar ejercicio", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = NameRules.filterInput(it) }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = if (sequenceEditingIndex < 0) NameRules.filterInput(it) else it }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                         item {
                             Text("Tipo de secuencia", fontWeight = FontWeight.Bold)
                             listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
@@ -3389,7 +3389,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         indexes.filterNotNull().distinct().size != cleanCards.size
                                 }
                                 when {
-                                    NameRules.validationError(sequenceTitleDraft) != null -> sequenceEditorMessage = NameRules.validationError(sequenceTitleDraft)!!
+                                    NameRules.validationError(sequenceTitleDraft) != null && sequenceTitleDraft != sequenceExercises.getOrNull(sequenceEditingIndex)?.title -> sequenceEditorMessage = NameRules.validationError(sequenceTitleDraft)!!
+                                    sequenceExercises.withIndex().any { (index, item) -> index != sequenceEditingIndex && NameRules.key(item.title) == NameRules.key(sequenceTitleDraft) && NameRules.key(item.category) == NameRules.key(sequenceCategoryDraft) } -> sequenceEditorMessage = "Ya existe un ejercicio con ese nombre en esta categoría."
                                     sequenceCategoryDraft.isBlank() -> sequenceEditorMessage = "Crea o selecciona una categoría antes de guardar el ejercicio."
                                     cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
@@ -3728,7 +3729,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         } else {
                             Text(if (editingWord == null) "Añadir tarjeta" else "Editar tarjeta", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                             Text("Completa los datos de la tarjeta y guarda. La imagen se elige desde la galería.", fontSize = 14.sp, color = Color(0xFF667085))
-                            OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = NameRules.filterInput(it) }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = if (editingWord == null) NameRules.filterInput(it) else it }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             Column {
                                 Text("Categoría", fontWeight = FontWeight.SemiBold)
                                 androidx.compose.foundation.layout.Box {
