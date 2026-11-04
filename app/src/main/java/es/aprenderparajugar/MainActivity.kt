@@ -939,15 +939,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var libraryCategoryFilter by remember { mutableStateOf("Todas") }
     var libraryDifficultyFilter by remember { mutableStateOf("Todas") }
     var libraryFilterCategoryExpanded by remember { mutableStateOf(false) }
-    var wordExerciseTarget by remember { mutableStateOf<PairItem?>(null) }
-    var wordExerciseLetterOrder by remember { mutableStateOf(emptyList<Int>()) }
-    var wordExercisePlaced by remember { mutableStateOf(emptyList<Int>()) }
-    var wordExerciseWrongAnswers by remember { mutableIntStateOf(0) }
-    var wordExerciseMessage by remember { mutableStateOf("") }
-    var wordSelectedDifficulty by remember { mutableStateOf("Fácil") }
-    var wordCurrentCategory by remember { mutableStateOf<String?>(null) }
-    var wordStartMessage by remember { mutableStateOf("") }
-    var wordCategoryCandidates by remember { mutableStateOf(emptyList<String>()) }
+    val wordGameState = remember { WordGameState() }
+    var wordExerciseTarget by wordGameState.target
+    var wordExerciseLetterOrder by wordGameState.letterOrder
+    var wordExercisePlaced by wordGameState.placedLetters
+    var wordExerciseWrongAnswers by wordGameState.wrongAnswers
+    var wordExerciseMessage by wordGameState.message
+    var wordSelectedDifficulty by wordGameState.selectedDifficulty
+    var wordCurrentCategory by wordGameState.currentCategory
+    var wordStartMessage by wordGameState.startMessage
+    var wordCategoryCandidates by wordGameState.categoryCandidates
 
     val exportPackageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -1126,33 +1127,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
 
     fun startWordExercise(category: String?) {
-        wordCurrentCategory = category
-        val eligible = wordExercises.filter {
-            it.active &&
-            it.category !in disabledWordExerciseCategories &&
-            it.difficulty == wordSelectedDifficulty &&
-            (category == null || it.category == category)
+        if (wordGameState.start(wordExercises, disabledWordExerciseCategories, category)) {
+            screen = "word-exercise"
         }
-        if (eligible.isEmpty()) {
-            wordExerciseTarget = null
-            wordStartMessage = if (category == null) {
-                "No hay ejercicios activos de Palabras con dificultad $wordSelectedDifficulty. Prueba otra dificultad o crea/activa ejercicios en Configuración > Palabras."
-            } else {
-                "No hay ejercicios activos de la categoría $category con dificultad $wordSelectedDifficulty. Prueba otra dificultad o elige otra categoría."
-            }
-            return
-        }
-        val chosen = eligible.random()
-        wordExerciseTarget = chosen
-        wordExerciseLetterOrder = chosen.word.indices.toList().shuffled()
-        if (chosen.word.length > 1 && wordExerciseLetterOrder == chosen.word.indices.toList()) {
-            wordExerciseLetterOrder = wordExerciseLetterOrder.drop(1) + wordExerciseLetterOrder.first()
-        }
-        wordExercisePlaced = emptyList()
-        wordExerciseWrongAnswers = 0
-        wordExerciseMessage = ""
-        wordStartMessage = ""
-        screen = "word-exercise"
     }
 
     fun eligibleSequenceExercises(type: String, level: String? = null): List<SequenceExercise> =
@@ -4175,29 +4152,20 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         val alreadyPlaced = letterIndex in wordExercisePlaced
                         OutlinedButton(
                             onClick = {
-                                val expected = targetWord.getOrNull(wordExercisePlaced.size)
-                                val chosenLetter = targetWord.getOrNull(letterIndex)
-                                if (expected != null && chosenLetter != null && expected.equals(chosenLetter, ignoreCase = true)) {
-                                    val next = wordExercisePlaced + letterIndex
-                                    wordExercisePlaced = next
-                                    wordExerciseMessage = if (next.size == targetWord.length) "¡Palabra completada!" else "¡Bien! Sigue con la siguiente letra."
-                                    if (next.size == targetWord.length) {
-                                        val baseReward = when (target.difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
-                                        val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
-                                        val rewardPercent = (100 - wordExerciseWrongAnswers * penaltyPercent).coerceAtLeast(20)
-                                        addEarnedTime(baseReward * rewardPercent / 100)
-                                        resultCorrectCount = (targetWord.length - wordExerciseWrongAnswers).coerceIn(0, targetWord.length)
-                                        resultTotalCount = targetWord.length
-                                        correct = if (wordExerciseWrongAnswers == 0) targetWord.length else resultCorrectCount
-                                        target.directory?.let { directory ->
-                                            runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, wordExerciseWrongAnswers) }
-                                        }
-                                        runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.PALABRAS, target.difficulty) }
-                                        screen = "result"
+                                val letterResult = wordGameState.chooseLetter(letterIndex)
+                                if (letterResult?.completed == true) {
+                                    val baseReward = when (target.difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
+                                    val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
+                                    val rewardPercent = (100 - letterResult.wrongAnswers * penaltyPercent).coerceAtLeast(20)
+                                    addEarnedTime(baseReward * rewardPercent / 100)
+                                    resultCorrectCount = (targetWord.length - letterResult.wrongAnswers).coerceIn(0, targetWord.length)
+                                    resultTotalCount = targetWord.length
+                                    correct = if (letterResult.wrongAnswers == 0) targetWord.length else resultCorrectCount
+                                    target.directory?.let { directory ->
+                                        runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, letterResult.wrongAnswers) }
                                     }
-                                } else {
-                                    wordExerciseWrongAnswers += 1
-                                    wordExerciseMessage = "Prueba con otra letra."
+                                    runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.PALABRAS, target.difficulty) }
+                                    screen = "result"
                                 }
                             },
                             enabled = !complete && !alreadyPlaced,
