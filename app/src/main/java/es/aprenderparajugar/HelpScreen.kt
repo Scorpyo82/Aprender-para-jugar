@@ -92,15 +92,15 @@ internal fun HelpScreen(onBack: () -> Unit) {
             )
         }
         if (topic == null) {
-            helpTopics.forEach { item ->
+            helpTopics.forEach { helpTopic ->
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth().clickable { selectedTopic = item.title },
+                        modifier = Modifier.fillMaxWidth().clickable { selectedTopic = helpTopic.title },
                         colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White)
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text(item.title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text(item.description, fontSize = 14.sp)
+                            Text(helpTopic.title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(helpTopic.description, fontSize = 14.sp)
                             Text("Consultar apartado  ›", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
