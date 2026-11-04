@@ -211,10 +211,37 @@ object StoryRepository {
     private const val STORY_JSON = "cuento.json"
     private const val SCENES_DIRECTORY = "escenas"
     private const val SCENE_JSON = "escena.json"
+    private const val COLLECTION_COVER_PREFIX = "portada_coleccion."
 
     fun collectionFolderName(value: String): String = safeSegment(value, "La colección")
     fun storyFolderName(value: String): String = safeSegment(value, "El cuento")
     fun sceneFolderName(value: String): String = safeSegment(value, "La escena")
+
+    /** Portada opcional de una colección, independiente de las portadas de sus cuentos. */
+    fun collectionCoverFile(context: Context, collection: String): File? {
+        val directory = File(rootDirectory(context), safeSegment(collection, "La colección"))
+        return directory.listFiles()
+            ?.filter { it.isFile && it.name.startsWith(COLLECTION_COVER_PREFIX) }
+            ?.sortedBy { it.name }
+            ?.firstOrNull()
+    }
+
+    /** Guarda la portada de colección sin tocar las portadas de los cuentos. */
+    fun saveCollectionCover(context: Context, collection: String, source: android.net.Uri): File {
+        val directory = ensureDirectory(File(rootDirectory(context), safeSegment(collection, "La colección")))
+        val savedName = importMedia(context, source, directory, "portada_coleccion")
+        directory.listFiles()
+            ?.filter { it.isFile && it.name.startsWith(COLLECTION_COVER_PREFIX) && it.name != savedName }
+            ?.forEach { it.delete() }
+        return File(directory, savedName)
+    }
+
+    fun removeCollectionCover(context: Context, collection: String) {
+        val directory = File(rootDirectory(context), safeSegment(collection, "La colección"))
+        directory.listFiles()
+            ?.filter { it.isFile && it.name.startsWith(COLLECTION_COVER_PREFIX) }
+            ?.forEach { it.delete() }
+    }
 
     fun rootDirectory(context: Context): File = ensureDirectory(File(context.filesDir, ROOT))
 
@@ -292,7 +319,7 @@ object StoryRepository {
                     ?: throw IllegalArgumentException("Formato de archivo no compatible.")
             }
         }
-        if (baseName == "portada" || baseName == "ilustracion") {
+        if (baseName.startsWith("portada") || baseName == "ilustracion") {
             require(mime.startsWith("image/")) { "Selecciona un archivo de imagen." }
         } else {
             require(mime.startsWith("audio/")) { "Selecciona un archivo de audio." }
