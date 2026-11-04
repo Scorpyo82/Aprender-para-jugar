@@ -908,6 +908,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferImportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferObjectConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferConflictIndex by remember { mutableIntStateOf(0) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
     var transferImportStatistics by remember { mutableStateOf(false) }
     var transferImportUsageStatistics by remember { mutableStateOf(false) }
@@ -1065,6 +1066,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
                 transferImportStories = inspected.stories.map { it.key }.toSet()
                 transferObjectConflictDecisions = emptyMap()
+                transferConflictIndex = 0
                 transferReplaceDuplicates = false
                 transferImportStatistics = false
                 transferMessage = "Archivo válido. Selecciona las categorías que deseas importar."
@@ -2116,9 +2118,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     }
                                 }
                                 val conflictDetails = LibraryPackageManager.objectConflicts(context, info, transferImportStories)
+                                val conflictIndex = transferConflictIndex.coerceIn(0, (conflictDetails.size - 1).coerceAtLeast(0))
                                 item {
-                                    Text(if (conflictDetails.isEmpty()) "Revisión de objetos: sin conflictos" else "Revisión de objetos: ${conflictDetails.size} conflicto(s) detectado(s)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                    if (conflictDetails.isNotEmpty()) Text("Resuelve todas las coincidencias antes de importar. Se comparan las imágenes reales y los datos de cada objeto.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Text(if (conflictDetails.isEmpty()) "Revisión de objetos: sin conflictos" else "Conflicto ${conflictIndex + 1} de ${conflictDetails.size}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    if (conflictDetails.isNotEmpty()) {
+                                        LinearProgressIndicator(progress = { (conflictIndex + 1).toFloat() / conflictDetails.size.toFloat() }, modifier = Modifier.fillMaxWidth())
+                                        Text("Resuelve las coincidencias una a una. Se comparan las imágenes reales y los datos de cada objeto.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    }
                                 }
                                 val localObjects = ObjectRepository.list(context)
                                 val neededObjectNames = linkedSetOf<String>()
@@ -2140,7 +2146,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         val identical = existing.metadata.name == incoming.metadata.name &&
                                             existing.metadata.image == incoming.metadata.image &&
                                             runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(File(incoming.directory, incoming.metadata.image).readBytes()) }.getOrDefault(false)
-                                        if (!identical) {
+                                        if (!identical && conflictDetails.indexOfFirst { it.incoming.folderName == dependency.directory } == conflictIndex) {
                                             item {
                                                 Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2186,6 +2192,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                                 color = Color(0xFFB3261E)
                                                             )
                                                             Text("La definición compartida cambiará para todos ellos. El inventario no se modifica.", fontSize = 11.sp, color = Color(0xFFB3261E))
+                                                        }
+                                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                            OutlinedButton(onClick = { transferConflictIndex = (conflictIndex - 1).coerceAtLeast(0) }, enabled = conflictIndex > 0) { Text("Anterior") }
+                                                            OutlinedButton(onClick = { transferConflictIndex = (conflictIndex + 1).coerceAtMost(conflictDetails.lastIndex) }, enabled = conflictIndex < conflictDetails.lastIndex) { Text("Siguiente") }
                                                         }
                                                     }
                                                 }
