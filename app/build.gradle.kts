@@ -12,8 +12,8 @@ android {
         applicationId = "es.aprenderparajugar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 41
-        versionName = "0.4.2-beta"
+        versionCode = 42
+        versionName = "0.4.3-beta"
     }
 
     buildFeatures {
