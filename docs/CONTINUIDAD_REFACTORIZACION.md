@@ -4,7 +4,7 @@
 
 - Repositorio: `Scorpyo82/Aprender-para-jugar`.
 - Rama de trabajo: `main`.
-- Último HEAD verificado antes de crear este documento: `7e76d87d2be92a6b5db9b2341ac0c97d19b5e047`.
+- Último HEAD verificado: `f7f3405ccfc0af244e6e8a882fcc25eb99624da9` (rama `main`).
 - Archivo principal: `app/src/main/java/es/aprenderparajugar/MainActivity.kt`.
 - Tamaño observado en la auditoría: 4.881 líneas.
 - Este documento es la referencia de continuidad. Actualizarlo al cerrar cada fase.
@@ -26,7 +26,7 @@ Criterios acordados:
 
 ## Historial de extracciones completadas
 
-Las siguientes cinco extracciones se han realizado sobre `main`. El usuario ha validado el funcionamiento en el dispositivo de las fases descritas.
+Las siguientes seis extracciones se han realizado sobre `main`. El usuario ha validado el funcionamiento en el dispositivo de las fases descritas.
 
 ### 1. Estado del editor de cuentos
 
@@ -78,6 +78,20 @@ Las siguientes cinco extracciones se han realizado sobre `main`. El usuario ha v
   - `7e76d87d2be92a6b5db9b2341ac0c97d19b5e047`
 - GitHub Actions: el estado final del run asociado no quedó registrado en esta nota de continuidad.
 - Validación del usuario: «Todo ok» después de probar añadir, retirar, persistencia tras cerrar/reabrir y sincronización con el editor.
+
+### 6. Estado de la biblioteca de Secuencias
+
+- Archivo: `SequenceLibraryState.kt`.
+- Responsabilidad extraída: estado de ejercicios de Secuencias, categorías, categorías deshabilitadas y filtros de tipo, categoría, dificultad y estado.
+- Operaciones delegadas: guardar y recargar ejercicios mediante `ExerciseUiStorage`; se añadieron métodos de apoyo para persistencia/mezcla de categorías.
+- Integración en `MainActivity.kt`: los estados de la biblioteca pasan a delegarse en `sequenceLibraryState`; el estado del editor y la lógica de las partidas quedaron fuera del alcance.
+- Commits:
+  - `a102ebc61b9ebf0362d02fd5c14d42834de43865` — creación de la clase.
+  - `7732c463b5c7fa1a8bf6c16b065121d84251a95b` — primera delegación.
+  - `f7f3405ccfc0af244e6e8a882fcc25eb99624da9` — integración completa del estado de biblioteca.
+- HEAD de `main` tras la fase: `f7f3405ccfc0af244e6e8a882fcc25eb99624da9`.
+- CI: el conector no devolvió estados ni ejecuciones de Actions asociadas a este SHA; no se registra aquí una compilación confirmada por la API.
+- Validación del usuario: «Todo funcionando». Se da por validado el arranque y el comportamiento de la biblioteca en el dispositivo.
 
 ## Archivos de estado extraídos
 
