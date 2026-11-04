@@ -2362,7 +2362,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     }
                                 }, enabled = (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
                                     LibraryPackageManager.objectConflicts(context, info, transferImportStories).all { it.incoming.folderName in transferObjectConflictDecisions } &&
-                                    storyNameConflicts.all { (incomingStory, _) -> transferStoryConflictDecisions[incomingStory.key] == "overwrite" }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
+                                    info.stories.filter { it.key in transferImportStories }.all { incomingStory ->
+                                        val duplicate = StoryRepository.list(context).any {
+                                            it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
+                                        }
+                                        !duplicate || transferStoryConflictDecisions[incomingStory.key] == "overwrite"
+                                    }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
                             item { OutlinedButton(onClick = { LibraryPackageManager.discard(info); transferPackage = null; parentSection = "library-transfer" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
                         }
