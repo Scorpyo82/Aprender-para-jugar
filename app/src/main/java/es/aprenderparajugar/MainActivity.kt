@@ -2143,13 +2143,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                     Text("Colección: ${incomingStory.collection}", fontSize = 12.sp)
                                                     Text("Local: ${existingStory.metadata.scenes.size} escenas · ZIP: ${incomingStory.sceneCount} escenas", fontSize = 12.sp, color = Color(0xFF667085))
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        androidx.compose.material3.RadioButton(
-                                                            selected = transferStoryConflictDecisions[incomingStory.key] == "overwrite",
-                                                            onClick = { transferStoryConflictDecisions = transferStoryConflictDecisions + (incomingStory.key to "overwrite") }
+                                                        Checkbox(
+                                                            checked = transferStoryConflictDecisions[incomingStory.key] == "overwrite",
+                                                            onCheckedChange = { checked ->
+                                                                transferStoryConflictDecisions = if (checked) {
+                                                                    transferStoryConflictDecisions + (incomingStory.key to "overwrite")
+                                                                } else {
+                                                                    transferStoryConflictDecisions - incomingStory.key
+                                                                }
+                                                            }
                                                         )
                                                         Column {
-                                                            Text("Sobrescribir el cuento completo", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                                            Text("Se reemplazará íntegramente el cuento local.", fontSize = 11.sp, color = Color(0xFF667085))
+                                                            Text("Confirmo sobrescribir el cuento completo", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                                            Text("Puedes desmarcarlo en cualquier momento. Sin confirmación no se permitirá importar.", fontSize = 11.sp, color = Color(0xFF667085))
                                                         }
                                                     }
                                                 }
