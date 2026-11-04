@@ -1082,6 +1082,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
 
     BackHandler(enabled = screen != "home" && screen != "play-time") {
         when (screen) {
+            "help" -> { screen = "home" }
             "parent" -> when (parentSection) {
                 "word-library", "word-categories" -> {
                     if (parentSection == "word-library" && wordLibraryPage == "edit") { wordLibraryPage = "list"; wordLibraryMessage = "" }
@@ -4563,6 +4564,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             if (cardsStartMessage.isNotBlank()) item { Text(cardsStartMessage, color = Color(0xFF9A4E00), fontWeight = FontWeight.SemiBold) }
             if (manualCategoryLimitReached) item { Text("Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit). Podrás volver a elegir categoría mañana.", fontSize = 13.sp, color = Color(0xFF8A4B08)) }
         }
+    } else if (screen == "help") {
+        HelpScreen(onBack = { screen = "home" })
     } else if (screen == "category-select") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -4606,6 +4609,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️", fontSize = 18.sp) }
                     Spacer(Modifier.width(8.dp))
                     OutlinedButton(onClick = { soundEnabled = !soundEnabled; preferences.edit().putBoolean("sound_enabled", soundEnabled).apply() }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text(if (soundEnabled) "🔊" else "🔇", fontSize = 18.sp) }
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(onClick = { screen = "help" }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text("❔ Ayuda", fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
                 }
             }
             item {
