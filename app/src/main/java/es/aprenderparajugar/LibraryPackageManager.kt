@@ -182,7 +182,8 @@ internal object LibraryPackageManager {
             }
             val modalitiesJson = manifest.optJSONArray("modalities")
                 ?: throw IllegalArgumentException("El manifiesto no declara bibliotecas.")
-            require(modalitiesJson.length() > 0) { "El paquete no contiene bibliotecas." }
+            // Un paquete puede contener exclusivamente cuentos, sin modalidades
+            // de ejercicios. La existencia de contenido se comprueba tras leer ambas secciones.
             val seenModalities = mutableSetOf<ContentStorage.Modality>()
             val result = (0 until modalitiesJson.length()).map { index ->
                 val item = modalitiesJson.getJSONObject(index)
@@ -262,6 +263,9 @@ internal object LibraryPackageManager {
                 StoryInfo(key, collection, directory, title, storedStory.metadata.scenes.size)
             }
             require(storyInfos.map { it.key }.distinct().size == storyInfos.size) { "El manifiesto repite cuentos." }
+            require(modalitiesJson.length() > 0 || storyInfos.isNotEmpty()) {
+                "El paquete no contiene bibliotecas ni cuentos."
+            }
 
             val objectsJson = manifest.optJSONArray("objectDependencies") ?: JSONArray()
             val objectInfos = (0 until objectsJson.length()).map { index ->
