@@ -903,6 +903,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferExportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferExportStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferExportUsageStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
+    var transferExportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
@@ -1047,7 +1048,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             transferMessage = try {
-                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics, transferExportUsageStatistics)
+                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics, transferExportUsageStatistics, transferExportStories)
                 "Exportación completada correctamente.".also { parentSection = "library-transfer" }
             } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
         }
@@ -1608,6 +1609,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     LibraryPackageManager.categories(context, modality).map { it.directory }.toSet()
                                 }
                                 transferExportStatistics = emptySet()
+                                transferExportStories = StoryRepository.list(context).map { "${it.collection}/${it.folderName}" }.toSet()
                                 transferMessage = ""
                                 parentSection = "library-export"
                             }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -1658,7 +1660,49 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "library-export" -> {
                         val options = ContentStorage.Modality.entries.associateWith { LibraryPackageManager.categories(context, it) }
                         item { Text("Exportar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Selecciona las categorías que quieres incluir. Se generará un único ZIP con la estructura original de las tres bibliotecas.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Selecciona las categorías, cuentos y estadísticas que quieres incluir en un único ZIP.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        val availableStories = StoryRepository.list(context)
+                        item {
+                            Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            if (availableStories.isEmpty()) {
+                                Text("No hay cuentos guardados para exportar.", fontSize = 13.sp, color = Color(0xFF667085))
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = availableStories.all { "${it.collection}/${it.folderName}" in transferExportStories },
+                                        onCheckedChange = { checked ->
+                                            transferExportStories = if (checked) availableStories.map { "${it.collection}/${it.folderName}" }.toSet() else emptySet()
+                                        }
+                                    )
+                                    Text("Seleccionar todos los cuentos")
+                                }
+                                availableStories.groupBy { it.collection }.toSortedMap().forEach { (collection, stories) ->
+                                    item {
+                                        Text(collection, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
+                                    }
+                                    stories.forEach { story ->
+                                        val key = "${story.collection}/${story.folderName}"
+                                        item {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = key in transferExportStories,
+                                                    onCheckedChange = { checked ->
+                                                        transferExportStories = transferExportStories.toMutableSet().also {
+                                                            if (checked) it.add(key) else it.remove(key)
+                                                        }
+                                                    }
+                                                )
+                                                Column {
+                                                    Text(story.metadata.title)
+                                                    Text("${story.metadata.scenes.size} escenas", fontSize = 12.sp, color = Color(0xFF667085))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        item { androidx.compose.material3.HorizontalDivider() }
                         ContentStorage.Modality.entries.forEach { modality ->
                             val label = when (modality) { ContentStorage.Modality.TARJETAS -> "Tarjetas"; ContentStorage.Modality.PALABRAS -> "Palabras"; ContentStorage.Modality.SECUENCIAS -> "Secuencias" }
                             val categoriesForModality = options[modality].orEmpty()
@@ -1708,13 +1752,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             Button(
                                 onClick = {
                                     val selected = transferExportCategories.filterValues { it.isNotEmpty() }
-                                    if (selected.isEmpty()) transferMessage = "Selecciona al menos una categoría."
+                                    if (selected.isEmpty() && transferExportStories.isEmpty()) transferMessage = "Selecciona al menos una categoría o cuento."
                                     else {
                                         preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                         unifiedExportLauncher.launch("biblioteca.zip")
                                     }
                                 },
-                                enabled = transferExportCategories.values.any { it.isNotEmpty() },
+                                enabled = transferExportCategories.values.any { it.isNotEmpty() } || transferExportStories.isNotEmpty(),
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Exportar selección") }
                         }
