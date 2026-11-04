@@ -42,6 +42,9 @@ internal fun StoryStructureScreen(
     }
     var startScene by remember(scenes, initialStartScene) { mutableStateOf(initialStartScene) }
     var startMenuExpanded by remember { mutableStateOf(false) }
+    val diagnostics = remember(scenes, connections, conditions, startScene) {
+        StoryStructureAnalysis.analyze(scenes, connections, conditions, startScene)
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -68,6 +71,38 @@ internal fun StoryStructureScreen(
             onConnectionsChange = { connections = it },
             onConditionsChange = { conditions = it }
         )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Comprobación de la estructura", fontWeight = FontWeight.Bold)
+            if (diagnostics.finalScenes.isEmpty()) {
+                Text(
+                    "No se ha encontrado ninguna escena final alcanzable desde la escena inicial.",
+                    color = androidx.compose.ui.graphics.Color(0xFFB3261E)
+                )
+            } else {
+                Text("Escenas finales: ${diagnostics.finalScenes.joinToString()}.")
+            }
+            if (diagnostics.unreachableScenes.isNotEmpty()) {
+                Text(
+                    "Escenas inaccesibles desde el inicio: ${diagnostics.unreachableScenes.sorted().joinToString()}. No cuentan como finales válidos.",
+                    color = androidx.compose.ui.graphics.Color(0xFF8A5A00)
+                )
+            }
+            if (diagnostics.cycleComponents.isNotEmpty()) {
+                Text("Circuitos detectados: ${diagnostics.cycleComponents.size}.")
+                if (diagnostics.cyclesWithoutUnconditionalExit.isNotEmpty()) {
+                    Text(
+                        "Advertencia: estos circuitos no tienen una salida incondicional desde todas sus escenas hacia un final alcanzable: ${diagnostics.cyclesWithoutUnconditionalExit.joinToString { it.sorted().joinToString(" ↔ ") }}. Comprueba que las condiciones y los objetos permitan salir del circuito.",
+                        color = androidx.compose.ui.graphics.Color(0xFF8A5A00)
+                    )
+                } else {
+                    Text("Todos los circuitos detectados disponen de una ruta incondicional hacia algún final alcanzable.")
+                }
+            }
+            Text(
+                "Estas comprobaciones son orientativas. Las advertencias no impiden guardar ni activar el cuento.",
+                color = androidx.compose.ui.graphics.Color(0xFF667085)
+            )
+        }
         if (message.isNotBlank() && message != "Cuento guardado.") {
             Text(message)
         }
