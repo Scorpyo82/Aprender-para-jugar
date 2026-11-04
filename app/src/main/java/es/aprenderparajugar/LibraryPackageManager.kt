@@ -322,7 +322,6 @@ internal object LibraryPackageManager {
         objectConflictDecisions: Map<String, String> = emptyMap()
     ): Int {
         var imported = 0
-        try {
             val selectedStoryInfos = packageInfo.stories.filter { it.key in selectedStories }
             require(selectedStories.all { key -> packageInfo.stories.any { it.key == key } }) {
                 "Uno de los cuentos seleccionados no está disponible en el paquete."
@@ -463,10 +462,7 @@ internal object LibraryPackageManager {
                     }
                 }
             }
-            return imported
-        } finally {
-            packageInfo.staging.deleteRecursively()
-        }
+        return imported
     }
 
     fun discard(packageInfo: PackageInfo) {
