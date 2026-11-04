@@ -2257,6 +2257,22 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 Text(if (transferImportStatistics) "Al sustituir un ejercicio, se incorporarán también las estadísticas incluidas en el ZIP." else "Si sustituyes un ejercicio sin importar estadísticas, se conservarán las estadísticas que ya tenía en este dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
                             }
                             item {
+                                val finalConflictReview = LibraryPackageManager.objectConflicts(context, info, transferImportStories)
+                                val resolvedCount = finalConflictReview.count { it.incoming.folderName in transferObjectConflictDecisions }
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("Resumen de coincidencias", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("${resolvedCount} de ${finalConflictReview.size} conflictos resueltos.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    finalConflictReview.forEach { conflict ->
+                                        val choice = when (transferObjectConflictDecisions[conflict.incoming.folderName]) {
+                                            "reuse" -> "Se conservará el objeto local"
+                                            "overwrite" -> "Se sobrescribirá el objeto local"
+                                            else -> "Pendiente de decisión"
+                                        }
+                                        Text("• ${conflict.incoming.metadata.name}: $choice", fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                            item {
                                 Button(onClick = {
                                     try {
                                         val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions)
