@@ -2341,11 +2341,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             OutlinedButton(onClick = { storyEditorScenes = storyEditorScenes + "Escena ${storyEditorScenes.size + 1}" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
                         }
                         item {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑂ Bifurcar") }
-                                OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.weight(1f)) { Text("⑃ Converger") }
-                            }
-                            Text("La organización de las ramas se habilitará al implementar la estructura del cuento.", fontSize = 12.sp, color = Color(0xFF667085))
+                            OutlinedButton(
+                                onClick = { parentSection = "stories-structure" },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("⑂ Editar estructura narrativa") }
+                            Text("Configura las conexiones entre escenas, las bifurcaciones y sus condiciones por objeto.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                         item {
                             Button(onClick = {
@@ -2357,6 +2357,26 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         item {
                             OutlinedButton(onClick = { parentSection = "stories-library" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                        }
+                    }
+                    "stories-structure" -> {
+                        item {
+                            StoryStructureScreen(
+                                scenes = storyEditorScenes,
+                                initialConnections = storyEditorState.connections.value,
+                                initialConditions = storyEditorState.connectionConditions.value,
+                                availableObjects = storedStoryObjects,
+                                message = storyEditorMessage,
+                                onSave = { connections, conditions ->
+                                    storyEditorState.connections.value = connections
+                                    storyEditorState.connectionConditions.value = conditions
+                                    if (persistStoryDraft() != null) {
+                                        parentSection = "stories-editor"
+                                        true
+                                    } else false
+                                },
+                                onCancel = { parentSection = "stories-editor" }
+                            )
                         }
                     }
                     "stories-scene-editor" -> {
