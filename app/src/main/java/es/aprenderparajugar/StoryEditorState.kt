@@ -81,8 +81,8 @@ internal class StoryEditorState(private val context: Context) {
 
     fun persist(): StoredStory? {
         return runCatching {
-            require(title.value.isNotBlank()) { "Escribe el título del cuento." }
-            require(collection.value.isNotBlank()) { "Selecciona una colección." }
+            require(NameRules.validationError(title.value) == null) { NameRules.validationError(title.value) ?: "Escribe el título del cuento." }
+            require(NameRules.validationError(collection.value) == null) { NameRules.validationError(collection.value) ?: "Selecciona una colección." }
             val collectionFolder = StoryRepository.collectionFolderName(collection.value)
             val sceneFolders = scenes.value.map { StoryRepository.sceneFolderName(it) }
             require(sceneFolders.distinct().size == sceneFolders.size) { "Hay nombres de escena duplicados." }
