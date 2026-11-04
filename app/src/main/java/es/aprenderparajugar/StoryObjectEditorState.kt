@@ -17,6 +17,7 @@ internal class StoryObjectEditorState {
     val pictureDraft: MutableState<String> = mutableStateOf("")
     val editingFolder: MutableState<String?> = mutableStateOf(null)
     val imageChanged: MutableState<Boolean> = mutableStateOf(false)
+    val availableInStore: MutableState<Boolean> = mutableStateOf(false)
     val message: MutableState<String> = mutableStateOf("")
     val selectedCollection: MutableState<String> = mutableStateOf("")
 
@@ -26,6 +27,7 @@ internal class StoryObjectEditorState {
         pictureDraft.value = ""
         selectedCollection.value = ""
         imageChanged.value = false
+        availableInStore.value = false
         message.value = ""
     }
 
@@ -35,6 +37,7 @@ internal class StoryObjectEditorState {
         pictureDraft.value = Uri.fromFile(File(stored.directory, stored.metadata.image)).toString()
         selectedCollection.value = stored.collection
         imageChanged.value = false
+        availableInStore.value = stored.metadata.availableInStore
         message.value = ""
     }
 
@@ -80,7 +83,7 @@ internal class StoryObjectEditorState {
             val folderName = existing?.folderName ?: cleanName.lowercase()
                 .replace(Regex("[^\\p{L}\\p{N}_-]+"), "_")
                 .trim('_')
-            ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName), imageBytes)
+            ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName, availableInStore.value), imageBytes)
             reset()
             message.value = "Objeto guardado correctamente."
             ObjectRepository.list(context)
