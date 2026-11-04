@@ -65,7 +65,7 @@ internal class StoryEditorState(private val context: Context) {
             .toMutableMap()
         sceneNames.forEach { next.putIfAbsent(it, emptyList()) }
         sceneNames.zipWithNext().forEach { (previous, current) ->
-            if (previous !in connections.value && next[previous].isNullOrEmpty()) {
+            if (current !in connections.value && next[previous].isNullOrEmpty()) {
                 next[previous] = listOf(current)
             }
         }
