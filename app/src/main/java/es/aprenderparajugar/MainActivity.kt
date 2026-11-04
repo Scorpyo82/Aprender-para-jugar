@@ -2236,6 +2236,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions)
                                         transferPackage = null
                                         LibraryPackageManager.discard(info)
+                                        // La biblioteca de cuentos mantiene una lista en estado Compose.
+                                        // Tras importar, hay que recargarla explícitamente para que los
+                                        // cuentos recién copiados aparezcan sin reiniciar la aplicación.
+                                        storedStories = StoryRepository.list(context)
+                                        storedStoryObjects = ObjectRepository.list(context)
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = wordLibraryState.reloadExercises()
                                         sequenceExercises = sequenceLibraryState.reloadExercises()
