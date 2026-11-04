@@ -475,7 +475,9 @@ internal object LibraryPackageManager {
                 modalityInfo.categories.filter { it.directory in selected }.forEach { category ->
                     val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
                     val targetCategory = File(ContentStorage.modalityDirectory(context, modality), category.directory)
+                    val categoryExisted = targetCategory.isDirectory
                     check(targetCategory.mkdirs() || targetCategory.isDirectory) { "No se pudo crear la categoría ${category.name}." }
+                    if (!categoryExisted) rollbackTargets.add(targetCategory to null)
                     sourceCategory.listFiles()?.filter { it.isDirectory }?.forEach { incoming ->
                         val incomingStored = ExerciseRepository.read(incoming)
                         val existing = ExerciseRepository.list(context, modality).firstOrNull {
