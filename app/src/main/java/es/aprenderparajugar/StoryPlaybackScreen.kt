@@ -2,6 +2,7 @@ package es.aprenderparajugar
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.media.MediaPlayer
 import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
@@ -11,20 +12,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,7 +79,7 @@ internal fun StoryPlayerScreen(
     var narrationFinished by remember { mutableStateOf(false) }
     var ambientPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var narrationPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-    var portraitWarning by remember { mutableStateOf(false) }
+    val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
 
     DisposableEffect(activity) {
         val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -190,7 +189,7 @@ internal fun StoryPlayerScreen(
                     }
                 }
             },
-            confirmButton = { Text("Cerrar", modifier = Modifier.padding(12.dp)) }
+            confirmButton = { TextButton(onClick = { backpackOpen = false }) { Text("Cerrar") } }
         )
     }
 }
