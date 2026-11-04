@@ -90,6 +90,38 @@ Cada condición incluye la opción **«Se consume»**:
 
 El editor solo configura las reglas. No consulta ni modifica el inventario real del jugador al diseñar el cuento. El consumo y la entrega pertenecen a la ejecución de la historia.
 
+### 3.5. Importación de cuentos y dependencias de objetos
+
+Un cuento no se debe importar de forma que queden referencias a objetos inexistentes. Al exportar un cuento se deben incluir las definiciones y los recursos de todos los objetos que utiliza, tanto en condiciones de conexiones como en entregas de escenas. Estas definiciones son dependencias del cuento, no una concesión automática al inventario.
+
+Al inspeccionar un paquete, el importador debe comparar cada objeto incluido con la biblioteca local. La identidad actual del objeto es el nombre de su carpeta; no existe un identificador independiente ni un campo de descripción. La comparación debe considerar las características realmente existentes en la versión de la aplicación (actualmente nombre e imagen) y, cuando se incorpore la tienda, también «Se puede comprar» y el precio en minutos.
+
+Reglas de resolución:
+
+1. Si no existe un objeto con ese nombre, se incorpora su definición y sus recursos.
+2. Si existe con el mismo nombre y las mismas características, se reutiliza el objeto local.
+3. Si existe con el mismo nombre, pero alguna característica difiere, se presenta un conflicto y la importación no puede continuar hasta resolverlo.
+4. No se renombra ningún objeto automáticamente ni se generan nombres alternativos por iniciativa del importador.
+5. Si el usuario considera que son objetos diferentes, debe adaptar previamente el contenido o la biblioteca para que sus nombres sean distintos y volver a intentar la importación.
+
+Cada conflicto debe mostrar dos miniaturas reales, lado a lado: la imagen del objeto incluido en el paquete y la imagen del objeto existente en la biblioteca. Junto a ellas se muestran el nombre y todas las diferencias detectadas. Las imágenes deben proceder de los archivos incluidos y locales, respectivamente; no se deben sustituir por ilustraciones genéricas.
+
+El selector obligatorio de resolución ofrece:
+
+- **Adaptar el cuento al objeto existente:** conservar la definición local y hacer que todas las referencias del cuento importado apunten a ese objeto.
+- **Sobrescribir el objeto existente:** sustituir su definición por la incluida en el paquete. Antes de permitirlo, advertir de los demás cuentos que utilizan ese nombre y de los efectos que el cambio tendrá sobre ellos. Cuando exista la tienda, advertir expresamente si cambia «Se puede comprar» o el precio.
+- **Cancelar la importación:** no incorporar el cuento ni sus dependencias.
+
+Las decisiones se aplican a todas las referencias del cuento importado: condiciones de conexiones y objetos entregados por escenas. No se puede dejar ninguna referencia sin resolver.
+
+El estado del inventario es independiente de la definición del objeto. Importar o sobrescribir una definición no debe añadir ni retirar automáticamente ese objeto del inventario. Tampoco se importan compras ni se concede el objeto al niño por importar un cuento.
+
+La resolución debe validarse antes de modificar la biblioteca. La operación debe ser transaccional: si se cancela o falla, no debe quedar una importación parcial ni una combinación de definiciones y referencias incoherente.
+
+### 3.6. Importación de objetos de forma independiente
+
+La importación de objetos como contenido independiente puede existir como operación separada. No sustituye la resolución de dependencias obligatoria cuando se importan cuentos. En ambos casos se aplican la detección de nombres coincidentes, la comparación visual y la resolución explícita de diferencias.
+
 ### 3.5. Escenas finales
 
 Una escena es candidata a final cuando no tiene conexiones salientes. No existe un selector manual de final.
