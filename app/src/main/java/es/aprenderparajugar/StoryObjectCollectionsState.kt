@@ -24,8 +24,8 @@ internal class StoryObjectCollectionsState(
     fun addCollection() {
         val clean = draft.value.trim()
         when {
-            clean.isBlank() -> message.value = "Escribe un nombre."
-            collections.value.any { it.equals(clean, ignoreCase = true) } ->
+            NameRules.validationError(clean) != null -> message.value = NameRules.validationError(clean)!!
+            collections.value.any { NameRules.key(it) == NameRules.key(clean) } ->
                 message.value = "Esa colección ya existe."
             else -> {
                 collections.value = (collections.value + clean).sortedBy { it.lowercase() }
