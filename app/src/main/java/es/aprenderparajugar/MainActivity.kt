@@ -63,6 +63,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -2839,7 +2840,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             Text(if (isEditing) "Cerrar edición" else "Editar colección")
                                         }
                                         if (isEditing) {
-                                            Divider()
+                                            HorizontalDivider()
                                             Text(if (name in disabledStoryCollections) "Colección desactivada" else "Colección activa", color = Color(0xFF667085))
                                             OutlinedButton(onClick = {
                                                 storyCollectionsState.toggleCollection(name)
