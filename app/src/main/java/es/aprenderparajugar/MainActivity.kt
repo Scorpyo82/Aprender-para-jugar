@@ -1662,11 +1662,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item { Text("Exportar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Selecciona las categorías, cuentos y estadísticas que quieres incluir en un único ZIP.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         val availableStories = StoryRepository.list(context)
-                        item {
-                            Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            if (availableStories.isEmpty()) {
-                                Text("No hay cuentos guardados para exportar.", fontSize = 13.sp, color = Color(0xFF667085))
-                            } else {
+                        item { Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                        if (availableStories.isEmpty()) {
+                            item { Text("No hay cuentos guardados para exportar.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                        } else {
+                            item {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Checkbox(
                                         checked = availableStories.all { "${it.collection}/${it.folderName}" in transferExportStories },
@@ -1676,26 +1676,24 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     )
                                     Text("Seleccionar todos los cuentos")
                                 }
-                                availableStories.groupBy { it.collection }.toSortedMap().forEach { (collection, stories) ->
+                            }
+                            availableStories.groupBy { it.collection }.toSortedMap().forEach { (collection, stories) ->
+                                item { Text(collection, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467)) }
+                                stories.forEach { story ->
+                                    val key = "${story.collection}/${story.folderName}"
                                     item {
-                                        Text(collection, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
-                                    }
-                                    stories.forEach { story ->
-                                        val key = "${story.collection}/${story.folderName}"
-                                        item {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
-                                                    checked = key in transferExportStories,
-                                                    onCheckedChange = { checked ->
-                                                        transferExportStories = transferExportStories.toMutableSet().also {
-                                                            if (checked) it.add(key) else it.remove(key)
-                                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = key in transferExportStories,
+                                                onCheckedChange = { checked ->
+                                                    transferExportStories = transferExportStories.toMutableSet().also {
+                                                        if (checked) it.add(key) else it.remove(key)
                                                     }
-                                                )
-                                                Column {
-                                                    Text(story.metadata.title)
-                                                    Text("${story.metadata.scenes.size} escenas", fontSize = 12.sp, color = Color(0xFF667085))
                                                 }
+                                            )
+                                            Column {
+                                                Text(story.metadata.title)
+                                                Text("${story.metadata.scenes.size} escenas", fontSize = 12.sp, color = Color(0xFF667085))
                                             }
                                         }
                                     }
