@@ -550,30 +550,29 @@ private fun AprenderApp() {
     var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
-    var wordExercises by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)) }
+    val wordLibraryState = remember(context, preferences) { WordLibraryState(context, preferences) }
+    var wordExercises by wordLibraryState.exercises
     var gameActiveCards by remember { mutableStateOf(preferences.getBoolean("game_active_cards", true)) }
     var gameActiveSequences by remember { mutableStateOf(preferences.getBoolean("game_active_sequences", true)) }
     var gameActiveWords by remember { mutableStateOf(preferences.getBoolean("game_active_words", true)) }
     var gameActiveStories by remember { mutableStateOf(preferences.getBoolean("game_active_stories", true)) }
-    var wordExerciseCategories by remember {
-        mutableStateOf((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct())
-    }
-    var disabledWordExerciseCategories by remember { mutableStateOf(preferences.getStringSet("disabled_letter_word_categories_v1", emptySet())?.toSet() ?: emptySet()) }
-    var wordLibraryPage by remember { mutableStateOf("list") }
-    var wordLibraryEditingIndex by remember { mutableIntStateOf(-1) }
-    var wordLibraryWordDraft by remember { mutableStateOf("") }
-    var wordLibraryPictureDraft by remember { mutableStateOf("") }
-    var wordLibraryCategoryDraft by remember { mutableStateOf("") }
-    var wordLibraryDifficultyDraft by remember { mutableStateOf("Fácil") }
-    var wordLibraryMessage by remember { mutableStateOf("") }
-    var wordLibraryCategoryMenuExpanded by remember { mutableStateOf(false) }
-    var wordFilterCategory by remember { mutableStateOf("Todas") }
-    var wordFilterDifficulty by remember { mutableStateOf("Todas") }
-    var wordFilterStatus by remember { mutableStateOf("Todos") }
+    var wordExerciseCategories by wordLibraryState.categories
+    var disabledWordExerciseCategories by wordLibraryState.disabledCategories
+    var wordLibraryPage by wordLibraryState.page
+    var wordLibraryEditingIndex by wordLibraryState.editingIndex
+    var wordLibraryWordDraft by wordLibraryState.wordDraft
+    var wordLibraryPictureDraft by wordLibraryState.pictureDraft
+    var wordLibraryCategoryDraft by wordLibraryState.categoryDraft
+    var wordLibraryDifficultyDraft by wordLibraryState.difficultyDraft
+    var wordLibraryMessage by wordLibraryState.message
+    var wordLibraryCategoryMenuExpanded by wordLibraryState.categoryMenuExpanded
+    var wordFilterCategory by wordLibraryState.filterCategory
+    var wordFilterDifficulty by wordLibraryState.filterDifficulty
+    var wordFilterStatus by wordLibraryState.filterStatus
     var wordPackageMessage by remember { mutableStateOf("") }
     var wordPendingImportMode by remember { mutableStateOf("replace") }
-    var wordNewCategoryDraft by remember { mutableStateOf("") }
-    var wordCategoryToDelete by remember { mutableStateOf<String?>(null) }
+    var wordNewCategoryDraft by wordLibraryState.newCategoryDraft
+    var wordCategoryToDelete by wordLibraryState.categoryToDelete
     var wordDraft by remember { mutableStateOf("") }
     var pictureDraft by remember { mutableStateOf("") }
     var categoryDraft by remember { mutableStateOf("") }
@@ -1004,11 +1003,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     merged
                 }
-                wordExercises = nextExercises
-                wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, nextExercises)
-                val nextCategories = if (wordPendingImportMode == "replace") imported.categories else (wordExerciseCategories + imported.categories).distinctBy { it.lowercase() }
-                wordExerciseCategories = nextCategories
-                preferences.edit().putString("letter_word_categories_v1", nextCategories.joinToString("|")).apply()
+                wordExercises = wordLibraryState.saveExercises(nextExercises)
+                wordLibraryState.mergeImportedCategories(imported.categories, wordPendingImportMode == "replace")
                 "Importación de Palabras completada: " + imported.pairs.size + " ejercicios. " + if (wordPendingImportMode == "replace") "Biblioteca sustituida." else "Contenido combinado."
             } catch (e: Exception) { "No se pudo importar: " + (e.message ?: "archivo no válido") }
         }
@@ -1906,7 +1902,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         wordExerciseCategories = (preferences.getString("letter_word_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
                                         sequenceCategoryNames = (preferences.getString("sequence_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
-                                        wordExercises = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)
+                                        wordExercises = wordLibraryState.reloadExercises()
                                         sequenceExercises = sequenceLibraryState.reloadExercises()
                                         deleteSelectedItems = emptySet()
                                         deleteExpandedCategories = emptySet()
@@ -3327,7 +3323,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             }
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedButton(onClick = { wordLibraryEditingIndex = index; wordLibraryWordDraft = exercise.word; wordLibraryPictureDraft = exercise.picture; wordLibraryCategoryDraft = exercise.category; wordLibraryDifficultyDraft = exercise.difficulty; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar") }
-                                                OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
+                                                OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; wordExercises = wordLibraryState.saveExercises(wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
                                                 OutlinedButton(onClick = { wordExercises = wordExercises.filterIndexed { i, _ -> i != index }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
                                             }
                                         }
@@ -3404,7 +3400,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             when {
                                 name.isBlank() -> wordLibraryMessage = "Escribe un nombre."
                                 wordExerciseCategories.any { it.equals(name, true) } -> wordLibraryMessage = "Esa categoría ya existe."
-                                else -> { wordExerciseCategories = wordExerciseCategories + name; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordNewCategoryDraft = ""; wordLibraryMessage = "Categoría creada." }
+                                else -> { wordLibraryState.createCategory(name); wordLibraryMessage = "Categoría creada." }
                             }
                         }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear categoría") } }
                         if (wordLibraryMessage.isNotBlank()) item { Text(wordLibraryMessage, color = Color(0xFF24733B)) }
@@ -3415,17 +3411,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Column(Modifier.weight(1f)) { Text(category, fontWeight = FontWeight.Bold); Text("${wordExercises.count { it.category == category }} ejercicios", color = Color(0xFF667085)) }
                                             Switch(checked = category !in disabledWordExerciseCategories, onCheckedChange = { enabled ->
-                                                disabledWordExerciseCategories = if (enabled) disabledWordExerciseCategories - category else disabledWordExerciseCategories + category
-                                                preferences.edit().putStringSet("disabled_letter_word_categories_v1", disabledWordExerciseCategories).apply()
+                                                wordLibraryState.setCategoryEnabled(category, enabled)
                                             })
                                         }
                                         if (wordCategoryToDelete == category) {
                                             Text("Borrar categoría y contenido", fontWeight = FontWeight.Bold)
                                             Text("Se eliminarán también los ${wordExercises.count { it.category == category }} ejercicios asignados.", color = Color(0xFFB3261E))
-                                            Button(onClick = { wordExercises = wordExercises.filterNot { it.category == category }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
+                                            Button(onClick = { wordLibraryState.deleteCategoryAndExercises(category) }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
                                             Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.Bold)
                                             wordExerciseCategories.filterNot { it == category }.forEach { destination ->
-                                                OutlinedButton(onClick = { wordExercises = wordExercises.map { if (it.category == category) it.copy(category = destination) else it }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises); wordExerciseCategories = wordExerciseCategories.filterNot { it == category }; preferences.edit().putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|")).apply(); wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                                OutlinedButton(onClick = { wordLibraryState.reassignCategory(category, destination) }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
                                             }
                                             OutlinedButton(onClick = { wordCategoryToDelete = null }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                                         } else {
