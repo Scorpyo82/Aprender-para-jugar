@@ -1899,7 +1899,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             }
                                         }
                                         categoryNames = (preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }
-                                        wordExerciseCategories = (preferences.getString("letter_word_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
+                                        wordLibraryState.saveCategories((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() })
                                         sequenceCategoryNames = (preferences.getString("sequence_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = wordLibraryState.reloadExercises()
@@ -2087,10 +2087,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics)
                                         transferPackage = null
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
-                                        wordExercises = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)
+                                        wordExercises = wordLibraryState.reloadExercises()
                                         sequenceExercises = sequenceLibraryState.reloadExercises()
                                         categoryNames = (categoryNames + ExerciseRepository.list(context, ContentStorage.Modality.TARJETAS).map { it.metadata.category }).distinct()
-                                        wordExerciseCategories = (wordExerciseCategories + ExerciseRepository.list(context, ContentStorage.Modality.PALABRAS).map { it.metadata.category }).distinct()
+                                        wordLibraryState.mergeImportedCategories(ExerciseRepository.list(context, ContentStorage.Modality.PALABRAS).map { it.metadata.category }, false)
                                         sequenceCategoryNames = (sequenceCategoryNames + ExerciseRepository.list(context, ContentStorage.Modality.SECUENCIAS).map { it.metadata.category }).distinct()
                                         preferences.edit()
                                             .putString("categories", categoryNames.joinToString("|"))
@@ -3324,7 +3324,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedButton(onClick = { wordLibraryEditingIndex = index; wordLibraryWordDraft = exercise.word; wordLibraryPictureDraft = exercise.picture; wordLibraryCategoryDraft = exercise.category; wordLibraryDifficultyDraft = exercise.difficulty; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar") }
                                                 OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; wordExercises = wordLibraryState.saveExercises(wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
-                                                OutlinedButton(onClick = { wordExercises = wordExercises.filterIndexed { i, _ -> i != index }; wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
+                                                OutlinedButton(onClick = { wordExercises = wordLibraryState.saveExercises(wordExercises.filterIndexed { i, _ -> i != index }) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
                                             }
                                         }
                                     }
@@ -3382,7 +3382,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         else -> {
                                             val entry = wordExercises.getOrNull(wordLibraryEditingIndex)?.copy(word = cleanWord, picture = wordLibraryPictureDraft.trim(), category = wordLibraryCategoryDraft, difficulty = wordLibraryDifficultyDraft, active = true) ?: PairItem(cleanWord, wordLibraryPictureDraft.trim(), wordLibraryCategoryDraft, wordLibraryDifficultyDraft, true)
                                             wordExercises = if (wordLibraryEditingIndex < 0) wordExercises + entry else wordExercises.toMutableList().also { it[wordLibraryEditingIndex] = entry }
-                                            wordExercises = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.PALABRAS, wordExercises)
+                                            wordExercises = wordLibraryState.saveExercises(wordExercises)
                                             wordLibraryPage = "list"; wordLibraryMessage = ""
                                         }
                                     }
