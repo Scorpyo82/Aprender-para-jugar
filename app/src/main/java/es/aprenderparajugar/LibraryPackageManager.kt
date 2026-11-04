@@ -24,7 +24,14 @@ internal object LibraryPackageManager {
         val includesLearningStatistics: Boolean,
         val includesUsageStatistics: Boolean
     )
-    data class PackageInfo(val modalities: List<ModalityInfo>, internal val staging: File)
+    data class StoryInfo(val key: String, val collection: String, val directory: String, val title: String, val sceneCount: Int)
+    data class ObjectDependencyInfo(val key: String, val collection: String, val directory: String, val name: String)
+    data class PackageInfo(
+        val modalities: List<ModalityInfo>,
+        val stories: List<StoryInfo>,
+        val objects: List<ObjectDependencyInfo>,
+        internal val staging: File
+    )
 
     fun categories(context: Context, modality: ContentStorage.Modality): List<CategoryInfo> {
         val root = ContentStorage.modalityDirectory(context, modality)
@@ -218,7 +225,82 @@ internal object LibraryPackageManager {
                 }
                 ModalityInfo(modality, categories, item.optBoolean("includesLearningStatistics"), includesUsage)
             }
-            return PackageInfo(result, staging)
+            val storiesJson = manifest.optJSONArray("stories") ?: JSONArray()
+            val storyInfos = (0 until storiesJson.length()).map { index ->
+                val item = storiesJson.getJSONObject(index)
+                val collection = item.optString("collection")
+                val directory = item.optString("directory")
+                val title = item.optString("title")
+                require(isSafeSegment(collection) && isSafeSegment(directory) && title.isNotBlank()) {
+                    "El paquete contiene un cuento con datos no válidos."
+                }
+                val key = "$collection/$directory"
+                val storyDirectory = File(staging, "cuentos/$key")
+                require(storyDirectory.isDirectory && File(storyDirectory, "cuento.json").isFile) {
+                    "Faltan los datos del cuento $title."
+                }
+                val storedStory = StoryRepository.read(storyDirectory)
+                require(storedStory.collection == collection && storedStory.folderName == directory &&
+                    storedStory.metadata.title == title && storedStory.metadata.scenes.size == item.optInt("sceneCount", -1)) {
+                    "Los metadatos del cuento $title no coinciden con el manifiesto."
+                }
+                storedStory.metadata.scenes.forEach { sceneName ->
+                    val sceneDir = File(File(storyDirectory, "escenas"), sceneName)
+                    val sceneJson = File(sceneDir, "escena.json")
+                    if (sceneJson.isFile) {
+                        val scene = StorySceneJsonCodec.decode(JSONObject(sceneJson.readText(Charsets.UTF_8)))
+                        listOfNotNull(scene.metadata.illustration, scene.metadata.ambientAudio, scene.metadata.narrationAudio).forEach { resource ->
+                            require(isSafeSegment(resource) && File(sceneDir, resource).isFile) {
+                                "Falta el recurso $resource de la escena $sceneName."
+                            }
+                        }
+                    }
+                }
+                storedStory.metadata.cover?.let { cover ->
+                    require(File(storyDirectory, cover).isFile) { "Falta la portada del cuento $title." }
+                }
+                StoryInfo(key, collection, directory, title, storedStory.metadata.scenes.size)
+            }
+            require(storyInfos.map { it.key }.distinct().size == storyInfos.size) { "El manifiesto repite cuentos." }
+
+            val objectsJson = manifest.optJSONArray("objectDependencies") ?: JSONArray()
+            val objectInfos = (0 until objectsJson.length()).map { index ->
+                val item = objectsJson.getJSONObject(index)
+                val collection = item.optString("collection")
+                val directory = item.optString("directory")
+                val name = item.optString("name")
+                require(isSafeSegment(collection) && isSafeSegment(directory) && name.isNotBlank()) {
+                    "El paquete contiene una dependencia de objeto no válida."
+                }
+                val key = "$collection/$directory"
+                val objectDir = File(staging, "objetos/$key")
+                val storedObject = ObjectRepository.read(objectDir)
+                require(storedObject.metadata.name == name && storedObject.metadata.image == item.optString("image")) {
+                    "Los datos del objeto $name no coinciden con el manifiesto."
+                }
+                ObjectDependencyInfo(key, collection, directory, name)
+            }
+            require(objectInfos.map { it.key }.distinct().size == objectInfos.size) { "El manifiesto repite objetos." }
+
+            // Comprueba que todas las referencias de objetos del cuento estén resueltas
+            // dentro del paquete; evita importar historias con dependencias rotas.
+            storyInfos.forEach { storyInfo ->
+                val story = StoryRepository.read(File(staging, "cuentos/${storyInfo.key}"))
+                val referenced = linkedSetOf<String>()
+                story.metadata.connectionConditions.mapNotNullTo(referenced) { it.requiredObject }
+                story.metadata.scenes.forEach { sceneName ->
+                    val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                    if (sceneFile.isFile) {
+                        val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
+                        listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { referenced.add(it) }
+                    }
+                }
+                val packagedNames = objectInfos.map { it.directory }.toSet()
+                require(referenced.all { it in packagedNames }) {
+                    "El cuento ${storyInfo.title} referencia un objeto que no está incluido en el ZIP."
+                }
+            }
+            return PackageInfo(result, storyInfos, objectInfos, staging)
         } catch (error: Exception) {
             staging.deleteRecursively()
             throw error
