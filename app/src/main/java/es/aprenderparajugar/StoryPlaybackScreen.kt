@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,13 @@ import java.io.File
 
 @Composable
 internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: () -> Unit) {
+    val activity = LocalContext.current as? Activity
+    val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
+    DisposableEffect(activity) {
+        val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        onDispose { activity?.requestedOrientation = previousOrientation }
+    }
     val cover = remember(story.directory.absolutePath, story.metadata.cover) {
         story.metadata.cover?.let { File(story.directory, it) }
             ?.takeIf { it.isFile }
@@ -56,6 +64,7 @@ internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: ()
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
     ) {
         Text(story.metadata.title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+        if (portraitWarning) Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = Color(0xFFFFD968), textAlign = TextAlign.Center)
         if (cover != null) Image(cover.asImageBitmap(), contentDescription = "Portada de ${story.metadata.title}", modifier = Modifier.weight(1f).fillMaxWidth(), contentScale = ContentScale.Fit)
         else Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text("📖", fontSize = 100.sp) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
