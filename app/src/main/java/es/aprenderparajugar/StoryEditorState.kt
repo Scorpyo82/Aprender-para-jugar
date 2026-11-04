@@ -130,9 +130,9 @@ internal class StoryEditorState(private val context: Context) {
                         illustrationSummary = summary.value,
                         text = sceneText.value,
                         illustration = illustrations.value[selectedScene.value] ?: existing?.illustration,
-                        ambientAudio = ambientAudio.value[selectedScene.value] ?: existing?.ambientAudio,
+                        ambientAudio = if (ambientAudio.value.containsKey(selectedScene.value)) ambientAudio.value[selectedScene.value] else existing?.ambientAudio,
                         keepPreviousAmbient = keepAmbientByScene.value[selectedScene.value] ?: false,
-                        narrationAudio = narrationAudio.value[selectedScene.value] ?: existing?.narrationAudio,
+                        narrationAudio = if (narrationAudio.value.containsKey(selectedScene.value)) narrationAudio.value[selectedScene.value] else existing?.narrationAudio,
                         awardedObject = if (awardedObjectByScene.value.containsKey(selectedScene.value)) awardedObjectByScene.value[selectedScene.value] else existing?.awardedObject,
                         awardTiming = if (objectTiming.value == "Al entrar") "onEnter" else "onExit"
                     )
