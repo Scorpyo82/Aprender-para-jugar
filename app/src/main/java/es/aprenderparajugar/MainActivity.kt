@@ -651,13 +651,14 @@ private fun AprenderApp() {
     var pendingCameraSequenceIndex by remember { mutableIntStateOf(-1) }
     var sequenceAlternativeDraft by remember { mutableStateOf("") }
     var sequenceEditorMessage by remember { mutableStateOf("") }
-    var sequencePlayingExercise by remember { mutableStateOf<SequenceExercise?>(null) }
-    var sequencePlayOrder by remember { mutableStateOf(emptyList<Int>()) }
-    var sequenceSelectedOrder by remember { mutableStateOf(emptyList<Int>()) }
-    var sequenceWrongAnswers by remember { mutableIntStateOf(0) }
-    var sequencePlayMessage by remember { mutableStateOf("") }
-    var sequenceChosenCategory by remember { mutableStateOf("") }
-    var sequenceChosenDifficulty by remember { mutableStateOf("") }
+    val sequenceGameState = remember(preferences) { SequenceGameState(preferences) }
+    var sequencePlayingExercise by sequenceGameState.playingExercise
+    var sequencePlayOrder by sequenceGameState.playOrder
+    var sequenceSelectedOrder by sequenceGameState.selectedOrder
+    var sequenceWrongAnswers by sequenceGameState.wrongAnswers
+    var sequencePlayMessage by sequenceGameState.playMessage
+    var sequenceChosenCategory by sequenceGameState.chosenCategory
+    var sequenceChosenDifficulty by sequenceGameState.chosenDifficulty
 
     var packageMessage by remember { mutableStateOf("") }
     var sequencePackageMessage by remember { mutableStateOf("") }
@@ -1158,42 +1159,17 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         screen = "word-exercise"
     }
 
-    fun sequenceDailyUsagePreferenceKey(exercise: SequenceExercise): String {
-        val today = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(java.util.Date())
-        val identity = listOf(exercise.type, exercise.title, exercise.category, exercise.difficulty,
-            exercise.cards.joinToString("\u001F"), exercise.pictures.joinToString("\u001F")).joinToString("\u001E")
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-            .digest(identity.toByteArray(Charsets.UTF_8))
-            .joinToString("") { byte -> "%02x".format(byte) }
-        return "sequence_completed_count_${today}_${digest}"
-    }
-
     fun eligibleSequenceExercises(type: String, level: String? = null): List<SequenceExercise> =
-        sequenceExercises.filter { exercise ->
-            exercise.active && exercise.cards.size <= sequenceMaxCards &&
-                exercise.category !in disabledSequenceCategories &&
-                exercise.type.equals(type, ignoreCase = true) &&
-                (level == null || exercise.difficulty.equals(level, ignoreCase = true))
-        }
+        sequenceGameState.eligibleExercises(
+            sequenceExercises, type, sequenceMaxCards, disabledSequenceCategories, level
+        )
 
     fun startSequenceExercise(type: String, level: String): Boolean {
-        val candidates = eligibleSequenceExercises(type, level)
-        if (candidates.isEmpty()) {
-            sequencePlayMessage = "No hay ejercicios activos de $type con dificultad $level y un máximo de $sequenceMaxCards tarjetas. Revisa los ejercicios disponibles o modifica la configuración."
-            return false
-        }
-        val leastCompleted = candidates.minOf { preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) }
-        val leastUsed = candidates.filter { preferences.getInt(sequenceDailyUsagePreferenceKey(it), 0) == leastCompleted }
-        val exercise = leastUsed.random()
-        sequencePlayingExercise = exercise
-        val indexes = exercise.cards.indices.toList()
-        val shuffled = indexes.shuffled()
-        sequencePlayOrder = if (shuffled.size > 1 && shuffled == indexes) shuffled.drop(1) + shuffled.first() else shuffled
-        sequenceSelectedOrder = emptyList()
-        sequenceWrongAnswers = 0
-        sequencePlayMessage = "Busca la primera tarjeta de la secuencia."
-        screen = "sequence-game"
-        return true
+        val started = sequenceGameState.startExercise(
+            sequenceExercises, type, level, sequenceMaxCards, disabledSequenceCategories
+        )
+        if (started) screen = "sequence-game"
+        return started
     }
 
     fun addEarnedTime(seconds: Int) {
@@ -4463,20 +4439,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         ?: if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else ""
                     Card(
                         Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
-                            val expectedIndex = sequenceSelectedOrder.size
-                            val validOrders = listOf(exercise.cards.indices.toList()) + exercise.alternatives.mapNotNull { line ->
-                                line.split(",").map { it.trim().toIntOrNull()?.minus(1) }.takeIf { values ->
-                                    values.size == exercise.cards.size && values.all { it != null } && values.filterNotNull().distinct().size == exercise.cards.size
-                                }?.map { it!! }
-                            }
-                            val isCorrectChoice = validOrders.any { order ->
-                                order.take(expectedIndex) == sequenceSelectedOrder && order.getOrNull(expectedIndex) == cardIndex
-                            }
-                            if (isCorrectChoice) {
-                                val nextOrder = sequenceSelectedOrder + cardIndex
-                                sequenceSelectedOrder = nextOrder
-                                val targetSize = exercise.cards.size
-                                if (nextOrder.size == targetSize) {
+                            if (sequenceGameState.selectCard(exercise, cardIndex)) {
                                     sequencePlayMessage = "¡Secuencia completada!"
                                     val baseRewardSeconds = (when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60
                                     val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
@@ -4485,7 +4448,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     val resultSize = exercise.cards.size
                                     resultCorrectCount = (resultSize - sequenceWrongAnswers).coerceIn(0, resultSize)
                                     resultTotalCount = resultSize
-                                    val usageKey = sequenceDailyUsagePreferenceKey(exercise)
+                                    val usageKey = sequenceGameState.dailyUsagePreferenceKey(exercise)
                                     preferences.edit().putInt(usageKey, preferences.getInt(usageKey, 0) + 1).apply()
                                     exercise.directory?.let { directory ->
                                         runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, sequenceWrongAnswers) }
@@ -4499,12 +4462,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         )
                                     }
                                     screen = "sequence-result"
-                                } else {
-                                    sequencePlayMessage = "¡Correcto! ¿Qué ocurre después?"
-                                }
-                            } else {
-                                sequenceWrongAnswers += 1
-                                sequencePlayMessage = "No es esa todavía. Busca el paso que ocurre antes."
                             }
                         },
                         shape = RoundedCornerShape(16.dp),
