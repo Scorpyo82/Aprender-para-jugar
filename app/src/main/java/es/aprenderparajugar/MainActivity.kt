@@ -625,30 +625,25 @@ private fun AprenderApp() {
     var disabledStoryCollections by storyCollectionsState.disabledCollections
 
     fun persistStoryDraft(): StoredStory? = storyEditorState.persist()
-var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
+    val sequenceLibraryState = remember(context, preferences) { SequenceLibraryState(context, preferences) }
+    var sequenceExercises by sequenceLibraryState.exercises
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
     var sequenceMaxCards by remember { mutableIntStateOf(preferences.getInt("sequence_max_cards_v1", 6).coerceIn(2, 6)) }
     var sequenceContentFormat by remember { mutableStateOf(preferences.getString("sequence_content_format_v1", "Imagen y texto") ?: "Imagen y texto") }
     var sequenceCategoryDraft by remember { mutableStateOf("") }
-    var sequenceNewCategoryDraft by remember { mutableStateOf("") }
+    var sequenceNewCategoryDraft by sequenceLibraryState.newCategoryDraft
     var sequenceCategoryMenuExpanded by remember { mutableStateOf(false) }
-    var sequenceCategoryNames by remember {
-        mutableStateOf(
-            (preferences.getString("sequence_categories_v1", null)
-                ?: "")
-                .split("|").map { it.trim() }.filter { it.isNotBlank() }.distinct()
-        )
-    }
-    var sequenceCategoryMessage by remember { mutableStateOf("") }
-    var sequenceCategoryToDelete by remember { mutableStateOf<String?>(null) }
+    var sequenceCategoryNames by sequenceLibraryState.categoryNames
+    var sequenceCategoryMessage by sequenceLibraryState.categoryMessage
+    var sequenceCategoryToDelete by sequenceLibraryState.categoryToDelete
     var sequenceTypeDraft by remember { mutableStateOf("Orden temporal") }
     var sequenceDifficultyDraft by remember { mutableStateOf("Normal") }
-    var sequenceFilterType by remember { mutableStateOf("Todos") }
-    var sequenceFilterCategory by remember { mutableStateOf("Todas") }
-    var sequenceFilterDifficulty by remember { mutableStateOf("Todas") }
-    var sequenceFilterStatus by remember { mutableStateOf("Todos") }
-    var disabledSequenceCategories by remember { mutableStateOf(preferences.getStringSet("disabled_sequence_categories", emptySet())?.toSet() ?: emptySet()) }
+    var sequenceFilterType by sequenceLibraryState.filterType
+    var sequenceFilterCategory by sequenceLibraryState.filterCategory
+    var sequenceFilterDifficulty by sequenceLibraryState.filterDifficulty
+    var sequenceFilterStatus by sequenceLibraryState.filterStatus
+    var disabledSequenceCategories by sequenceLibraryState.disabledCategories
     var sequenceCardsDraft by remember { mutableStateOf(listOf("", "")) }
     var sequenceCardPicturesDraft by remember { mutableStateOf(listOf("", "")) }
     var pendingSequencePictureIndex by remember { mutableIntStateOf(-1) }
@@ -667,7 +662,7 @@ var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context
     var packageMessage by remember { mutableStateOf("") }
     var sequencePackageMessage by remember { mutableStateOf("") }
     var sequencePendingImportMode by remember { mutableStateOf("replace") }
-    var sequenceLibraryFilterCategoryExpanded by remember { mutableStateOf(false) }
+    var sequenceLibraryFilterCategoryExpanded by sequenceLibraryState.filterCategoryExpanded
     var pendingImportMode by remember { mutableStateOf("replace") }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -1042,7 +1037,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 val nextDisabled = if (sequencePendingImportMode == "replace") imported.disabledCategories else disabledSequenceCategories + imported.disabledCategories
                 sequenceExercises = nextExercises
                 disabledSequenceCategories = nextDisabled
-                sequenceExercises = saveSequenceExercises(context, nextExercises)
+                sequenceExercises = sequenceLibraryState.saveExercises(nextExercises)
                 preferences.edit().putStringSet("disabled_sequence_categories", nextDisabled).apply()
                 "Importación completada: ${imported.exercises.size} ejercicios. ${if (sequencePendingImportMode == "replace") "Biblioteca de secuencias sustituida." else "Contenido combinado."}"
             } catch (e: Exception) { "No se pudo importar: ${e.message ?: "archivo no válido"}" }
@@ -1936,7 +1931,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         sequenceCategoryNames = (preferences.getString("sequence_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)
-                                        sequenceExercises = ExerciseUiStorage.loadSequences(context)
+                                        sequenceExercises = sequenceLibraryState.reloadExercises()
                                         deleteSelectedItems = emptySet()
                                         deleteExpandedCategories = emptySet()
                                         deleteConfirmArmed = false
@@ -2976,7 +2971,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Switch(checked = exercise.active, onCheckedChange = { active ->
                                                 sequenceExercises = sequenceExercises.toMutableList().also { it[index] = exercise.copy(active = active) }
-                                                sequenceExercises = saveSequenceExercises(context, sequenceExercises)
+                                                sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
                                             })
                                             Text(if (exercise.active) "Activo" else "Inactivo", fontSize = 11.sp)
                                             OutlinedButton(onClick = {
@@ -3234,7 +3229,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
                                         }
                                         sequenceExercises = updatedExercises
-                                        sequenceExercises = saveSequenceExercises(context, updatedExercises)
+                                        sequenceExercises = sequenceLibraryState.saveExercises(updatedExercises)
                                         parentSection = "sequence-library"
                                     }
                                 }
