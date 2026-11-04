@@ -906,6 +906,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferExportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
+    var transferImportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var transferObjectConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
     var transferImportStatistics by remember { mutableStateOf(false) }
     var transferImportUsageStatistics by remember { mutableStateOf(false) }
@@ -1061,6 +1063,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 val inspected = LibraryPackageManager.inspect(context, uri)
                 transferPackage = inspected
                 transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
+                transferImportStories = inspected.stories.map { it.key }.toSet()
+                transferObjectConflictDecisions = emptyMap()
                 transferReplaceDuplicates = false
                 transferImportStatistics = false
                 transferMessage = "Archivo válido. Selecciona las categorías que deseas importar."
@@ -2079,6 +2083,86 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         if (info == null) {
                             item { Text("No hay ningún paquete validado. Vuelve atrás y selecciona un archivo.") }
                         } else {
+                            if (info.stories.isNotEmpty()) {
+                                item {
+                                    Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text("Se importan completos, con escenas, conexiones y recursos.", fontSize = 12.sp, color = Color(0xFF667085))
+                                }
+                                item {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = info.stories.all { it.key in transferImportStories },
+                                            onCheckedChange = { checked -> transferImportStories = if (checked) info.stories.map { it.key }.toSet() else emptySet() }
+                                        )
+                                        Text("Seleccionar todos los cuentos")
+                                    }
+                                }
+                                info.stories.forEach { story ->
+                                    item {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = story.key in transferImportStories,
+                                                onCheckedChange = { checked ->
+                                                    transferImportStories = transferImportStories.toMutableSet().also {
+                                                        if (checked) it.add(story.key) else it.remove(story.key)
+                                                    }
+                                                }
+                                            )
+                                            Column {
+                                                Text(story.title, fontWeight = FontWeight.SemiBold)
+                                                Text("${story.collection} · ${story.sceneCount} escenas", fontSize = 12.sp, color = Color(0xFF667085))
+                                            }
+                                        }
+                                    }
+                                }
+                                val localObjects = ObjectRepository.list(context)
+                                val neededObjectNames = linkedSetOf<String>()
+                                info.stories.filter { it.key in transferImportStories }.forEach { storyInfo ->
+                                    val story = StoryRepository.read(File(info.staging, "cuentos/${storyInfo.key}"))
+                                    story.metadata.connectionConditions.mapNotNullTo(neededObjectNames) { it.requiredObject }
+                                    story.metadata.scenes.forEach { sceneName ->
+                                        val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                                        if (sceneFile.isFile) {
+                                            val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
+                                            listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { neededObjectNames.add(it) }
+                                        }
+                                    }
+                                }
+                                info.objects.filter { it.directory in neededObjectNames }.forEach { dependency ->
+                                    val existing = localObjects.firstOrNull { it.folderName == dependency.directory }
+                                    if (existing != null) {
+                                        val incoming = ObjectRepository.read(File(info.staging, "objetos/${dependency.key}"))
+                                        val identical = existing.metadata.name == incoming.metadata.name &&
+                                            existing.metadata.image == incoming.metadata.image &&
+                                            runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(File(incoming.directory, incoming.metadata.image).readBytes()) }.getOrDefault(false)
+                                        if (!identical) {
+                                            item {
+                                                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                        Text("Conflicto de objeto: ${dependency.name}", fontWeight = FontWeight.Bold)
+                                                        Text("Ya existe un objeto con la misma identidad, pero sus datos o imagen son diferentes.", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            androidx.compose.material3.RadioButton(
+                                                                selected = transferObjectConflictDecisions[dependency.directory] == "reuse",
+                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (dependency.directory to "reuse") }
+                                                            )
+                                                            Text("Adaptar el cuento al objeto existente")
+                                                        }
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            androidx.compose.material3.RadioButton(
+                                                                selected = transferObjectConflictDecisions[dependency.directory] == "overwrite",
+                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (dependency.directory to "overwrite") }
+                                                            )
+                                                            Text("Sobrescribir el objeto existente")
+                                                        }
+                                                        Text("Sobrescribir puede afectar a otros cuentos que utilicen este objeto.", fontSize = 11.sp, color = Color(0xFFB3261E))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             info.modalities.forEach { modalityInfo ->
                                 val modality = modalityInfo.modality
                                 val label = when (modality) { ContentStorage.Modality.TARJETAS -> "Tarjetas"; ContentStorage.Modality.PALABRAS -> "Palabras"; ContentStorage.Modality.SECUENCIAS -> "Secuencias" }
