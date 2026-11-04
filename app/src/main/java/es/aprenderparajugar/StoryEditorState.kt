@@ -34,10 +34,12 @@ internal class StoryEditorState(private val context: Context) {
     val collectionMenuExpanded: MutableState<Boolean> = mutableStateOf(false)
     val connections: MutableState<Map<String, List<String>>> = mutableStateOf(emptyMap())
     val connectionConditions: MutableState<List<StoryConnectionCondition>> = mutableStateOf(emptyList())
+    val startScene: MutableState<String> = mutableStateOf("Escena 1")
 
     /** Carga el grafo persistido usando los nombres visibles de las escenas en el editor. */
     fun loadStructure(metadata: StoryMetadata) {
         val visibleByFolder = metadata.scenes.associate { it to it.replace('_', ' ') }
+        startScene.value = visibleByFolder[metadata.startScene] ?: visibleByFolder.values.firstOrNull().orEmpty()
         connections.value = metadata.scenes.associate { folder ->
             visibleByFolder.getValue(folder) to metadata.connections[folder].orEmpty().mapNotNull(visibleByFolder::get)
         }
@@ -50,6 +52,7 @@ internal class StoryEditorState(private val context: Context) {
 
     /** Inicializa un cuento nuevo con el recorrido lineal que se utilizaba hasta ahora. */
     fun resetStructure(sceneNames: List<String>) {
+        startScene.value = sceneNames.firstOrNull() ?: ""
         connections.value = sceneNames.mapIndexed { index, scene ->
             scene to listOfNotNull(sceneNames.getOrNull(index + 1))
         }.toMap()
@@ -99,7 +102,7 @@ internal class StoryEditorState(private val context: Context) {
                 title = title.value.trim(),
                 collection = collectionFolder,
                 cover = cover.value,
-                startScene = sceneFolders.first(),
+                startScene = folderByVisible[startScene.value] ?: sceneFolders.first(),
                 scenes = sceneFolders,
                 connections = persistedConnections,
                 connectionConditions = persistedConditions
