@@ -2701,20 +2701,39 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             StoryImagePreview(illustrationFile, "Vista previa de ilustración")
                         }
                         item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).apply()
-                                storyAmbientPicker.launch(arrayOf("audio/*"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorAmbientAudio[storyEditorSelectedScene] == null) "♫ Elegir audio ambiental" else "Cambiar audio ambiental") }
-                            val ambientFile = if (storyEditorAmbientAudio[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
+                            val keepPreviousAmbient = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false
+                            val ambientFile = if (!keepPreviousAmbient && storyEditorAmbientAudio[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
                                 File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorAmbientAudio[storyEditorSelectedScene]!!) }
                             else null
-                            StoryAudioPreview(ambientFile, "Audio ambiental")
+                            OutlinedButton(
+                                onClick = {
+                                    preferences.edit().putBoolean("content_picker_active", true).apply()
+                                    storyAmbientPicker.launch(arrayOf("audio/*"))
+                                },
+                                enabled = !keepPreviousAmbient,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(if (keepPreviousAmbient) "Audio ambiental deshabilitado" else if (ambientFile == null) "♫ Elegir audio ambiental" else "Cambiar audio ambiental") }
+                            if (!keepPreviousAmbient) {
+                                StoryAudioPreview(ambientFile, "Audio ambiental")
+                                if (ambientFile != null) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(storyEditorSelectedScene, null) }
+                                            ambientFile.delete()
+                                            persistStoryDraft()
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text("Eliminar audio ambiental") }
+                                }
+                            } else {
+                                Text("Se conservará el sonido de la escena anterior. El audio asignado a esta escena se ignorará.", fontSize = 12.sp, color = Color(0xFF667085))
+                            }
                         }
                         item {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Mantener sonido ambiental de escena anterior", fontWeight = FontWeight.Medium)
-                                    Text("Continúa el audio anterior sin seleccionar el mismo archivo otra vez.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Text("Tiene prioridad sobre cualquier audio ambiental asignado a esta escena.", fontSize = 12.sp, color = Color(0xFF667085))
                                 }
                                 Switch(
                                     checked = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
@@ -2722,19 +2741,30 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
                                             put(storyEditorSelectedScene, enabled)
                                         }
+                                        persistStoryDraft()
                                     }
                                 )
                             }
                         }
                         item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).apply()
-                                storyNarrationPicker.launch(arrayOf("audio/*"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorNarrationAudio[storyEditorSelectedScene] == null) "♫ Elegir audio de narración" else "Cambiar audio de narración") }
                             val narrationFile = if (storyEditorNarrationAudio[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
                                 File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorNarrationAudio[storyEditorSelectedScene]!!) }
                             else null
+                            OutlinedButton(onClick = {
+                                preferences.edit().putBoolean("content_picker_active", true).apply()
+                                storyNarrationPicker.launch(arrayOf("audio/*"))
+                            }, modifier = Modifier.fillMaxWidth()) { Text(if (narrationFile == null) "♫ Elegir audio de narración" else "Cambiar audio de narración") }
                             StoryAudioPreview(narrationFile, "Audio de narración")
+                            if (narrationFile != null) {
+                                OutlinedButton(
+                                    onClick = {
+                                        storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(storyEditorSelectedScene, null) }
+                                        narrationFile.delete()
+                                        persistStoryDraft()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text("Eliminar audio de narración") }
+                            }
                         }
                         item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
                         item {
