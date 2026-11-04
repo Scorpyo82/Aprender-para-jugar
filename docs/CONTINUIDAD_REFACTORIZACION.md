@@ -4,7 +4,7 @@
 
 - Repositorio: `Scorpyo82/Aprender-para-jugar`.
 - Rama de trabajo: `main`.
-- Último HEAD verificado: `2dfb2f213a9e101e86a6546d9203a7337182616c` (rama `main`).
+- Último HEAD verificado: `2dfb2f213a9e101e86a6546d9203a7337182616c` para el código de la fase 7; la actualización documental más reciente queda registrada en el historial de commits de `main`.
 - Archivo principal: `app/src/main/java/es/aprenderparajugar/MainActivity.kt`.
 - Tamaño observado en la auditoría: 4.881 líneas.
 - Este documento es la referencia de continuidad. Actualizarlo al cerrar cada fase.
@@ -170,7 +170,7 @@ El archivo `StoryStructureEditor.kt` existe, pero no debe darse por integrado ni
 
 Estas reglas deben conservarse para cuando se retome expresamente esa funcionalidad.
 
-## Fase 7: estado y reglas de la partida de Secuencias — IMPLEMENTADA, PENDIENTE DE COMPILACIÓN Y PRUEBA
+## Fase 7: estado y reglas de la partida de Secuencias — VALIDADA POR EL USUARIO
 
 El usuario autorizó continuar con la fase 7 después de validar la biblioteca de Secuencias.
 
