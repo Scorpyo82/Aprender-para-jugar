@@ -85,8 +85,8 @@ internal fun StoryPlayerScreen(
         val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         onDispose {
-            ambientPlayer?.runCatching { stop(); release() }
-            narrationPlayer?.runCatching { stop(); release() }
+            safelyStopAndRelease(ambientPlayer)
+            safelyStopAndRelease(narrationPlayer)
             engine.stop()
             activity?.requestedOrientation = previousOrientation
         }
@@ -94,7 +94,7 @@ internal fun StoryPlayerScreen(
 
     LaunchedEffect(snapshot.scene.folderName, snapshot.scene.metadata.keepPreviousAmbient, snapshot.scene.metadata.ambientAudio) {
         if (!snapshot.scene.metadata.keepPreviousAmbient) {
-            ambientPlayer?.runCatching { stop(); release() }
+            safelyStopAndRelease(ambientPlayer)
             ambientPlayer = null
             val audio = snapshot.scene.metadata.ambientAudio?.let { File(snapshot.scene.directory, it) }?.takeIf { it.isFile }
             if (audio != null) {
@@ -111,7 +111,7 @@ internal fun StoryPlayerScreen(
     }
 
     LaunchedEffect(snapshot.scene.folderName, snapshot.scene.metadata.narrationAudio) {
-        narrationPlayer?.runCatching { stop(); release() }
+        safelyStopAndRelease(narrationPlayer)
         narrationPlayer = null
         narrationFinished = false
         val audio = snapshot.scene.metadata.narrationAudio?.let { File(snapshot.scene.directory, it) }?.takeIf { it.isFile }
@@ -152,15 +152,15 @@ internal fun StoryPlayerScreen(
                 OutlinedButton(onClick = { backpackOpen = true }) { Text("🎒 Mochila (${snapshot.inventory.size})") }
                 if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
                     OutlinedButton(onClick = {
-                        narrationPlayer?.runCatching { seekTo(0); start() }
+                        narrationPlayer?.let { player -> runCatching { player.seekTo(0); player.start() } }
                         narrationFinished = false
                     }) { Text("↻ Repetir") }
                 }
                 if (snapshot.isFinished) {
                     Button(onClick = {
                         engine.finish()
-                        ambientPlayer?.runCatching { stop(); release() }; ambientPlayer = null
-                        narrationPlayer?.runCatching { stop(); release() }; narrationPlayer = null
+                        safelyStopAndRelease(ambientPlayer); ambientPlayer = null
+                        safelyStopAndRelease(narrationPlayer); narrationPlayer = null
                         onExit()
                     }) { Text("Fin") }
                 } else if (snapshot.canAdvance) {
@@ -191,5 +191,13 @@ internal fun StoryPlayerScreen(
             },
             confirmButton = { TextButton(onClick = { backpackOpen = false }) { Text("Cerrar") } }
         )
+    }
+}
+
+private fun safelyStopAndRelease(player: MediaPlayer?) {
+    if (player == null) return
+    runCatching {
+        if (player.isPlaying) player.stop()
+        player.release()
     }
 }
