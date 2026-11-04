@@ -250,7 +250,7 @@ internal object LibraryPackageManager {
                     val sceneJson = File(sceneDir, "escena.json")
                     if (sceneJson.isFile) {
                         val scene = StorySceneJsonCodec.decode(JSONObject(sceneJson.readText(Charsets.UTF_8)))
-                        listOfNotNull(scene.metadata.illustration, scene.metadata.ambientAudio, scene.metadata.narrationAudio).forEach { resource ->
+                        listOfNotNull(scene.illustration, scene.ambientAudio, scene.narrationAudio).forEach { resource ->
                             require(isSafeSegment(resource) && File(sceneDir, resource).isFile) {
                                 "Falta el recurso $resource de la escena $sceneName."
                             }
