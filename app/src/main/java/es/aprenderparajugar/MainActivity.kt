@@ -588,7 +588,8 @@ private fun AprenderApp() {
     var storyObjectImageChanged by storyObjectEditorState.imageChanged
     var storyObjectMessage by storyObjectEditorState.message
     var storedStoryObjects by remember { mutableStateOf(emptyList<StoredObject>()) }
-    var storedInventoryFolders by remember { mutableStateOf(InventoryRepository.list(context)) }
+    val storyObjectInventoryState = remember(context) { StoryObjectInventoryState(context) }
+    var storedInventoryFolders by storyObjectInventoryState.folders
     var storyObjectCollectionMenuExpanded by remember { mutableStateOf(false) }
     val storyObjectCollectionsState = remember(preferences) { StoryObjectCollectionsState(preferences) }
     var storyObjectCollections by storyObjectCollectionsState.collections
@@ -2570,7 +2571,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storedInventoryFolders = InventoryRepository.list(context); storyObjectCollectionMessage = ""; parentSection = "stories-object-collection" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
+                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storyObjectInventoryState.refresh(context); storyObjectCollectionMessage = ""; parentSection = "stories-object-collection" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("📚", fontSize = 30.sp)
                                     Column(Modifier.weight(1f)) {
@@ -2582,7 +2583,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storedInventoryFolders = InventoryRepository.list(context); parentSection = "stories-object-inventory" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
+                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storyObjectInventoryState.refresh(context); parentSection = "stories-object-inventory" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("🎒", fontSize = 30.sp)
                                     Column(Modifier.weight(1f)) {
@@ -2602,14 +2603,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 val isInInventory = storedInventoryFolders.contains(storyObjectEditingFolder)
                                 OutlinedButton(
                                     onClick = {
-                                        try {
-                                            storedInventoryFolders = if (isInInventory) {
-                                                InventoryRepository.remove(context, storyObjectEditingFolder!!)
-                                            } else {
-                                                InventoryRepository.add(context, storyObjectEditingFolder!!)
-                                            }
-                                        } catch (error: Exception) {
-                                            storyObjectMessage = error.message ?: "No se pudo actualizar el inventario."
+                                        storyObjectInventoryState.toggle(context, storyObjectEditingFolder!!)?.let {
+                                            storyObjectMessage = it
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
@@ -2720,24 +2715,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                     OutlinedButton(onClick = {
                                                         storyObjectEditorState.beginEdit(stored)
-                                                        storedInventoryFolders = InventoryRepository.list(context)
+                                                        storyObjectInventoryState.refresh(context)
                                                         parentSection = "stories-object-create"
                                                     }) { Text("Editar") }
                                                     OutlinedButton(
                                                         onClick = {
-                                                            try {
-                                                                storedInventoryFolders = if (isInInventory) {
-                                                                    InventoryRepository.remove(context, stored.folderName)
-                                                                } else {
-                                                                    InventoryRepository.add(context, stored.folderName)
-                                                                }
-                                                                storyObjectCollectionMessage = if (isInInventory) {
-                                                                    "${stored.metadata.name} retirado del inventario."
-                                                                } else {
-                                                                    "${stored.metadata.name} añadido al inventario."
-                                                                }
-                                                            } catch (error: Exception) {
-                                                                storyObjectCollectionMessage = error.message ?: "No se pudo actualizar el inventario."
+                                                            val error = storyObjectInventoryState.toggle(context, stored.folderName)
+                                                            storyObjectCollectionMessage = error ?: if (isInInventory) {
+                                                                "${stored.metadata.name} retirado del inventario."
+                                                            } else {
+                                                                "${stored.metadata.name} añadido al inventario."
                                                             }
                                                         }
                                                     ) {
@@ -2790,7 +2777,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 Text(stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
                                             }
                                             OutlinedButton(onClick = {
-                                                storedInventoryFolders = InventoryRepository.remove(context, stored.folderName)
+                                                storyObjectInventoryState.remove(context, stored.folderName)?.let { storyObjectMessage = it }
                                             }) { Text("Retirar") }
                                         }
                                     }
