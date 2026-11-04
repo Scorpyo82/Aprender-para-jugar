@@ -2365,11 +2365,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 scenes = storyEditorScenes,
                                 initialConnections = storyEditorState.connections.value,
                                 initialConditions = storyEditorState.connectionConditions.value,
+                                initialStartScene = storyEditorState.startScene.value,
                                 availableObjects = storedStoryObjects,
                                 message = storyEditorMessage,
-                                onSave = { connections, conditions ->
+                                onSave = { connections, conditions, startScene ->
                                     storyEditorState.connections.value = connections
                                     storyEditorState.connectionConditions.value = conditions
+                                    storyEditorState.startScene.value = startScene
                                     if (persistStoryDraft() != null) {
                                         parentSection = "stories-editor"
                                         true
