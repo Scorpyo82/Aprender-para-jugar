@@ -238,6 +238,49 @@ El usuario autorizó la fase 8 y se ha realizado la extracción sobre `main`.
 
 No hace falta repetir pruebas de las partidas de Secuencias ni de su biblioteca: no se han modificado.
 
+## Fase 9: estado y lógica de las partidas de Tarjetas y Palabras — IMPLEMENTADA, PENDIENTE DE COMPILACIÓN Y PRUEBA
+
+La fase 9 se ha iniciado sobre `main`. Se han separado las reglas principales de la partida de Palabras y el estado/evaluación de Tarjetas, manteniendo la interfaz en `MainActivity.kt`.
+
+### Palabras
+- Nuevo archivo: `WordGameState.kt`.
+- Commits:
+  - `40df2f190d86d786e998b2e21c460e15f70aff5f` — clase de estado y reglas de selección/validación.
+  - `2827979ca821affe02f8dcae3b92bead5e3576bc` — integración en `MainActivity.kt`.
+- Extraído: objetivo, orden aleatorio de letras, letras colocadas, errores, mensajes, dificultad, categoría actual y categorías candidatas.
+- Extraído el filtrado de ejercicios elegibles, selección aleatoria, aleatorización no coincidente con el orden original y validación de la letra siguiente.
+- La concesión de tiempo, penalización, registro de resultados y navegación siguen coordinados desde `MainActivity.kt`.
+
+### Tarjetas
+- Nuevo archivo: `CardsGameState.kt`.
+- Commits:
+  - `c75a41a459eff0fbce046e86aa195a18a227b6d3` — clase de estado y evaluación de parejas.
+  - `96edc8cc12c153e0254c0dde5ba17576e5d9bb55` — delegación de estados y reinicio de partida.
+  - `d92c7dc20022f3e82959984c2ed1588ec6dfce90` — centralización de evaluación de parejas.
+  - `9a391728d5d39875775b3dce45b4f974125c718b` — enlace del feedback al estado extraído.
+- Extraído: parejas activas, palabra seleccionada, imagen seleccionada, imágenes evaluadas, palabras resueltas, contador de aciertos y feedback.
+- La resolución de parejas ahora se realiza en `CardsGameState`, incluida la actualización de la secuencia de aprendizaje y el feedback.
+- La persistencia de estadísticas, las recompensas, el registro de resultados por ejercicio y la navegación permanecen en el coordinador.
+- `MainActivity.kt` ha pasado de 4.828 a 4.772 líneas.
+- Revisión estática: referencias de estado conectadas a las clases extraídas; sin bloques duplicados de actualización de aprendizaje en los callbacks; llaves balanceadas en los tres archivos.
+- CI: no se ha obtenido todavía un resultado de GitHub Actions asociado a los commits.
+- Validación en dispositivo: pendiente.
+
+### Pruebas pendientes para fase 9
+
+1. **Palabras:** iniciar partidas al azar y por categoría, en las distintas dificultades disponibles.
+2. Comprobar que las letras aparecen desordenadas y que una letra incorrecta incrementa los errores sin avanzar.
+3. Completar una palabra y comprobar el resultado, el tiempo ganado y las estadísticas.
+4. **Tarjetas:** iniciar partidas con los modos Al azar, Elegir y Mezcladas, respetando dificultad y número de preguntas.
+5. Comprobar selección/cancelación de palabras e imágenes en ambos órdenes (palabra primero e imagen primero).
+6. Comprobar que cada pareja queda resuelta, tanto con acierto como con error, y que el progreso termina en el momento correcto.
+7. Comprobar que las penalizaciones configuradas y el tiempo ganado se mantienen.
+8. Comprobar estadísticas de aprendizaje y resultados individuales de los ejercicios.
+9. Verificar el botón «Siguiente ejercicio» en los resultados de Tarjetas y Palabras.
+10. Comprobar que salir de una partida y volver a entrar no conserva selecciones ni progreso de la partida anterior.
+
+No hace falta repetir las pruebas de biblioteca/editor de Palabras, Secuencias ni Cuentos: no se han modificado.
+
 ## Próximo paso
 
-Fase 8 cerrada y validada. Próxima fase orientativa: fase 9, separar la lógica y el estado de las partidas de Tarjetas y Palabras, manteniendo el comportamiento actual. Esperar autorización expresa del usuario antes de comenzar.
+Fase 8 cerrada y validada. La fase 9 está implementada y pendiente de compilación/prueba en dispositivo; no iniciar la fase 10 hasta que el usuario confirme su validación.
