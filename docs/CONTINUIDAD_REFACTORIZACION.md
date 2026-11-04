@@ -204,7 +204,7 @@ El usuario autorizó continuar con la fase 7 después de validar la biblioteca d
 
 No hace falta repetir las pruebas de la biblioteca de Secuencias, que ya quedó validada en la fase 6.
 
-## Fase 8: biblioteca y editor de Palabras — IMPLEMENTADA, PENDIENTE DE COMPILACIÓN Y PRUEBA
+## Fase 8: biblioteca y editor de Palabras — VALIDADA POR EL USUARIO
 
 El usuario autorizó la fase 8 y se ha realizado la extracción sobre `main`.
 
@@ -223,7 +223,7 @@ El usuario autorizó la fase 8 y se ha realizado la extracción sobre `main`.
 - CI: pendiente de confirmación. No se ha podido recuperar desde el conector un resultado de Actions asociado a este commit.
 - Validación en dispositivo: pendiente.
 
-### Pruebas pendientes para fase 8
+### Pruebas realizadas y validadas para fase 8
 
 1. Abrir Configuración > Palabras > Biblioteca y comprobar que aparecen los ejercicios existentes.
 2. Crear un ejercicio con palabra, imagen, categoría y dificultad; comprobar que se guarda y aparece en la lista.
@@ -240,4 +240,4 @@ No hace falta repetir pruebas de las partidas de Secuencias ni de su biblioteca:
 
 ## Próximo paso
 
-Esperar la compilación y la validación del usuario para cerrar la fase 8. No iniciar la fase 9 antes de esa validación.
+Fase 8 cerrada y validada. Próxima fase orientativa: fase 9, separar la lógica y el estado de las partidas de Tarjetas y Palabras, manteniendo el comportamiento actual. Esperar autorización expresa del usuario antes de comenzar.
