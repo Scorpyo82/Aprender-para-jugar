@@ -593,7 +593,7 @@ private fun AprenderApp() {
     val storyObjectCollectionsState = remember(preferences) { StoryObjectCollectionsState(preferences) }
     var storyObjectCollections by storyObjectCollectionsState.collections
     var storyObjectCollectionDraft by storyObjectCollectionsState.draft
-    var storyObjectSelectedCollection by remember { mutableStateOf("") }
+    var storyObjectSelectedCollection by storyObjectEditorState.selectedCollection
     var storyObjectCollectionMessage by storyObjectCollectionsState.message
     var storyObjectCollectionToDelete by storyObjectCollectionsState.collectionToDelete
     val storyCollectionsState = remember(preferences) { StoryCollectionsState(preferences) }
@@ -2721,7 +2721,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                     OutlinedButton(onClick = {
                                                         storyObjectEditorState.beginEdit(stored)
                                                         storedInventoryFolders = InventoryRepository.list(context)
-                                                        storyObjectSelectedCollection = stored.collection
                                                         parentSection = "stories-object-create"
                                                     }) { Text("Editar") }
                                                     OutlinedButton(
