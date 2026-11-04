@@ -73,8 +73,8 @@ internal class StoryObjectEditorState {
                 .replace(Regex("[^\\p{L}\\p{N}_-]+"), "_")
                 .trim('_')
             ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName), imageBytes)
-            message.value = "Objeto guardado correctamente."
             reset()
+            message.value = "Objeto guardado correctamente."
             ObjectRepository.list(context)
         } catch (error: Exception) {
             message.value = error.message ?: "No se ha podido guardar el objeto."
