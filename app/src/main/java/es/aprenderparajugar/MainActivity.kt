@@ -2184,11 +2184,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
                                     }
                                     if (existing != null) {
-                                        val identical = existing.metadata.name == incoming.metadata.name &&
-                                            existing.metadata.image == incoming.metadata.image &&
-                                            existing.metadata.availableInStore == incoming.metadata.availableInStore &&
-                                            runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(File(incoming.directory, incoming.metadata.image).readBytes()) }.getOrDefault(false)
-                                        if (!identical && conflictDetails.indexOfFirst { it.incoming.folderName == dependency.directory } == conflictIndex) {
+                                        if (conflictDetails.indexOfFirst { it.incoming.folderName == dependency.directory } == conflictIndex) {
                                             item {
                                                 Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
