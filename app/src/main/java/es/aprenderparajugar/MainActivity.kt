@@ -894,7 +894,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var correct by cardsGameState.correctCount
     var resultCorrectCount by remember { mutableIntStateOf(0) }
     var resultTotalCount by remember { mutableIntStateOf(0) }
-    var feedback by remember { mutableStateOf("") }
+    var feedback by cardsGameState.feedback
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup) "device-setup" else "menu") }
