@@ -26,6 +26,14 @@ internal object LibraryPackageManager {
     )
     data class StoryInfo(val key: String, val collection: String, val directory: String, val title: String, val sceneCount: Int)
     data class ObjectDependencyInfo(val key: String, val collection: String, val directory: String, val name: String)
+
+    data class ObjectConflictInfo(
+        val key: String,
+        val incoming: StoredObject,
+        val existing: StoredObject,
+        val differences: List<String>,
+        val referencingStories: List<String>
+    )
     data class PackageInfo(
         val modalities: List<ModalityInfo>,
         val stories: List<StoryInfo>,
