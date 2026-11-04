@@ -2445,7 +2445,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "stories-editor" -> {
                         item { Text("Crear cuento", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            OutlinedTextField(value = storyEditorTitle, onValueChange = { storyEditorTitle = it }, label = { Text("Título del cuento") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = storyEditorTitle, onValueChange = { storyEditorTitle = NameRules.filterInput(it) }, label = { Text("Título del cuento") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                         item {
                             Column {
@@ -2668,7 +2668,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item { Text("Colecciones", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Crea y organiza las colecciones de cuentos.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
-                            OutlinedTextField(value = storyCollectionDraft, onValueChange = { storyCollectionDraft = it }, label = { Text("Nueva colección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = storyCollectionDraft, onValueChange = { storyCollectionDraft = NameRules.filterInput(it) }, label = { Text("Nueva colección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                         item {
                             Button(onClick = {
@@ -2783,7 +2783,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
-                            OutlinedTextField(value = storyObjectNameDraft, onValueChange = { storyObjectNameDraft = it }, label = { Text("Nombre del objeto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = storyObjectNameDraft, onValueChange = { storyObjectNameDraft = NameRules.filterInput(it) }, label = { Text("Nombre del objeto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                         item {
                             Column {
@@ -2841,7 +2841,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item { Text("Colecciones", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Organiza los objetos de la biblioteca común en colecciones.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
-                            OutlinedTextField(value = storyObjectCollectionDraft, onValueChange = { storyObjectCollectionDraft = it }, label = { Text("Nueva colección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = storyObjectCollectionDraft, onValueChange = { storyObjectCollectionDraft = NameRules.filterInput(it) }, label = { Text("Nueva colección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                         item {
                             Button(onClick = { storyObjectCollectionsState.addCollection() }, modifier = Modifier.fillMaxWidth()) { Text("Añadir colección") }
@@ -3160,7 +3160,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item {
                             OutlinedTextField(
                                 value = sequenceNewCategoryDraft,
-                                onValueChange = { sequenceNewCategoryDraft = it; sequenceCategoryMessage = "" },
+                                onValueChange = { sequenceNewCategoryDraft = NameRules.filterInput(it); sequenceCategoryMessage = "" },
                                 label = { Text("Nueva categoría") },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
@@ -3243,7 +3243,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "sequence-editor-temporal" -> {
                         item { Text(if (sequenceEditingIndex < 0) "Nuevo ejercicio" else "Editar ejercicio", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = it }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = NameRules.filterInput(it) }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                         item {
                             Text("Tipo de secuencia", fontWeight = FontWeight.Bold)
                             listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
@@ -3590,7 +3590,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "word-categories" -> {
                         item { Text("Categorías de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Estas categorías solo afectan a los ejercicios de Palabras; no modifican Tarjetas ni Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        item { OutlinedTextField(value = wordNewCategoryDraft, onValueChange = { wordNewCategoryDraft = it; wordLibraryMessage = "" }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item { OutlinedTextField(value = wordNewCategoryDraft, onValueChange = { wordNewCategoryDraft = NameRules.filterInput(it); wordLibraryMessage = "" }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                         item { Button(onClick = {
                             val name = wordNewCategoryDraft.trim()
                             when {
@@ -3721,7 +3721,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         } else {
                             Text(if (editingWord == null) "Añadir tarjeta" else "Editar tarjeta", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                             Text("Completa los datos de la tarjeta y guarda. La imagen se elige desde la galería.", fontSize = 14.sp, color = Color(0xFF667085))
-                            OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = it }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = NameRules.filterInput(it) }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                             Column {
                                 Text("Categoría", fontWeight = FontWeight.SemiBold)
                                 androidx.compose.foundation.layout.Box {
@@ -3775,7 +3775,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "categories" -> item {
                         Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Activa o desactiva categorías completas sin borrar sus palabras. También puedes mover o eliminar categorías.", fontSize = 14.sp, color = Color(0xFF667085))
-                        OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = it }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = NameRules.filterInput(it) }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         Button(onClick = { val clean = categoryDraftName.trim(); if (clean.isBlank()) categoryMessage = "Escribe un nombre."; else if (categories.any { it.equals(clean, ignoreCase = true) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("|")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
                         if (categoryMessage.isNotBlank()) Text(categoryMessage, color = Color(0xFF24733B))
                         categories.forEach { name ->
