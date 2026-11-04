@@ -4,7 +4,7 @@
 
 - Repositorio: `Scorpyo82/Aprender-para-jugar`.
 - Rama de trabajo: `main`.
-- Último HEAD verificado: `2dfb2f213a9e101e86a6546d9203a7337182616c` para el código de la fase 7; la actualización documental más reciente queda registrada en el historial de commits de `main`.
+- Último HEAD documental verificado: `e4c528cb19eb3b71058a529b63816cd14d6e90ad`; código de la fase 9: `9a391728d5d39875775b3dce45b4f974125c718b`.
 - Archivo principal: `app/src/main/java/es/aprenderparajugar/MainActivity.kt`.
 - Tamaño observado en la auditoría: 4.881 líneas.
 - Este documento es la referencia de continuidad. Actualizarlo al cerrar cada fase.
