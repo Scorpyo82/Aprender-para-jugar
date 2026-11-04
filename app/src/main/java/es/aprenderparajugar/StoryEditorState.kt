@@ -81,8 +81,15 @@ internal class StoryEditorState(private val context: Context) {
 
     fun persist(): StoredStory? {
         return runCatching {
-            require(NameRules.validationError(title.value) == null) { NameRules.validationError(title.value) ?: "Escribe el título del cuento." }
-            require(NameRules.validationError(collection.value) == null) { NameRules.validationError(collection.value) ?: "Selecciona una colección." }
+            val originalStory = editingFolder.value?.let { folder ->
+                StoryRepository.list(context).firstOrNull { it.folderName == folder && it.collection == editingCollectionFolder.value }
+            }
+            require(NameRules.validationError(title.value) == null || title.value == originalStory?.metadata?.title) {
+                NameRules.validationError(title.value) ?: "Escribe el título del cuento."
+            }
+            require(NameRules.validationError(collection.value) == null || collection.value == editingCollectionFolder.value) {
+                NameRules.validationError(collection.value) ?: "Selecciona una colección."
+            }
             val duplicateStory = StoryRepository.list(context).firstOrNull {
                 it.collection == StoryRepository.collectionFolderName(collection.value) &&
                     NameRules.key(it.metadata.title) == NameRules.key(title.value) &&
