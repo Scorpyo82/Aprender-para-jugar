@@ -630,6 +630,7 @@ private fun AprenderApp() {
     var editingStoryCollection by remember { mutableStateOf<String?>(null) }
     var storiesBoardTab by remember { mutableStateOf("all") }
     var selectedStoriesCollection by remember { mutableStateOf<String?>(null) }
+    var selectedStoryPath by remember { mutableStateOf<String?>(null) }
 
     fun persistStoryDraft(): StoredStory? = storyEditorState.persist()
     val sequenceLibraryState = remember(context, preferences) { SequenceLibraryState(context, preferences) }
@@ -4883,7 +4884,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                OutlinedButton(onClick = { screen = "home"; selectedStoriesCollection = null }) { Text("← Volver al inicio", color = Color.White) }
+                OutlinedButton(onClick = { screen = "home"; selectedStoriesCollection = null; selectedStoryPath = null }) { Text("← Volver al inicio", color = Color.White) }
                 Text(
                     if (selectedCollection == null) "Cuentos" else "Colección",
                     fontSize = 28.sp,
@@ -4932,10 +4933,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 availableStories.sortedBy { it.metadata.title.lowercase() }.forEach { story ->
                                     val coverFile = story.metadata.cover?.let { File(story.directory, it) }?.takeIf { it.isFile }
                                     Card(
-                                        Modifier.width(boardCardWidth).clickable { /* La apertura del lector se conectará en la siguiente fase. */ },
+                                        Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath },
                                         shape = RoundedCornerShape(16.dp),
                                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2638)),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF34445A))
+                                        border = androidx.compose.foundation.BorderStroke(if (selectedStoryPath == story.directory.absolutePath) 2.dp else 1.dp, if (selectedStoryPath == story.directory.absolutePath) Color(0xFF8DB8F5) else Color(0xFF34445A))
                                     ) {
                                         Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Box(
@@ -4955,6 +4956,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             Text(
                                                 story.metadata.title,
                                                 fontSize = 15.sp,
+                                                fontFamily = exerciseFontFamily,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color.White,
                                                 maxLines = 2,
@@ -5002,7 +5004,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                     Text("📚", fontSize = 48.sp)
                                                 }
                                             }
-                                            Text(displayName, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
+                                            Text(displayName, fontSize = 15.sp, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
                                             Text("${availableStories.count { it.collection == folder }} cuentos", fontSize = 12.sp, color = Color(0xFFB8C3D3))
                                         }
                                     }
@@ -5032,7 +5034,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         Column(Modifier.weight(1f)) {
-                            Text(displayName, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                            Text(displayName, color = Color.White, fontSize = 19.sp, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold)
                             Text("← Volver a colecciones", color = Color(0xFF9FC5F8), fontSize = 13.sp)
                         }
                     }
@@ -5069,7 +5071,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 Text("📖", fontSize = 48.sp)
                                             }
                                         }
-                                        Text(story.metadata.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
+                                        Text(story.metadata.title, fontSize = 15.sp, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
                                     }
                                 }
                             }
