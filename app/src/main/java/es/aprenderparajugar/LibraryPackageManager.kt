@@ -313,10 +313,88 @@ internal object LibraryPackageManager {
         selectedCategories: Map<ContentStorage.Modality, Set<String>>,
         replaceSameName: Boolean,
         importLearningStatistics: Boolean,
-        importUsageStatistics: Boolean
+        importUsageStatistics: Boolean,
+        selectedStories: Set<String> = emptySet(),
+        objectConflictDecisions: Map<String, String> = emptyMap()
     ): Int {
         var imported = 0
         try {
+            val selectedStoryInfos = packageInfo.stories.filter { it.key in selectedStories }
+            require(selectedStories.all { key -> packageInfo.stories.any { it.key == key } }) {
+                "Uno de los cuentos seleccionados no está disponible en el paquete."
+            }
+            val selectedObjectNames = linkedSetOf<String>()
+            selectedStoryInfos.forEach { info ->
+                val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
+                story.metadata.connectionConditions.mapNotNullTo(selectedObjectNames) { it.requiredObject }
+                story.metadata.scenes.forEach { sceneName ->
+                    val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                    if (sceneFile.isFile) {
+                        val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
+                        listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { selectedObjectNames.add(it) }
+                    }
+                }
+            }
+            val selectedObjectInfos = packageInfo.objects.filter { it.directory in selectedObjectNames }
+            val localObjects = ObjectRepository.list(context)
+            selectedObjectInfos.forEach { incoming ->
+                val existing = localObjects.firstOrNull { it.folderName == incoming.directory }
+                if (existing != null) {
+                    val source = File(packageInfo.staging, "objetos/${incoming.key}")
+                    val incomingObject = ObjectRepository.read(source)
+                    val sameDefinition = existing.metadata.name == incomingObject.metadata.name &&
+                        existing.metadata.image == incomingObject.metadata.image &&
+                        runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(
+                            File(incomingObject.directory, incomingObject.metadata.image).readBytes()
+                        ) }.getOrDefault(false)
+                    if (!sameDefinition) {
+                        require(objectConflictDecisions[incoming.directory] in setOf("reuse", "overwrite")) {
+                            "Conflicto con el objeto «${incoming.name}». Debes elegir si conservar el objeto existente o sobrescribirlo."
+                        }
+                    }
+                }
+            }
+            selectedStoryInfos.forEach { incoming ->
+                val target = File(File(StoryRepository.rootDirectory(context), incoming.collection), incoming.directory)
+                require(!target.exists()) {
+                    "Ya existe un cuento llamado «${incoming.title}» en la colección «${incoming.collection}». Renómbralo o elimina el existente antes de importarlo."
+                }
+            }
+
+            // Importa primero las definiciones de objetos requeridas. No toca nunca
+            // el inventario local del niño: solo se copia la biblioteca de objetos.
+            selectedObjectInfos.forEach { incoming ->
+                val source = File(packageInfo.staging, "objetos/${incoming.key}")
+                val incomingObject = ObjectRepository.read(source)
+                val existing = ObjectRepository.list(context).firstOrNull { it.folderName == incoming.directory }
+                val decision = objectConflictDecisions[incoming.directory]
+                if (existing != null && decision == "reuse") return@forEach
+                val targetCollection = if (existing != null) existing.collection else incoming.collection
+                val target = File(File(ObjectRepository.rootDirectory(context), targetCollection), incoming.directory)
+                val temporary = File(target.parentFile, ".import-${incoming.directory}-${System.nanoTime()}")
+                copyDirectory(source, temporary)
+                if (target.exists()) {
+                    val backup = File(target.parentFile, ".backup-${incoming.directory}-${System.nanoTime()}")
+                    check(target.renameTo(backup)) { "No se pudo reservar el objeto anterior «${incoming.name}»." }
+                    if (!temporary.renameTo(target)) {
+                        backup.renameTo(target)
+                        throw IllegalStateException("No se pudo sobrescribir el objeto «${incoming.name}».")
+                    }
+                    backup.deleteRecursively()
+                } else {
+                    check(temporary.renameTo(target)) { "No se pudo importar el objeto «${incoming.name}»." }
+                }
+            }
+            selectedStoryInfos.forEach { incoming ->
+                val source = File(packageInfo.staging, "cuentos/${incoming.key}")
+                val collection = File(StoryRepository.rootDirectory(context), incoming.collection)
+                check(collection.mkdirs() || collection.isDirectory)
+                val target = File(collection, incoming.directory)
+                val temporary = File(collection, ".import-${incoming.directory}-${System.nanoTime()}")
+                copyDirectory(source, temporary)
+                check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
+                imported++
+            }
             packageInfo.modalities.forEach { modalityInfo ->
                 val modality = modalityInfo.modality
                 val selected = selectedCategories[modality].orEmpty()
