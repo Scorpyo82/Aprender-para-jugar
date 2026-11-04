@@ -625,6 +625,7 @@ private fun AprenderApp() {
     var disabledStoryCollections by storyCollectionsState.disabledCollections
     var pendingStoryCollectionCover by remember { mutableStateOf<String?>(null) }
     var storyCollectionCoverRevision by remember { mutableIntStateOf(0) }
+    var editingStoryCollection by remember { mutableStateOf<String?>(null) }
 
     fun persistStoryDraft(): StoredStory? = storyEditorState.persist()
     val sequenceLibraryState = remember(context, preferences) { SequenceLibraryState(context, preferences) }
@@ -2775,14 +2776,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "stories-collections" -> {
                         item { Text("Colecciones", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Crea y organiza las colecciones de cuentos. Puedes añadir una portada propia para cada colección; no modifica las portadas de sus cuentos.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        item { Text("Organiza tus cuentos en colecciones. Cada una puede tener su propia portada.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
                             OutlinedTextField(value = storyCollectionDraft, onValueChange = { storyCollectionDraft = NameRules.filterInput(it) }, label = { Text("Nueva colección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                         item {
-                            Button(onClick = {
-                                storyCollectionsState.addCollection()
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Añadir colección") }
+                            Button(onClick = { storyCollectionsState.addCollection() }, modifier = Modifier.fillMaxWidth()) { Text("Añadir colección") }
                         }
                         if (storyCollectionMessage.isNotBlank()) {
                             item { Text(storyCollectionMessage, color = if (storyCollectionMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)) }
@@ -2795,66 +2794,77 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 val coverFile = remember(name, storyCollectionCoverRevision) {
                                     StoryRepository.collectionCoverFile(context, StoryRepository.collectionFolderName(name))
                                 }
+                                val isEditing = editingStoryCollection == name
                                 Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                         if (coverFile != null) {
-                                            StoryImagePreview(coverFile, "Portada de la colección")
+                                            StoryImagePreview(coverFile, "Portada de $name")
                                         } else {
                                             Box(
-                                                Modifier.fillMaxWidth().height(116.dp)
+                                                Modifier.fillMaxWidth().height(150.dp)
                                                     .background(Color(0xFFFFF3E8), RoundedCornerShape(12.dp)),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    Text("📚", fontSize = 34.sp)
-                                                    Text("Esta colección todavía no tiene portada", fontSize = 13.sp, color = Color(0xFF667085))
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                                    Text("📚", fontSize = 42.sp)
+                                                    Text("Sin portada", fontSize = 13.sp, color = Color(0xFF667085))
                                                 }
                                             }
                                         }
-                                        Text(if (name in disabledStoryCollections) "Desactivada" else "Activa", color = Color(0xFF667085))
-                                        OutlinedButton(onClick = {
-                                            storyCollectionsState.toggleCollection(name)
-                                        }, modifier = Modifier.fillMaxWidth()) {
-                                            Text(if (name in disabledStoryCollections) "Activar colección" else "Desactivar colección")
+                                        Text(name, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                                        OutlinedButton(
+                                            onClick = { editingStoryCollection = if (isEditing) null else name },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(if (isEditing) "Cerrar edición" else "Editar colección")
                                         }
-                                        OutlinedButton(onClick = {
-                                            pendingStoryCollectionCover = name
-                                            preferences.edit().putBoolean("content_picker_active", true).apply()
-                                            storyCollectionCoverPicker.launch(arrayOf("image/*"))
-                                        }, modifier = Modifier.fillMaxWidth()) {
-                                            Text(if (coverFile == null) "Elegir portada" else "Cambiar portada")
-                                        }
-                                        if (coverFile != null) {
+                                        if (isEditing) {
+                                            Divider()
+                                            Text(if (name in disabledStoryCollections) "Colección desactivada" else "Colección activa", color = Color(0xFF667085))
                                             OutlinedButton(onClick = {
-                                                StoryRepository.removeCollectionCover(context, StoryRepository.collectionFolderName(name))
-                                                storyCollectionCoverRevision++
-                                                storyCollectionMessage = "Portada de «$name» eliminada."
+                                                storyCollectionsState.toggleCollection(name)
                                             }, modifier = Modifier.fillMaxWidth()) {
-                                                Text("Quitar portada")
+                                                Text(if (name in disabledStoryCollections) "Activar colección" else "Desactivar colección")
                                             }
-                                        }
-                                        if (storyCollectionToDelete == name) {
-                                            Text("¿Cómo quieres eliminar esta colección?", fontWeight = FontWeight.SemiBold)
-                                            Text("Eliminar colección y cuentos", fontWeight = FontWeight.SemiBold)
-                                            Text("Se eliminarán también todos los cuentos que pertenezcan a esta colección.", fontSize = 13.sp, color = Color(0xFFB3261E))
-                                            Button(onClick = {
-                                                storyCollectionsState.deleteCollection(name)
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección y cuentos") }
-                                            Text("Eliminar colección y reasignar cuentos a:", fontWeight = FontWeight.SemiBold)
-                                            storyCollections.filterNot { it == name }.forEach { destination ->
+                                            OutlinedButton(onClick = {
+                                                pendingStoryCollectionCover = name
+                                                preferences.edit().putBoolean("content_picker_active", true).apply()
+                                                storyCollectionCoverPicker.launch(arrayOf("image/*"))
+                                            }, modifier = Modifier.fillMaxWidth()) {
+                                                Text(if (coverFile == null) "Elegir portada" else "Cambiar portada")
+                                            }
+                                            if (coverFile != null) {
                                                 OutlinedButton(onClick = {
-                                                    storyCollectionMessage = "La reasignación estará disponible cuando se implemente el almacenamiento de cuentos."
-                                                }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                                    StoryRepository.removeCollectionCover(context, StoryRepository.collectionFolderName(name))
+                                                    storyCollectionCoverRevision++
+                                                    storyCollectionMessage = "Portada de «$name» eliminada."
+                                                }, modifier = Modifier.fillMaxWidth()) {
+                                                    Text("Quitar portada")
+                                                }
                                             }
-                                            if (storyCollections.size <= 1) {
-                                                Text("No hay otra colección a la que reasignar los cuentos.", fontSize = 13.sp, color = Color(0xFF667085))
+                                            if (storyCollectionToDelete == name) {
+                                                Text("¿Cómo quieres eliminar esta colección?", fontWeight = FontWeight.SemiBold)
+                                                Text("Eliminar colección y cuentos", fontWeight = FontWeight.SemiBold)
+                                                Text("Se eliminarán también todos los cuentos que pertenezcan a esta colección.", fontSize = 13.sp, color = Color(0xFFB3261E))
+                                                Button(onClick = {
+                                                    storyCollectionsState.deleteCollection(name)
+                                                    editingStoryCollection = null
+                                                }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección y cuentos") }
+                                                Text("Eliminar colección y reasignar cuentos a:", fontWeight = FontWeight.SemiBold)
+                                                storyCollections.filterNot { it == name }.forEach { destination ->
+                                                    OutlinedButton(onClick = {
+                                                        storyCollectionMessage = "La reasignación estará disponible cuando se implemente el almacenamiento de cuentos."
+                                                    }, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(destination) }
+                                                }
+                                                if (storyCollections.size <= 1) {
+                                                    Text("No hay otra colección a la que reasignar los cuentos.", fontSize = 13.sp, color = Color(0xFF667085))
+                                                } else {
+                                                    Text("La reasignación se habilitará cuando existan cuentos vinculados a estas colecciones.", fontSize = 13.sp, color = Color(0xFF667085))
+                                                }
+                                                OutlinedButton(onClick = { storyCollectionsState.cancelDelete() }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
                                             } else {
-                                                Text("La reasignación se habilitará cuando existan cuentos vinculados a estas colecciones.", fontSize = 13.sp, color = Color(0xFF667085))
+                                                OutlinedButton(onClick = { storyCollectionsState.requestDelete(name) }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                             }
-                                            OutlinedButton(onClick = { storyCollectionsState.cancelDelete() }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-                                        } else {
-                                            OutlinedButton(onClick = { storyCollectionsState.requestDelete(name) }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
                                         }
                                     }
                                 }
