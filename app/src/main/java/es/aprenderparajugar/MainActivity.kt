@@ -3535,7 +3535,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                             }
                         } else {
-                            item { OutlinedTextField(value = wordLibraryWordDraft, onValueChange = { wordLibraryWordDraft = it }, label = { Text("Palabra que formará") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                            item { OutlinedTextField(value = wordLibraryWordDraft, onValueChange = { wordLibraryWordDraft = if (wordLibraryEditingIndex < 0) NameRules.filterInput(it) else it }, label = { Text("Palabra que formará") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                             item {
                                 Text("Imagen de pista", fontWeight = FontWeight.Bold)
                                 Text("Selecciona una imagen de la galería o haz una foto con la cámara.", fontSize = 13.sp, color = Color(0xFF667085))
