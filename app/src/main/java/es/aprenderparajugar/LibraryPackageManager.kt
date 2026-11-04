@@ -460,7 +460,6 @@ internal object LibraryPackageManager {
                 copyDirectory(source, temporary)
                 check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
                 rollbackTargets.add(target to null)
-                imported++
             }
             packageInfo.modalities.forEach { modalityInfo ->
                 val modality = modalityInfo.modality
