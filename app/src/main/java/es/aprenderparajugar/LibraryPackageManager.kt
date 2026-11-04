@@ -368,7 +368,7 @@ internal object LibraryPackageManager {
                         listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { refs.add(it) }
                     }
                 }
-                dependency.directory in refs
+                existing.folderName in refs
             }.map { "${it.metadata.title} (${it.collection})" }
             ObjectConflictInfo(dependency.key, incoming, existing, differences, references)
         }
