@@ -2088,6 +2088,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         if (info == null) {
                             item { Text("No hay ningún paquete validado. Vuelve atrás y selecciona un archivo.") }
                         } else {
+                            val localStoriesForImport = StoryRepository.list(context)
+                            val storyNameConflicts = info.stories.filter { it.key in transferImportStories }.mapNotNull { incomingStory ->
+                                val existingStory = localStoriesForImport.firstOrNull {
+                                    it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
+                                }
+                                existingStory?.let { incomingStory to it }
+                            }
                             if (info.stories.isNotEmpty()) {
                                 item {
                                     Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -2121,13 +2128,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     }
                                 }
                                 val conflictDetails = LibraryPackageManager.objectConflicts(context, info, transferImportStories)
-                                val localStoriesForImport = StoryRepository.list(context)
-                                val storyNameConflicts = info.stories.filter { it.key in transferImportStories }.mapNotNull { incomingStory ->
-                                    val existingStory = localStoriesForImport.firstOrNull {
-                                        it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
-                                    }
-                                    existingStory?.let { incomingStory to it }
-                                }
                                 if (storyNameConflicts.isNotEmpty()) {
                                     item {
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
