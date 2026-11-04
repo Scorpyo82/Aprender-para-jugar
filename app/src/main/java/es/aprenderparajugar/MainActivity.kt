@@ -2291,7 +2291,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         transferMessage = "No se pudo completar la importación: ${e.message ?: "error"}"
                                     }
                                 }, enabled = (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
-                                    conflictDetails.all { it.incoming.folderName in transferObjectConflictDecisions }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
+                                    LibraryPackageManager.objectConflicts(context, info, transferImportStories).all { it.incoming.folderName in transferObjectConflictDecisions }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
                             item { OutlinedButton(onClick = { LibraryPackageManager.discard(info); transferPackage = null; parentSection = "library-transfer" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
                         }
