@@ -2235,6 +2235,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     try {
                                         val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions)
                                         transferPackage = null
+                                        LibraryPackageManager.discard(info)
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = wordLibraryState.reloadExercises()
                                         sequenceExercises = sequenceLibraryState.reloadExercises()
