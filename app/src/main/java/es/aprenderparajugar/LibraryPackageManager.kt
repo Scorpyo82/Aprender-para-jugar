@@ -342,8 +342,10 @@ internal object LibraryPackageManager {
         }
         val localObjects = ObjectRepository.list(context)
         return packageInfo.objects.filter { it.directory in requiredNames }.mapNotNull { dependency ->
-            val existing = localObjects.firstOrNull { it.folderName == dependency.directory } ?: return@mapNotNull null
             val incoming = ObjectRepository.read(File(packageInfo.staging, "objetos/${dependency.key}"))
+            val existing = localObjects.firstOrNull {
+                it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
+            } ?: return@mapNotNull null
             val sameImageBytes = runCatching {
                 File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                     File(incoming.directory, incoming.metadata.image).readBytes()
@@ -353,6 +355,7 @@ internal object LibraryPackageManager {
                 if (existing.metadata.name != incoming.metadata.name) add("Nombre: «${existing.metadata.name}» → «${incoming.metadata.name}»")
                 if (existing.metadata.image != incoming.metadata.image) add("Archivo de imagen: ${existing.metadata.image} → ${incoming.metadata.image}")
                 if (!sameImageBytes) add("El contenido de la imagen es diferente")
+                if (existing.metadata.availableInStore != incoming.metadata.availableInStore) add("Aparece en la tienda: ${if (existing.metadata.availableInStore) "Sí" else "No"} → ${if (incoming.metadata.availableInStore) "Sí" else "No"}")
             }
             if (differences.isEmpty()) return@mapNotNull null
             val references = StoryRepository.list(context).filter { story ->
