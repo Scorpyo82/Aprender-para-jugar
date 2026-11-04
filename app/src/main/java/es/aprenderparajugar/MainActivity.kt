@@ -215,7 +215,7 @@ private fun loadSequenceExercises(context: Context): List<SequenceExercise> =
 
 private fun saveSequenceExercises(context: Context, exercises: List<SequenceExercise>): List<SequenceExercise> =
     ExerciseUiStorage.saveSequences(context, exercises)
-private data class WordLearning(
+internal data class WordLearning(
     val streak: Int = 0,
     val lastShownTurn: Int = 0,
     val lastCorrect: Boolean = true
@@ -885,12 +885,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var lastEarnedSeconds by remember { mutableIntStateOf(0) }
     var learningStats by remember { mutableStateOf(loadLearningStats(preferences)) }
     var learningTurn by remember { mutableIntStateOf(preferences.getInt("learning_turn_v1", 0)) }
-    var activeExercisePairs by remember { mutableStateOf<List<PairItem>>(emptyList()) }
-    var selected by remember { mutableStateOf(mapOf<String, String>()) }
-    var selectedPicture by remember { mutableStateOf("") }
-    var evaluatedPictures by remember { mutableStateOf(mapOf<String, Boolean>()) }
-    var resolved by remember { mutableStateOf(setOf<String>()) }
-    var correct by remember { mutableIntStateOf(0) }
+    val cardsGameState = remember { CardsGameState() }
+    var activeExercisePairs by cardsGameState.activePairs
+    var selected by cardsGameState.selectedWord
+    var selectedPicture by cardsGameState.selectedPicture
+    var evaluatedPictures by cardsGameState.evaluatedPictures
+    var resolved by cardsGameState.resolvedWords
+    var correct by cardsGameState.correctCount
     var resultCorrectCount by remember { mutableIntStateOf(0) }
     var resultTotalCount by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf("") }
@@ -1200,16 +1201,17 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             selectedExerciseCategory = chosenCategory
             preferences.edit().putString("selected_exercise_category", chosenCategory).apply()
         }
-        activeExercisePairs = chooseAdaptivePairs(candidates, questionCount, learningStats, learningTurn)
-        activeExercisePairs.forEach { pair ->
+        val chosenPairs = chooseAdaptivePairs(candidates, questionCount, learningStats, learningTurn)
+        activeExercisePairs = chosenPairs
+        chosenPairs.forEach { pair ->
             learningTurn += 1
             val state = learningStats[pair.word] ?: WordLearning()
             learningStats = learningStats + (pair.word to state.copy(lastShownTurn = learningTurn))
         }
         preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
         saveLearningStats(preferences, learningStats)
-        resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap()
-        correct = 0; feedback = ""; screen = "exercise"
+        cardsGameState.begin(activeExercisePairs)
+        feedback = ""; screen = "exercise"
     }
 
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
