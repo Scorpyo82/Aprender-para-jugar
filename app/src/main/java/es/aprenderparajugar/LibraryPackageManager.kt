@@ -433,7 +433,15 @@ internal object LibraryPackageManager {
                 val incomingObject = ObjectRepository.read(source)
                 val existing = ObjectRepository.list(context).firstOrNull { it.folderName == incoming.directory }
                 val decision = objectConflictDecisions[incoming.directory]
-                if (existing != null && decision == "reuse") return@forEach
+                val identical = existing != null &&
+                    existing.metadata.name == incomingObject.metadata.name &&
+                    existing.metadata.image == incomingObject.metadata.image &&
+                    runCatching {
+                        File(existing.directory, existing.metadata.image).readBytes().contentEquals(
+                            File(incomingObject.directory, incomingObject.metadata.image).readBytes()
+                        )
+                    }.getOrDefault(false)
+                if (existing != null && (decision == "reuse" || identical)) return@forEach
                 val targetCollection = if (existing != null) existing.collection else incoming.collection
                 val target = File(File(ObjectRepository.rootDirectory(context), targetCollection), incoming.directory)
                 val temporary = File(target.parentFile, ".import-${incoming.directory}-${System.nanoTime()}")
