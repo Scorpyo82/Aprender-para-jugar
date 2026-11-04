@@ -2116,7 +2116,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         transferPackage = null
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS)
-                                        sequenceExercises = ExerciseUiStorage.loadSequences(context)
+                                        sequenceExercises = sequenceLibraryState.reloadExercises()
                                         categoryNames = (categoryNames + ExerciseRepository.list(context, ContentStorage.Modality.TARJETAS).map { it.metadata.category }).distinct()
                                         wordExerciseCategories = (wordExerciseCategories + ExerciseRepository.list(context, ContentStorage.Modality.PALABRAS).map { it.metadata.category }).distinct()
                                         sequenceCategoryNames = (sequenceCategoryNames + ExerciseRepository.list(context, ContentStorage.Modality.SECUENCIAS).map { it.metadata.category }).distinct()
@@ -2976,7 +2976,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             Text(if (exercise.active) "Activo" else "Inactivo", fontSize = 11.sp)
                                             OutlinedButton(onClick = {
                                                 sequenceExercises = sequenceExercises.filterIndexed { currentIndex, _ -> currentIndex != index }
-                                                sequenceExercises = saveSequenceExercises(context, sequenceExercises)
+                                                sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
                                                 sequenceCategoryMessage = "Ejercicio eliminado."
                                             }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text("Eliminar", fontSize = 12.sp) }
                                         }
@@ -3037,7 +3037,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             )
                                             Button(onClick = {
                                                 sequenceExercises = sequenceExercises.filterNot { it.category.equals(category, ignoreCase = true) }
-                                                sequenceExercises = saveSequenceExercises(context, sequenceExercises)
+                                                sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
                                                 sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
                                                 preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
                                                 disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
@@ -3052,7 +3052,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                     sequenceExercises = sequenceExercises.map {
                                                         if (it.category.equals(category, ignoreCase = true)) it.copy(category = destination) else it
                                                     }
-                                                    sequenceExercises = saveSequenceExercises(context, sequenceExercises)
+                                                    sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
                                                     sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
                                                     preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
                                                     disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
