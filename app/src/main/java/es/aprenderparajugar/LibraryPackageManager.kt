@@ -330,6 +330,8 @@ internal object LibraryPackageManager {
         objectConflictDecisions: Map<String, String> = emptyMap()
     ): Int {
         var imported = 0
+        val rollbackTargets = mutableListOf<Pair<File, File?>>()
+        try {
             val selectedStoryInfos = packageInfo.stories.filter { it.key in selectedStories }
             require(selectedStories.all { key -> packageInfo.stories.any { it.key == key } }) {
                 "Uno de los cuentos seleccionados no está disponible en el paquete."
@@ -391,9 +393,10 @@ internal object LibraryPackageManager {
                         backup.renameTo(target)
                         throw IllegalStateException("No se pudo sobrescribir el objeto «${incoming.name}».")
                     }
-                    backup.deleteRecursively()
+                    rollbackTargets.add(target to backup)
                 } else {
                     check(temporary.renameTo(target)) { "No se pudo importar el objeto «${incoming.name}»." }
+                    rollbackTargets.add(target to null)
                 }
             }
             selectedStoryInfos.forEach { incoming ->
@@ -404,6 +407,7 @@ internal object LibraryPackageManager {
                 val temporary = File(collection, ".import-${incoming.directory}-${System.nanoTime()}")
                 copyDirectory(source, temporary)
                 check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
+                rollbackTargets.add(target to null)
                 imported++
             }
             packageInfo.modalities.forEach { modalityInfo ->
@@ -442,9 +446,10 @@ internal object LibraryPackageManager {
                                 backup.renameTo(target)
                                 throw IllegalStateException("No se pudo sustituir ${incomingStored.metadata.title}.")
                             }
-                            backup.deleteRecursively()
+                            rollbackTargets.add(target to backup)
                         } else {
                             check(stagingExercise.renameTo(target)) { "No se pudo incorporar ${incomingStored.metadata.title}." }
+                            rollbackTargets.add(target to null)
                         }
                         imported++
                     }
@@ -466,11 +471,19 @@ internal object LibraryPackageManager {
                             if (backupUsage.exists()) backupUsage.renameTo(targetUsage)
                             throw IllegalStateException("No se pudieron guardar las estadísticas de uso de ${modality.directoryName}.")
                         }
-                        if (backupUsage.exists()) backupUsage.delete()
+                        rollbackTargets.add(targetUsage to backupUsage.takeIf { it.exists() })
                     }
                 }
             }
+        rollbackTargets.forEach { (_, backup) -> backup?.deleteRecursively() }
         return imported
+        } catch (error: Exception) {
+            rollbackTargets.asReversed().forEach { (target, backup) ->
+                target.deleteRecursively()
+                if (backup != null && backup.exists()) backup.renameTo(target)
+            }
+            throw error
+        }
     }
 
     fun discard(packageInfo: PackageInfo) {
