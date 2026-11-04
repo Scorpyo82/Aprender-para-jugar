@@ -5051,10 +5051,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             collectionStories.forEach { story ->
                                 val coverFile = story.metadata.cover?.let { File(story.directory, it) }?.takeIf { it.isFile }
                                 Card(
-                                    Modifier.width(boardCardWidth).clickable { /* La apertura del lector se conectará en la siguiente fase. */ },
+                                    Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath },
                                     shape = RoundedCornerShape(16.dp),
                                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2638)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF34445A))
+                                    border = androidx.compose.foundation.BorderStroke(if (selectedStoryPath == story.directory.absolutePath) 2.dp else 1.dp, if (selectedStoryPath == story.directory.absolutePath) Color(0xFF8DB8F5) else Color(0xFF34445A))
                                 ) {
                                     Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Box(
