@@ -83,8 +83,8 @@ internal class WordLibraryState(
     fun createCategory(name: String): String? {
         val cleanName = name.trim()
         return when {
-            cleanName.isBlank() -> "Escribe un nombre."
-            categories.value.any { it.equals(cleanName, true) } -> "Esa categoría ya existe."
+            NameRules.validationError(cleanName) != null -> NameRules.validationError(cleanName)!!
+            categories.value.any { NameRules.key(it) == NameRules.key(cleanName) } -> "Esa categoría ya existe."
             else -> {
                 saveCategories(categories.value + cleanName)
                 newCategoryDraft.value = ""
@@ -102,7 +102,13 @@ internal class WordLibraryState(
         categoryToDelete.value = null
     }
 
-    fun reassignCategory(category: String, destination: String) {
+    fun reassignCategory(category: String, destination: String): List<String> {
+        val moving = exercises.value.filter { it.category == category }
+        val conflicts = NameRules.duplicates(moving.map { it.word }, exercises.value.filter { it.category == destination }.map { it.word })
+        if (conflicts.isNotEmpty()) {
+            message.value = "No se ha reasignado. Ya existen en «$destination»: ${conflicts.joinToString()}. Renombra o resuelve esos ejercicios antes de volver a intentarlo."
+            return conflicts
+        }
         saveExercises(exercises.value.map {
             if (it.category == category) it.copy(category = destination) else it
         })
@@ -113,6 +119,8 @@ internal class WordLibraryState(
         }
         if (filterCategory.value == category) filterCategory.value = "Todas"
         categoryToDelete.value = null
+        message.value = "Categoría reasignada correctamente."
+        return emptyList()
     }
 
     companion object {
