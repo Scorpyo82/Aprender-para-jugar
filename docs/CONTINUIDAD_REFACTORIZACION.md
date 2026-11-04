@@ -4,7 +4,7 @@
 
 - Repositorio: `Scorpyo82/Aprender-para-jugar`.
 - Rama de trabajo: `main`.
-- Último HEAD documental verificado: `e4c528cb19eb3b71058a529b63816cd14d6e90ad`; código de la fase 9: `9a391728d5d39875775b3dce45b4f974125c718b`.
+- Último HEAD verificado antes de esta actualización: `1c2992e06ae77e373f03a813e00af617fbab70f3`; último commit de código de la fase 9: `9a391728d5d39875775b3dce45b4f974125c718b`.
 - Archivo principal: `app/src/main/java/es/aprenderparajugar/MainActivity.kt`.
 - Tamaño observado en la auditoría: 4.881 líneas.
 - Este documento es la referencia de continuidad. Actualizarlo al cerrar cada fase.
@@ -238,7 +238,7 @@ El usuario autorizó la fase 8 y se ha realizado la extracción sobre `main`.
 
 No hace falta repetir pruebas de las partidas de Secuencias ni de su biblioteca: no se han modificado.
 
-## Fase 9: estado y lógica de las partidas de Tarjetas y Palabras — IMPLEMENTADA, PENDIENTE DE COMPILACIÓN Y PRUEBA
+## Fase 9: estado y lógica de las partidas de Tarjetas y Palabras — VALIDADA POR EL USUARIO
 
 La fase 9 se ha iniciado sobre `main`. Se han separado las reglas principales de la partida de Palabras y el estado/evaluación de Tarjetas, manteniendo la interfaz en `MainActivity.kt`.
 
@@ -263,10 +263,10 @@ La fase 9 se ha iniciado sobre `main`. Se han separado las reglas principales de
 - La persistencia de estadísticas, las recompensas, el registro de resultados por ejercicio y la navegación permanecen en el coordinador.
 - `MainActivity.kt` ha pasado de 4.828 a 4.772 líneas.
 - Revisión estática: referencias de estado conectadas a las clases extraídas; sin bloques duplicados de actualización de aprendizaje en los callbacks; llaves balanceadas en los tres archivos.
-- CI: no se ha obtenido todavía un resultado de GitHub Actions asociado a los commits.
-- Validación en dispositivo: pendiente.
+- CI: el conector no permitió recuperar un resultado verificable de GitHub Actions para los commits de código. El usuario ha compilado e instalado el APK.
+- Validación en dispositivo: el usuario confirma «Todo funciona». Fase 9 cerrada y validada funcionalmente.
 
-### Pruebas pendientes para fase 9
+### Pruebas realizadas y validadas para fase 9
 
 1. **Palabras:** iniciar partidas al azar y por categoría, en las distintas dificultades disponibles.
 2. Comprobar que las letras aparecen desordenadas y que una letra incorrecta incrementa los errores sin avanzar.
@@ -283,4 +283,4 @@ No hace falta repetir las pruebas de biblioteca/editor de Palabras, Secuencias n
 
 ## Próximo paso
 
-Fase 8 cerrada y validada. La fase 9 está implementada y pendiente de compilación/prueba en dispositivo; no iniciar la fase 10 hasta que el usuario confirme su validación.
+Fases 1 a 9 cerradas y validadas por el usuario. La fase 9 queda validada tras compilar, instalar y probar el APK: el usuario confirma que todo funciona. La siguiente fase propuesta es la fase 10 (categorías generales y estadísticas de aprendizaje), pero requiere autorización expresa antes de inspeccionar o modificar código.
