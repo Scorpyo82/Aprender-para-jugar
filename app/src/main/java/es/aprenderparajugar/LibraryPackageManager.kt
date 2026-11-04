@@ -382,7 +382,8 @@ internal object LibraryPackageManager {
         importLearningStatistics: Boolean,
         importUsageStatistics: Boolean,
         selectedStories: Set<String> = emptySet(),
-        objectConflictDecisions: Map<String, String> = emptyMap()
+        objectConflictDecisions: Map<String, String> = emptyMap(),
+        storyConflictDecisions: Map<String, String> = emptyMap()
     ): Int {
         var imported = 0
         val rollbackTargets = mutableListOf<Pair<File, File?>>()
@@ -405,27 +406,38 @@ internal object LibraryPackageManager {
             }
             val selectedObjectInfos = packageInfo.objects.filter { it.directory in selectedObjectNames }
             val localObjects = ObjectRepository.list(context)
+            val objectReferenceRemapping = mutableMapOf<String, String>()
             selectedObjectInfos.forEach { incoming ->
-                val existing = localObjects.firstOrNull { it.folderName == incoming.directory }
+                val source = File(packageInfo.staging, "objetos/${incoming.key}")
+                val incomingObject = ObjectRepository.read(source)
+                val existing = localObjects.firstOrNull {
+                    it.collection == incomingObject.collection &&
+                        NameRules.key(it.metadata.name) == NameRules.key(incomingObject.metadata.name)
+                }
                 if (existing != null) {
-                    val source = File(packageInfo.staging, "objetos/${incoming.key}")
-                    val incomingObject = ObjectRepository.read(source)
                     val sameDefinition = existing.metadata.name == incomingObject.metadata.name &&
                         existing.metadata.image == incomingObject.metadata.image &&
+                        existing.metadata.availableInStore == incomingObject.metadata.availableInStore &&
                         runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
                         ) }.getOrDefault(false)
                     if (!sameDefinition) {
                         require(objectConflictDecisions[incoming.directory] in setOf("reuse", "overwrite")) {
-                            "Conflicto con el objeto «${incoming.name}». Debes elegir si conservar el objeto existente o sobrescribirlo."
+                            "Conflicto con el objeto «${incomingObject.metadata.name}». Debes elegir cuál conservar."
                         }
                     }
+                    objectReferenceRemapping[incoming.directory] = existing.folderName
                 }
             }
+            val localStories = StoryRepository.list(context)
             selectedStoryInfos.forEach { incoming ->
-                val target = File(File(StoryRepository.rootDirectory(context), incoming.collection), incoming.directory)
-                require(!target.exists()) {
-                    "Ya existe un cuento llamado «${incoming.title}» en la colección «${incoming.collection}». Renómbralo o elimina el existente antes de importarlo."
+                val existing = localStories.firstOrNull {
+                    it.collection == incoming.collection && NameRules.key(it.metadata.title) == NameRules.key(incoming.title)
+                }
+                if (existing != null) {
+                    require(storyConflictDecisions[incoming.key] == "overwrite") {
+                        "Ya existe el cuento «${incoming.title}» en «${incoming.collection}». Debes confirmar su sobrescritura completa o cancelar."
+                    }
                 }
             }
 
@@ -434,19 +446,22 @@ internal object LibraryPackageManager {
             selectedObjectInfos.forEach { incoming ->
                 val source = File(packageInfo.staging, "objetos/${incoming.key}")
                 val incomingObject = ObjectRepository.read(source)
-                val existing = ObjectRepository.list(context).firstOrNull { it.folderName == incoming.directory }
+                val existing = ObjectRepository.list(context).firstOrNull {
+                    it.collection == incomingObject.collection &&
+                        NameRules.key(it.metadata.name) == NameRules.key(incomingObject.metadata.name)
+                }
                 val decision = objectConflictDecisions[incoming.directory]
                 val identical = existing != null &&
                     existing.metadata.name == incomingObject.metadata.name &&
                     existing.metadata.image == incomingObject.metadata.image &&
+                    existing.metadata.availableInStore == incomingObject.metadata.availableInStore &&
                     runCatching {
                         File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
                         )
                     }.getOrDefault(false)
                 if (existing != null && (decision == "reuse" || identical)) return@forEach
-                val targetCollection = if (existing != null) existing.collection else incoming.collection
-                val target = File(File(ObjectRepository.rootDirectory(context), targetCollection), incoming.directory)
+                val target = existing?.directory ?: File(File(ObjectRepository.rootDirectory(context), incoming.collection), incoming.directory)
                 val temporary = File(target.parentFile, ".import-${incoming.directory}-${System.nanoTime()}")
                 copyDirectory(source, temporary)
                 if (target.exists()) {
@@ -464,13 +479,27 @@ internal object LibraryPackageManager {
             }
             selectedStoryInfos.forEach { incoming ->
                 val source = File(packageInfo.staging, "cuentos/${incoming.key}")
+                if (objectReferenceRemapping.isNotEmpty()) remapStoryObjectReferences(source, objectReferenceRemapping)
                 val collection = File(StoryRepository.rootDirectory(context), incoming.collection)
                 check(collection.mkdirs() || collection.isDirectory)
-                val target = File(collection, incoming.directory)
+                val existing = StoryRepository.list(context).firstOrNull {
+                    it.collection == incoming.collection && NameRules.key(it.metadata.title) == NameRules.key(incoming.title)
+                }
+                val target = existing?.directory ?: File(collection, incoming.directory)
                 val temporary = File(collection, ".import-${incoming.directory}-${System.nanoTime()}")
                 copyDirectory(source, temporary)
-                check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
-                rollbackTargets.add(target to null)
+                if (target.exists()) {
+                    val backup = File(collection, ".backup-story-${incoming.directory}-${System.nanoTime()}")
+                    check(target.renameTo(backup)) { "No se pudo reservar el cuento anterior «${incoming.title}»." }
+                    if (!temporary.renameTo(target)) {
+                        backup.renameTo(target)
+                        throw IllegalStateException("No se pudo sobrescribir el cuento «${incoming.title}».")
+                    }
+                    rollbackTargets.add(target to backup)
+                } else {
+                    check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
+                    rollbackTargets.add(target to null)
+                }
             }
             packageInfo.modalities.forEach { modalityInfo ->
                 val modality = modalityInfo.modality
@@ -547,6 +576,31 @@ internal object LibraryPackageManager {
                 if (backup != null && backup.exists()) backup.renameTo(target)
             }
             throw error
+        }
+    }
+
+    private fun remapStoryObjectReferences(storyDirectory: File, mapping: Map<String, String>) {
+        val storyFile = File(storyDirectory, "cuento.json")
+        if (storyFile.isFile) {
+            val metadata = StoryJsonCodec.decode(JSONObject(storyFile.readText(Charsets.UTF_8)))
+            val remapped = metadata.copy(
+                connectionConditions = metadata.connectionConditions.map { condition ->
+                    condition.copy(requiredObject = condition.requiredObject?.let { mapping[it] ?: it })
+                }
+            )
+            storyFile.writeText(StoryJsonCodec.encode(remapped).toString(2), Charsets.UTF_8)
+        }
+        val scenesRoot = File(storyDirectory, "escenas")
+        scenesRoot.listFiles()?.filter { it.isDirectory }?.forEach { sceneDirectory ->
+            val sceneFile = File(sceneDirectory, "escena.json")
+            if (sceneFile.isFile) {
+                val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
+                val remapped = scene.copy(
+                    awardedObject = scene.awardedObject?.let { mapping[it] ?: it },
+                    requiredObject = scene.requiredObject?.let { mapping[it] ?: it }
+                )
+                sceneFile.writeText(StorySceneJsonCodec.encode(remapped).toString(2), Charsets.UTF_8)
+            }
         }
     }
 
