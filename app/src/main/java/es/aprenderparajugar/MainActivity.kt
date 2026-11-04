@@ -4963,7 +4963,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 availableStories.sortedBy { it.metadata.title.lowercase() }.forEach { story ->
                                     val coverFile = story.metadata.cover?.let { File(story.directory, it) }?.takeIf { it.isFile }
                                     Card(
-                                        Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath },
+                                        Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath; screen = "story-cover" },
                                         shape = RoundedCornerShape(16.dp),
                                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2638)),
                                         border = androidx.compose.foundation.BorderStroke(if (selectedStoryPath == story.directory.absolutePath) 2.dp else 1.dp, if (selectedStoryPath == story.directory.absolutePath) Color(0xFF8DB8F5) else Color(0xFF34445A))
@@ -5081,7 +5081,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             collectionStories.forEach { story ->
                                 val coverFile = story.metadata.cover?.let { File(story.directory, it) }?.takeIf { it.isFile }
                                 Card(
-                                    Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath },
+                                    Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath; screen = "story-cover" },
                                     shape = RoundedCornerShape(16.dp),
                                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2638)),
                                     border = androidx.compose.foundation.BorderStroke(if (selectedStoryPath == story.directory.absolutePath) 2.dp else 1.dp, if (selectedStoryPath == story.directory.absolutePath) Color(0xFF8DB8F5) else Color(0xFF34445A))
@@ -5109,6 +5109,37 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
             }
+        }
+    } else if (screen == "story-cover") {
+        val selectedStory = selectedStoryPath?.let { path ->
+            storedStories.firstOrNull { it.directory.absolutePath == path }
+                ?: runCatching { StoryRepository.read(File(path)) }.getOrNull()
+        }
+        if (selectedStory == null) {
+            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("No se ha podido abrir este cuento.")
+                OutlinedButton(onClick = { screen = "stories"; selectedStoryPath = null }) { Text("Volver a la cartelera") }
+            }
+        } else {
+            StoryCoverScreen(
+                story = selectedStory,
+                onBack = { screen = "stories"; selectedStoryPath = null },
+                onPlay = { screen = "story-player" }
+            )
+        }
+    } else if (screen == "story-player") {
+        val selectedStory = selectedStoryPath?.let { path ->
+            storedStories.firstOrNull { it.directory.absolutePath == path }
+                ?: runCatching { StoryRepository.read(File(path)) }.getOrNull()
+        }
+        if (selectedStory == null) {
+            screen = "stories"
+        } else {
+            StoryPlayerScreen(
+                story = selectedStory,
+                balanceSeconds = balanceSeconds,
+                onExit = { screen = "stories"; selectedStoryPath = null }
+            )
         }
     } else if (screen == "cards-options") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
