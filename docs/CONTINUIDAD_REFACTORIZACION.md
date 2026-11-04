@@ -192,7 +192,7 @@ El usuario autorizó continuar con la fase 7 después de validar la biblioteca d
 - CI: el conector no ha devuelto un estado de compilación ni ejecuciones de Actions para este commit. No declarar compilación correcta hasta disponer del resultado real.
 - Validación en dispositivo: pendiente. No marcar la fase como completada hasta que el usuario confirme.
 
-### Pruebas de dispositivo pendientes para fase 7
+### Pruebas de dispositivo realizadas y validadas para fase 7
 
 1. Iniciar una partida de Secuencias de cada tipo/dificultad que tenga ejercicios disponibles.
 2. Confirmar que las tarjetas aparecen desordenadas.
@@ -204,6 +204,40 @@ El usuario autorizó continuar con la fase 7 después de validar la biblioteca d
 
 No hace falta repetir las pruebas de la biblioteca de Secuencias, que ya quedó validada en la fase 6.
 
+## Fase 8: biblioteca y editor de Palabras — IMPLEMENTADA, PENDIENTE DE COMPILACIÓN Y PRUEBA
+
+El usuario autorizó la fase 8 y se ha realizado la extracción sobre `main`.
+
+- Nuevo archivo: `WordLibraryState.kt`.
+- Commits:
+  - `0857d9e57ca0fdd21e7d2cfc25142c91ccac56ad` — creación de la clase de estado.
+  - `2b57e75a66554354ff794227d0c2b956f534b3a8` — sincronización de categorías para transferencias.
+  - `aad6ee8a4617e0d871e5319fd567cecfe0203398` — delegación del estado de biblioteca/editor.
+  - `cd9a4ed2c4ed103198a77e7dc85cbf6d9e8638c9` — delegación completa de persistencia y recargas.
+- Estado delegado: ejercicios, categorías, categorías desactivadas, página de biblioteca, índice de edición, campos del formulario, mensajes, filtros, creación/eliminación/reasignación de categorías y persistencia.
+- Operaciones delegadas: cargar/recargar/guardar ejercicios, guardar y combinar categorías importadas, activar/desactivar categorías, crear categorías, borrar categorías con su contenido y reasignar ejercicios a otra categoría.
+- Se mantienen en `MainActivity.kt` la composición visual de la biblioteca/editor, navegación, lanzadores de galería/cámara y mensajes de transferencia ZIP; la lógica de datos y persistencia se centraliza en `WordLibraryState`.
+- También se ha conectado la recarga y sincronización de la biblioteca desde la pantalla de transferencia/importación.
+- `MainActivity.kt` tiene 4.828 líneas tras la fase (antes 4.833).
+- Revisión estática: sin llamadas directas restantes a `ExerciseUiStorage.loadPairs/savePairs` para la modalidad PALABRAS en `MainActivity.kt`; llaves balanceadas en ambos archivos.
+- CI: pendiente de confirmación. No se ha podido recuperar desde el conector un resultado de Actions asociado a este commit.
+- Validación en dispositivo: pendiente.
+
+### Pruebas pendientes para fase 8
+
+1. Abrir Configuración > Palabras > Biblioteca y comprobar que aparecen los ejercicios existentes.
+2. Crear un ejercicio con palabra, imagen, categoría y dificultad; comprobar que se guarda y aparece en la lista.
+3. Editar un ejercicio existente y comprobar que conserva/actualiza correctamente sus datos e imagen.
+4. Activar y desactivar un ejercicio; comprobar que el estado persiste al salir y volver.
+5. Probar los filtros de categoría, dificultad y estado.
+6. Crear una categoría y comprobar que aparece en el editor y en la lista de categorías.
+7. Desactivar una categoría y comprobar que sigue persistiendo esa configuración.
+8. Probar eliminar una categoría con contenido: borrar contenido y reasignar a otra categoría.
+9. Comprobar importación/exportación de Palabras y recarga desde Transferencia de bibliotecas, si utilizas esas funciones.
+10. Cerrar y abrir la aplicación y verificar que ejercicios y categorías permanecen guardados.
+
+No hace falta repetir pruebas de las partidas de Secuencias ni de su biblioteca: no se han modificado.
+
 ## Próximo paso
 
-Esperar el resultado de compilación de GitHub Actions y la prueba del usuario para cerrar la fase 7. No iniciar la siguiente extracción antes de esa validación.
+Esperar la compilación y la validación del usuario para cerrar la fase 8. No iniciar la fase 9 antes de esa validación.
