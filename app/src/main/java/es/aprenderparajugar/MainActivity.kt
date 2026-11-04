@@ -2218,7 +2218,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             item {
                                 Button(onClick = {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics)
+                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions)
                                         transferPackage = null
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = wordLibraryState.reloadExercises()
@@ -2231,12 +2231,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             .putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|"))
                                             .putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|"))
                                             .apply()
-                                        transferMessage = "Importación completada: $count ejercicios incorporados."
+                                        transferMessage = "Importación completada: $count ejercicios y ${transferImportStories.size} cuentos incorporados. El inventario del niño no se ha modificado."
                                         parentSection = "library-transfer"
                                     } catch (e: Exception) {
                                         transferMessage = "No se pudo completar la importación: ${e.message ?: "error"}"
                                     }
-                                }, enabled = transferImportCategories.values.any { it.isNotEmpty() }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
+                                }, enabled = transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
                             item { OutlinedButton(onClick = { LibraryPackageManager.discard(info); transferPackage = null; parentSection = "library-transfer" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
                         }
