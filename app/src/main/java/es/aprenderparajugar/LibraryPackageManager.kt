@@ -319,6 +319,59 @@ internal object LibraryPackageManager {
         }
     }
 
+    /**
+     * Compara las dependencias de los cuentos seleccionados con los objetos locales.
+     * La identidad se determina por el nombre de carpeta; la imagen se compara por bytes.
+     */
+    fun objectConflicts(
+        context: Context,
+        packageInfo: PackageInfo,
+        selectedStories: Set<String>
+    ): List<ObjectConflictInfo> {
+        val requiredNames = linkedSetOf<String>()
+        packageInfo.stories.filter { it.key in selectedStories }.forEach { info ->
+            val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
+            story.metadata.connectionConditions.mapNotNullTo(requiredNames) { it.requiredObject }
+            story.metadata.scenes.forEach { sceneName ->
+                val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                if (sceneFile.isFile) {
+                    val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
+                    listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { requiredNames.add(it) }
+                }
+            }
+        }
+        val localObjects = ObjectRepository.list(context)
+        return packageInfo.objects.filter { it.directory in requiredNames }.mapNotNull { dependency ->
+            val existing = localObjects.firstOrNull { it.folderName == dependency.directory } ?: return@mapNotNull null
+            val incoming = ObjectRepository.read(File(packageInfo.staging, "objetos/${dependency.key}"))
+            val sameImageBytes = runCatching {
+                File(existing.directory, existing.metadata.image).readBytes().contentEquals(
+                    File(incoming.directory, incoming.metadata.image).readBytes()
+                )
+            }.getOrDefault(false)
+            val differences = buildList {
+                if (existing.metadata.name != incoming.metadata.name) add("Nombre: «${existing.metadata.name}» → «${incoming.metadata.name}»")
+                if (existing.metadata.image != incoming.metadata.image) add("Archivo de imagen: ${existing.metadata.image} → ${incoming.metadata.image}")
+                if (!sameImageBytes) add("El contenido de la imagen es diferente")
+                if (existing.collection != incoming.collection) add("Colección: ${existing.collection} → ${incoming.collection}")
+            }
+            if (differences.isEmpty()) return@mapNotNull null
+            val references = StoryRepository.list(context).filter { story ->
+                val refs = linkedSetOf<String>()
+                story.metadata.connectionConditions.mapNotNullTo(refs) { it.requiredObject }
+                story.metadata.scenes.forEach { sceneName ->
+                    val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                    if (sceneFile.isFile) runCatching {
+                        val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
+                        listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { refs.add(it) }
+                    }
+                }
+                dependency.directory in refs
+            }.map { it.metadata.title }
+            ObjectConflictInfo(dependency.key, incoming, existing, differences, references)
+        }
+    }
+
     fun import(
         context: Context,
         packageInfo: PackageInfo,
