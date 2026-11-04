@@ -2241,6 +2241,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         // cuentos recién copiados aparezcan sin reiniciar la aplicación.
                                         storedStories = StoryRepository.list(context)
                                         storedStoryObjects = ObjectRepository.list(context)
+                                        // Las colecciones importadas pueden no existir todavía en las
+                                        // preferencias de este dispositivo. Registrar un nombre visible
+                                        // derivado del identificador de carpeta, sin modificar la ruta.
+                                        val knownCollectionFolders = storyCollections.map {
+                                            StoryRepository.collectionFolderName(it)
+                                        }.toSet()
+                                        val importedCollectionNames = storedStories.map { it.collection }.distinct()
+                                            .filter { it !in knownCollectionFolders }
+                                            .map { it.replace('_', ' ') }
+                                        if (importedCollectionNames.isNotEmpty()) {
+                                            storyCollections = (storyCollections + importedCollectionNames)
+                                                .distinctBy { it.lowercase() }
+                                                .sortedBy { it.lowercase() }
+                                            preferences.edit()
+                                                .putString("story_collections", storyCollections.joinToString("|"))
+                                                .apply()
+                                        }
                                         pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                         wordExercises = wordLibraryState.reloadExercises()
                                         sequenceExercises = sequenceLibraryState.reloadExercises()
@@ -2399,7 +2416,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp)) {
                                     Text(stored.metadata.title, fontWeight = FontWeight.Bold)
-                                    Text(storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
+                                    Text(storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085))
                                 }
                             }
                         }
