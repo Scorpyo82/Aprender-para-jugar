@@ -55,6 +55,10 @@ internal class StoryObjectEditorState {
             val existing = editingFolder.value?.let { folder ->
                 ObjectRepository.list(context).firstOrNull { it.folderName == folder }
             }
+            val duplicateName = ObjectRepository.list(context).firstOrNull {
+                NameRules.key(it.metadata.name) == NameRules.key(cleanName) && it.folderName != editingFolder.value
+            }
+            require(duplicateName == null) { "Ya existe un objeto con ese nombre. Los nombres de objeto deben ser únicos." }
             val imageBytes = if (existing != null && !imageChanged.value) {
                 File(existing.directory, existing.metadata.image).readBytes()
             } else {
