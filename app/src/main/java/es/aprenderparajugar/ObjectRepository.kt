@@ -12,7 +12,8 @@ import java.io.File
  */
 data class ObjectMetadata(
     val name: String,
-    val image: String
+    val image: String,
+    val availableInStore: Boolean = false
 )
 
 data class StoredObject(
@@ -30,12 +31,14 @@ object ObjectJsonCodec {
         return JSONObject()
             .put("name", metadata.name.trim())
             .put("image", metadata.image)
+            .put("availableInStore", metadata.availableInStore)
     }
 
     fun decode(json: JSONObject): ObjectMetadata {
         val metadata = ObjectMetadata(
             name = json.optString("name").trim(),
-            image = json.optString("image")
+            image = json.optString("image"),
+            availableInStore = json.optBoolean("availableInStore", false)
         )
         validate(metadata)
         return metadata
