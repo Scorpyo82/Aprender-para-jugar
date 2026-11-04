@@ -105,9 +105,14 @@ internal object LibraryPackageManager {
                 val referencedObjects = linkedSetOf<String>()
                 story.metadata.connectionConditions.mapNotNullTo(referencedObjects) { it.requiredObject }
                 story.metadata.scenes.forEach { sceneName ->
-                    val scene = StoryRepository.readScene(story, sceneName)
-                    listOfNotNull(scene.metadata.awardedObject, scene.metadata.requiredObject)
-                        .forEach(referencedObjects::add)
+                    // Un cuento puede estar guardado a medio crear. Si todavía no
+                    // existe escena.json, se conserva su carpeta sin exigir contenido.
+                    val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                    if (sceneFile.isFile) {
+                        val scene = StoryRepository.readScene(story, sceneName)
+                        listOfNotNull(scene.metadata.awardedObject, scene.metadata.requiredObject)
+                            .forEach { referencedObjects.add(it) }
+                    }
                 }
                 referencedObjects.forEach { folderName ->
                     val storedObject = ObjectRepository.list(context).firstOrNull { it.folderName == folderName }
