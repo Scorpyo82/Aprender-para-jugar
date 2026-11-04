@@ -51,6 +51,19 @@ internal class WordLibraryState(
         preferences.edit().putString(CATEGORIES_KEY, updated.joinToString("|")).apply()
     }
 
+    fun removeCategories(categoriesToRemove: Collection<String>) {
+        saveCategories(categories.value.filterNot { name ->
+            categoriesToRemove.any { it.equals(name, ignoreCase = true) }
+        })
+        disabledCategories.value = disabledCategories.value.filterNot { name ->
+            categoriesToRemove.any { it.equals(name, ignoreCase = true) }
+        }.toSet()
+        preferences.edit().putStringSet(DISABLED_CATEGORIES_KEY, disabledCategories.value).apply()
+        if (filterCategory.value != "Todas" && categoriesToRemove.any { it.equals(filterCategory.value, true) }) {
+            filterCategory.value = "Todas"
+        }
+    }
+
     fun mergeImportedCategories(imported: List<String>, replace: Boolean) {
         val updated = if (replace) imported.distinctBy { it.trim().lowercase() }
         else (categories.value + imported).map { it.trim() }
