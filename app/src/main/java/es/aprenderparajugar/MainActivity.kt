@@ -909,6 +909,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferImportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferObjectConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferStoryConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var transferConflictIndex by remember { mutableIntStateOf(0) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
     var transferImportStatistics by remember { mutableStateOf(false) }
@@ -1067,6 +1068,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
                 transferImportStories = inspected.stories.map { it.key }.toSet()
                 transferObjectConflictDecisions = emptyMap()
+                transferStoryConflictDecisions = emptyMap()
                 transferConflictIndex = 0
                 transferReplaceDuplicates = false
                 transferImportStatistics = false
@@ -2119,6 +2121,42 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     }
                                 }
                                 val conflictDetails = LibraryPackageManager.objectConflicts(context, info, transferImportStories)
+                                val localStoriesForImport = StoryRepository.list(context)
+                                val storyNameConflicts = info.stories.filter { it.key in transferImportStories }.mapNotNull { incomingStory ->
+                                    val existingStory = localStoriesForImport.firstOrNull {
+                                        it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
+                                    }
+                                    existingStory?.let { incomingStory to it }
+                                }
+                                if (storyNameConflicts.isNotEmpty()) {
+                                    item {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text("Cuentos con el mismo nombre", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                            Text("Un cuento nunca se fusiona ni se adapta. Si confirmas, el cuento local se sustituirá por completo, con todas sus escenas, conexiones, imágenes y audios. Si no quieres sustituirlo, cancela toda la importación.", fontSize = 12.sp, color = Color(0xFF667085))
+                                        }
+                                    }
+                                    storyNameConflicts.forEach { (incomingStory, existingStory) ->
+                                        item {
+                                            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4E5))) {
+                                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    Text(incomingStory.title, fontWeight = FontWeight.Bold)
+                                                    Text("Colección: ${incomingStory.collection}", fontSize = 12.sp)
+                                                    Text("Local: ${existingStory.metadata.scenes.size} escenas · ZIP: ${incomingStory.sceneCount} escenas", fontSize = 12.sp, color = Color(0xFF667085))
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        androidx.compose.material3.RadioButton(
+                                                            selected = transferStoryConflictDecisions[incomingStory.key] == "overwrite",
+                                                            onClick = { transferStoryConflictDecisions = transferStoryConflictDecisions + (incomingStory.key to "overwrite") }
+                                                        )
+                                                        Column {
+                                                            Text("Sobrescribir el cuento completo", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                                            Text("Se reemplazará íntegramente el cuento local.", fontSize = 11.sp, color = Color(0xFF667085))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 val conflictIndex = transferConflictIndex.coerceIn(0, (conflictDetails.size - 1).coerceAtLeast(0))
                                 item {
                                     Text(if (conflictDetails.isEmpty()) "Revisión de objetos: sin conflictos" else "Conflicto ${conflictIndex + 1} de ${conflictDetails.size}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -2276,7 +2314,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             item {
                                 Button(onClick = {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions)
+                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions)
                                         transferPackage = null
                                         LibraryPackageManager.discard(info)
                                         // La biblioteca de cuentos mantiene una lista en estado Compose.
@@ -2318,7 +2356,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         transferMessage = "No se pudo completar la importación: ${e.message ?: "error"}"
                                     }
                                 }, enabled = (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
-                                    LibraryPackageManager.objectConflicts(context, info, transferImportStories).all { it.incoming.folderName in transferObjectConflictDecisions }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
+                                    LibraryPackageManager.objectConflicts(context, info, transferImportStories).all { it.incoming.folderName in transferObjectConflictDecisions } &&
+                                    storyNameConflicts.all { (incomingStory, _) -> transferStoryConflictDecisions[incomingStory.key] == "overwrite" }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
                             item { OutlinedButton(onClick = { LibraryPackageManager.discard(info); transferPackage = null; parentSection = "library-transfer" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
                         }
