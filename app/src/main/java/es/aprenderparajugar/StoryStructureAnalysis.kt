@@ -1,0 +1,128 @@
+package es.aprenderparajugar
+
+/** Diagnóstico estático de la estructura narrativa; nunca bloquea el guardado. */
+internal data class StoryStructureDiagnostics(
+    val reachableScenes: Set<String>,
+    val unreachableScenes: Set<String>,
+    val finalScenes: Set<String>,
+    val cycleComponents: List<Set<String>>,
+    val cyclesWithoutUnconditionalExit: List<Set<String>>,
+    val hasReachableFinal: Boolean
+)
+
+internal object StoryStructureAnalysis {
+
+    fun analyze(
+        scenes: List<String>,
+        connections: Map<String, List<String>>,
+        conditions: List<StoryConnectionCondition>,
+        startScene: String
+    ): StoryStructureDiagnostics {
+        val sceneSet = scenes.toSet()
+        val adjacency = scenes.associateWith { scene ->
+            connections[scene].orEmpty().filter { it in sceneSet }.distinct()
+        }
+        val reachable = reachableFrom(startScene, adjacency)
+        val unreachable = sceneSet - reachable
+        val finals = reachable.filterTo(linkedSetOf()) { adjacency[it].orEmpty().isEmpty() }
+
+        val unconditionalAdjacency = scenes.associateWith { origin ->
+            adjacency[origin].orEmpty().filter { destination ->
+                conditions.none {
+                    it.fromScene == origin && it.toScene == destination && it.requiredObject != null
+                }
+            }
+        }
+        val components = stronglyConnectedComponents(reachable, adjacency)
+            .filter { component ->
+                component.size > 1 || component.any { node -> node in adjacency[node].orEmpty() }
+            }
+        val unsafeCycles = components.filter { component ->
+            component.any { scene -> !canReachAny(scene, finals, unconditionalAdjacency) }
+        }
+
+        return StoryStructureDiagnostics(
+            reachableScenes = reachable,
+            unreachableScenes = unreachable,
+            finalScenes = finals,
+            cycleComponents = components,
+            cyclesWithoutUnconditionalExit = unsafeCycles,
+            hasReachableFinal = finals.isNotEmpty()
+        )
+    }
+
+    private fun reachableFrom(start: String, adjacency: Map<String, List<String>>): Set<String> {
+        if (start !in adjacency) return emptySet()
+        val visited = linkedSetOf<String>()
+        val pending = ArrayDeque<String>()
+        pending.add(start)
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (!visited.add(current)) continue
+            adjacency[current].orEmpty().forEach { if (it !in visited) pending.add(it) }
+        }
+        return visited
+    }
+
+    private fun canReachAny(
+        start: String,
+        targets: Set<String>,
+        adjacency: Map<String, List<String>>
+    ): Boolean {
+        if (start in targets) return true
+        val visited = mutableSetOf<String>()
+        val pending = ArrayDeque<String>()
+        pending.add(start)
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (!visited.add(current)) continue
+            adjacency[current].orEmpty().forEach { next ->
+                if (next in targets) return true
+                if (next !in visited) pending.add(next)
+            }
+        }
+        return false
+    }
+
+    private fun stronglyConnectedComponents(
+        nodes: Set<String>,
+        adjacency: Map<String, List<String>>
+    ): List<Set<String>> {
+        var nextIndex = 0
+        val indices = mutableMapOf<String, Int>()
+        val lowLinks = mutableMapOf<String, Int>()
+        val stack = ArrayDeque<String>()
+        val onStack = mutableSetOf<String>()
+        val result = mutableListOf<Set<String>>()
+
+        fun visit(node: String) {
+            indices[node] = nextIndex
+            lowLinks[node] = nextIndex
+            nextIndex++
+            stack.addLast(node)
+            onStack.add(node)
+
+            adjacency[node].orEmpty().filter { it in nodes }.forEach { next ->
+                if (next !in indices) {
+                    visit(next)
+                    lowLinks[node] = minOf(lowLinks.getValue(node), lowLinks.getValue(next))
+                } else if (next in onStack) {
+                    lowLinks[node] = minOf(lowLinks.getValue(node), indices.getValue(next))
+                }
+            }
+
+            if (lowLinks[node] == indices[node]) {
+                val component = linkedSetOf<String>()
+                do {
+                    val member = stack.removeLast()
+                    onStack.remove(member)
+                    component.add(member)
+                } while (member != node)
+                result.add(component)
+            }
+        }
+
+        nodes.forEach { if (it !in indices) visit(it) }
+        return result
+    }
+}
