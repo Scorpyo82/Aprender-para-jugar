@@ -46,8 +46,8 @@ internal class StoryObjectEditorState {
     fun save(context: Context): List<StoredObject>? {
         val cleanName = nameDraft.value.trim()
         val collection = selectedCollection.value.trim()
-        if (cleanName.isBlank() || collection.isBlank() || pictureDraft.value.isBlank()) {
-            message.value = "Completa el nombre, la colección y selecciona una imagen."
+        if (NameRules.validationError(cleanName) != null || NameRules.validationError(collection) != null || pictureDraft.value.isBlank()) {
+            message.value = NameRules.validationError(cleanName) ?: NameRules.validationError(collection) ?: "Selecciona una imagen."
             return null
         }
 
