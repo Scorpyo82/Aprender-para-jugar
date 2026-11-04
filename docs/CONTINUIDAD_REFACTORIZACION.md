@@ -4,7 +4,7 @@
 
 - Repositorio: `Scorpyo82/Aprender-para-jugar`.
 - Rama de trabajo: `main`.
-- Último HEAD verificado: `f7f3405ccfc0af244e6e8a882fcc25eb99624da9` (rama `main`).
+- Último HEAD verificado: `2dfb2f213a9e101e86a6546d9203a7337182616c` (rama `main`).
 - Archivo principal: `app/src/main/java/es/aprenderparajugar/MainActivity.kt`.
 - Tamaño observado en la auditoría: 4.881 líneas.
 - Este documento es la referencia de continuidad. Actualizarlo al cerrar cada fase.
@@ -170,6 +170,40 @@ El archivo `StoryStructureEditor.kt` existe, pero no debe darse por integrado ni
 
 Estas reglas deben conservarse para cuando se retome expresamente esa funcionalidad.
 
+## Fase 7: estado y reglas de la partida de Secuencias — IMPLEMENTADA, PENDIENTE DE COMPILACIÓN Y PRUEBA
+
+El usuario autorizó continuar con la fase 7 después de validar la biblioteca de Secuencias.
+
+- Nuevo archivo: `SequenceGameState.kt`.
+- Commit de creación: `558fcd27f0c52eb2e8a2474eb1d037d438f9c1a8`.
+- Commit de integración: `2dfb2f213a9e101e86a6546d9203a7337182616c`.
+- HEAD de `main`: `2dfb2f213a9e101e86a6546d9203a7337182616c`.
+- Estado extraído:
+  - ejercicio activo, orden aleatorio, orden seleccionado y errores;
+  - categoría y dificultad elegidas;
+  - filtrado de ejercicios elegibles por tipo, dificultad, actividad, categorías desactivadas y máximo de tarjetas;
+  - selección equilibrada del ejercicio menos completado en el día;
+  - validación de orden principal y soluciones alternativas;
+  - mensajes de progreso y finalización;
+  - clave diaria de uso para persistir la frecuencia de realización.
+- `MainActivity.kt` delega estos estados y reglas a `SequenceGameState`. La navegación, el cálculo/concesión de recompensas, el registro de resultados y la pantalla visual de la partida permanecen en el coordinador en esta primera extracción para mantener intacto el flujo funcional.
+- `MainActivity.kt` pasa de 4.876 a 4.833 líneas en esta fase.
+- Revisión estática posterior al cambio: referencias al antiguo helper eliminadas y llaves balanceadas en ambos archivos.
+- CI: el conector no ha devuelto un estado de compilación ni ejecuciones de Actions para este commit. No declarar compilación correcta hasta disponer del resultado real.
+- Validación en dispositivo: pendiente. No marcar la fase como completada hasta que el usuario confirme.
+
+### Pruebas de dispositivo pendientes para fase 7
+
+1. Iniciar una partida de Secuencias de cada tipo/dificultad que tenga ejercicios disponibles.
+2. Confirmar que las tarjetas aparecen desordenadas.
+3. Seleccionar una tarjeta incorrecta y comprobar que aumenta el contador de errores sin avanzar.
+4. Seleccionar los pasos correctos y comprobar que el progreso avanza, incluyendo ejercicios con solución alternativa.
+5. Completar una secuencia y comprobar resultado, tiempo/recompensa y estadísticas.
+6. Volver a jugar y comprobar que la selección prioriza ejercicios menos realizados durante el día.
+7. Verificar que los filtros de máximo de tarjetas y categorías desactivadas siguen respetándose.
+
+No hace falta repetir las pruebas de la biblioteca de Secuencias, que ya quedó validada en la fase 6.
+
 ## Próximo paso
 
-El documento deja fijado el contexto para continuar sin depender de reconstruir toda la conversación. La siguiente tarea, cuando el usuario lo autorice, será preparar la fase 6 tras volver a inspeccionar el estado actual de `main` y concretar el límite de extracción de la biblioteca/editor de Secuencias.
+Esperar el resultado de compilación de GitHub Actions y la prueba del usuario para cerrar la fase 7. No iniciar la siguiente extracción antes de esa validación.
