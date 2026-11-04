@@ -353,7 +353,6 @@ internal object LibraryPackageManager {
                 if (existing.metadata.name != incoming.metadata.name) add("Nombre: «${existing.metadata.name}» → «${incoming.metadata.name}»")
                 if (existing.metadata.image != incoming.metadata.image) add("Archivo de imagen: ${existing.metadata.image} → ${incoming.metadata.image}")
                 if (!sameImageBytes) add("El contenido de la imagen es diferente")
-                if (existing.collection != incoming.collection) add("Colección: ${existing.collection} → ${incoming.collection}")
             }
             if (differences.isEmpty()) return@mapNotNull null
             val references = StoryRepository.list(context).filter { story ->
@@ -367,7 +366,7 @@ internal object LibraryPackageManager {
                     }
                 }
                 dependency.directory in refs
-            }.map { it.metadata.title }
+            }.map { "${it.metadata.title} (${it.collection})" }
             ObjectConflictInfo(dependency.key, incoming, existing, differences, references)
         }
     }
