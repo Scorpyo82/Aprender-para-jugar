@@ -2115,6 +2115,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         }
                                     }
                                 }
+                                val conflictDetails = LibraryPackageManager.objectConflicts(context, info, transferImportStories)
+                                item {
+                                    Text(if (conflictDetails.isEmpty()) "Revisión de objetos: sin conflictos" else "Revisión de objetos: ${conflictDetails.size} conflicto(s) detectado(s)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    if (conflictDetails.isNotEmpty()) Text("Resuelve todas las coincidencias antes de importar. Se comparan las imágenes reales y los datos de cada objeto.", fontSize = 12.sp, color = Color(0xFF667085))
+                                }
                                 val localObjects = ObjectRepository.list(context)
                                 val neededObjectNames = linkedSetOf<String>()
                                 info.stories.filter { it.key in transferImportStories }.forEach { storyInfo ->
@@ -2155,6 +2160,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                                 Text(existing.metadata.name, fontSize = 12.sp)
                                                             }
                                                         }
+                                                        val detail = conflictDetails.firstOrNull { it.incoming.folderName == dependency.directory }
+                                                        detail?.differences?.forEach { difference -> Text("• $difference", fontSize = 11.sp, color = Color(0xFF475467)) }
                                                         Text("Ya existe un objeto con la misma identidad, pero sus datos o imagen son diferentes.", fontSize = 12.sp, color = Color(0xFF667085))
                                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                                             androidx.compose.material3.RadioButton(
@@ -2170,7 +2177,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                             )
                                                             Text("Sobrescribir el objeto existente")
                                                         }
-                                                        Text("Sobrescribir puede afectar a otros cuentos que utilicen este objeto.", fontSize = 11.sp, color = Color(0xFFB3261E))
+                                                        if (transferObjectConflictDecisions[dependency.directory] == "overwrite") {
+                                                            val affectedStories = detail?.referencingStories.orEmpty()
+                                                            Text(
+                                                                if (affectedStories.isEmpty()) "No se han encontrado otros cuentos locales que utilicen este objeto."
+                                                                else "ATENCIÓN: ${affectedStories.size} cuento(s) local(es) también lo utilizan: ${affectedStories.joinToString(", ")}.",
+                                                                fontSize = 11.sp,
+                                                                color = Color(0xFFB3261E)
+                                                            )
+                                                            Text("La definición compartida cambiará para todos ellos. El inventario no se modifica.", fontSize = 11.sp, color = Color(0xFFB3261E))
+                                                        }
                                                     }
                                                 }
                                             }
@@ -2274,7 +2290,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     } catch (e: Exception) {
                                         transferMessage = "No se pudo completar la importación: ${e.message ?: "error"}"
                                     }
-                                }, enabled = transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
+                                }, enabled = (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
+                                    conflictDetails.all { it.incoming.folderName in transferObjectConflictDecisions }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
                             item { OutlinedButton(onClick = { LibraryPackageManager.discard(info); transferPackage = null; parentSection = "library-transfer" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
                         }
