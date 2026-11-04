@@ -357,7 +357,7 @@ internal object LibraryPackageManager {
                 if (!sameImageBytes) add("El contenido de la imagen es diferente")
                 if (existing.metadata.availableInStore != incoming.metadata.availableInStore) add("Aparece en la tienda: ${if (existing.metadata.availableInStore) "Sí" else "No"} → ${if (incoming.metadata.availableInStore) "Sí" else "No"}")
             }
-            if (differences.isEmpty()) return@mapNotNull null
+            if (differences.isEmpty()) differences.add("Las dos fichas tienen el mismo nombre, imagen y disponibilidad en la tienda.")
             val references = StoryRepository.list(context).filter { story ->
                 val refs = linkedSetOf<String>()
                 story.metadata.connectionConditions.mapNotNullTo(refs) { it.requiredObject }
