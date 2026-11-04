@@ -597,77 +597,30 @@ private fun AprenderApp() {
     var storyCollections by remember { mutableStateOf((preferences.getString("story_collections", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() }) }
     var storyCollectionDraft by remember { mutableStateOf("") }
     var storyCollectionMessage by remember { mutableStateOf("") }
-    var storyEditorTitle by remember { mutableStateOf("") }
-    var storyEditorCover by remember { mutableStateOf<String?>(null) }
-    var storyEditorIllustrations by remember { mutableStateOf(emptyMap<String, String?>()) }
-    var storyEditorAmbientAudio by remember { mutableStateOf(emptyMap<String, String?>()) }
-    var storyEditorNarrationAudio by remember { mutableStateOf(emptyMap<String, String?>()) }
-    var editingStoryFolder by remember { mutableStateOf<String?>(null) }
-    var editingStoryCollectionFolder by remember { mutableStateOf<String?>(null) }
-    var storedStories by remember { mutableStateOf(StoryRepository.list(context)) }
-    var storyEditorMessage by remember { mutableStateOf("") }
-    var storyEditorCollection by remember { mutableStateOf("") }
-    var storyEditorSummary by remember { mutableStateOf("") }
-    var storyEditorScenes by remember { mutableStateOf(listOf("Escena 1")) }
-    var storyEditorSelectedScene by remember { mutableStateOf("") }
-    var storyEditorSceneText by remember { mutableStateOf("") }
-    var storyEditorObjectTiming by remember { mutableStateOf("Al salir") }
-    var storyEditorAwardedObjectByScene by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
-    var storyEditorObjectMenuExpanded by remember { mutableStateOf(false) }
-    var storyEditorKeepAmbientByScene by remember { mutableStateOf(emptyMap<String, Boolean>()) }
-    var storyEditorCollectionMenuExpanded by remember { mutableStateOf(false) }
+    val storyEditorState = remember(context) { StoryEditorState(context) }
+    var storyEditorTitle by storyEditorState.title
+    var storyEditorCover by storyEditorState.cover
+    var storyEditorIllustrations by storyEditorState.illustrations
+    var storyEditorAmbientAudio by storyEditorState.ambientAudio
+    var storyEditorNarrationAudio by storyEditorState.narrationAudio
+    var editingStoryFolder by storyEditorState.editingFolder
+    var editingStoryCollectionFolder by storyEditorState.editingCollectionFolder
+    var storedStories by storyEditorState.storedStories
+    var storyEditorMessage by storyEditorState.message
+    var storyEditorCollection by storyEditorState.collection
+    var storyEditorSummary by storyEditorState.summary
+    var storyEditorScenes by storyEditorState.scenes
+    var storyEditorSelectedScene by storyEditorState.selectedScene
+    var storyEditorSceneText by storyEditorState.sceneText
+    var storyEditorObjectTiming by storyEditorState.objectTiming
+    var storyEditorAwardedObjectByScene by storyEditorState.awardedObjectByScene
+    var storyEditorObjectMenuExpanded by storyEditorState.objectMenuExpanded
+    var storyEditorKeepAmbientByScene by storyEditorState.keepAmbientByScene
+    var storyEditorCollectionMenuExpanded by storyEditorState.collectionMenuExpanded
     var storyCollectionToDelete by remember { mutableStateOf("") }
     var disabledStoryCollections by remember { mutableStateOf(preferences.getStringSet("disabled_story_collections", emptySet())?.toSet() ?: emptySet()) }
 
-    fun persistStoryDraft(): StoredStory? {
-        return runCatching {
-            require(storyEditorTitle.isNotBlank()) { "Escribe el título del cuento." }
-            require(storyEditorCollection.isNotBlank()) { "Selecciona una colección." }
-            val collectionFolder = StoryRepository.collectionFolderName(storyEditorCollection)
-            val sceneFolders = storyEditorScenes.map { StoryRepository.sceneFolderName(it) }
-            require(sceneFolders.distinct().size == sceneFolders.size) { "Hay nombres de escena duplicados." }
-            val storyFolder = editingStoryFolder ?: StoryRepository.storyFolderName(storyEditorTitle)
-            val connections = sceneFolders.mapIndexed { index, scene ->
-                scene to listOfNotNull(sceneFolders.getOrNull(index + 1))
-            }.toMap()
-            val metadata = StoryMetadata(
-                title = storyEditorTitle.trim(),
-                collection = collectionFolder,
-                cover = storyEditorCover,
-                startScene = sceneFolders.first(),
-                scenes = sceneFolders,
-                connections = connections
-            )
-            var stored = StoryRepository.save(context, collectionFolder, storyFolder, metadata)
-            sceneFolders.forEachIndexed { index, sceneFolder ->
-                val existing = runCatching { StoryRepository.readScene(stored, sceneFolder).metadata }.getOrNull()
-                val isSelected = storyEditorSelectedScene == storyEditorScenes[index]
-                val sceneMetadata = if (isSelected) {
-                    StorySceneMetadata(
-                        title = storyEditorSelectedScene,
-                        illustrationSummary = storyEditorSummary,
-                        text = storyEditorSceneText,
-                        illustration = storyEditorIllustrations[storyEditorSelectedScene] ?: existing?.illustration,
-                        ambientAudio = storyEditorAmbientAudio[storyEditorSelectedScene] ?: existing?.ambientAudio,
-                        keepPreviousAmbient = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
-                        narrationAudio = storyEditorNarrationAudio[storyEditorSelectedScene] ?: existing?.narrationAudio,
-                        awardedObject = if (storyEditorAwardedObjectByScene.containsKey(storyEditorSelectedScene)) storyEditorAwardedObjectByScene[storyEditorSelectedScene] else existing?.awardedObject,
-                        awardTiming = if (storyEditorObjectTiming == "Al entrar") "onEnter" else "onExit"
-                    )
-                } else existing ?: StorySceneMetadata(title = storyEditorScenes[index])
-                StoryRepository.saveScene(stored, sceneFolder, sceneMetadata)
-            }
-            editingStoryFolder = storyFolder
-            editingStoryCollectionFolder = collectionFolder
-            stored = StoryRepository.read(File(File(StoryRepository.rootDirectory(context), collectionFolder), storyFolder))
-            storedStories = StoryRepository.list(context)
-            storyEditorMessage = "Cuento guardado."
-            stored
-        }.getOrElse {
-            storyEditorMessage = it.message ?: "No se pudo guardar el cuento."
-            null
-        }
-    }
+    fun persistStoryDraft(): StoredStory? = storyEditorState.persist()
 var sequenceExercises by remember { mutableStateOf(loadSequenceExercises(context)) }
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
