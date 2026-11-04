@@ -39,9 +39,10 @@ internal object LibraryPackageManager {
         target: Uri,
         selectedCategories: Map<ContentStorage.Modality, Set<String>>,
         learningStatisticsModalities: Set<ContentStorage.Modality>,
-        usageStatisticsModalities: Set<ContentStorage.Modality>
+        usageStatisticsModalities: Set<ContentStorage.Modality>,
+        selectedStories: Set<String> = emptySet()
     ) {
-        require(selectedCategories.values.any { it.isNotEmpty() }) { "Selecciona al menos una categoría." }
+        require(selectedCategories.values.any { it.isNotEmpty() } || selectedStories.isNotEmpty()) { "Selecciona al menos una categoría o cuento." }
         val resolver = context.contentResolver
         val output = resolver.openOutputStream(target)?.buffered()
             ?: throw IllegalArgumentException("No se puede escribir en el archivo seleccionado.")
@@ -85,6 +86,53 @@ internal object LibraryPackageManager {
                 }
             }
             manifest.put("modalities", modalitiesJson)
+
+            // Los cuentos se exportan como unidades completas: estructura narrativa,
+            // escenas y recursos propios. Solo se incluyen los objetos realmente
+            // referenciados por los cuentos seleccionados; nunca el inventario.
+            val storiesJson = JSONArray()
+            val selectedStoredStories = StoryRepository.list(context).filter {
+                "${it.collection}/${it.folderName}" in selectedStories
+            }
+            require(selectedStoredStories.size == selectedStories.size) {
+                "Uno o varios cuentos seleccionados ya no están disponibles."
+            }
+            val objectDependencies = linkedMapOf<String, StoredObject>()
+            selectedStoredStories.forEach { story ->
+                val storyPrefix = "cuentos/${story.collection}/${story.folderName}"
+                addDirectory(zip, story.directory, storyPrefix, includeStatistics = false)
+
+                val referencedObjects = linkedSetOf<String>()
+                story.metadata.connectionConditions.mapNotNullTo(referencedObjects) { it.requiredObject }
+                story.metadata.scenes.forEach { sceneName ->
+                    val scene = StoryRepository.readScene(story, sceneName)
+                    listOfNotNull(scene.metadata.awardedObject, scene.metadata.requiredObject)
+                        .forEach(referencedObjects::add)
+                }
+                referencedObjects.forEach { folderName ->
+                    val storedObject = ObjectRepository.list(context).firstOrNull { it.folderName == folderName }
+                        ?: throw IllegalArgumentException("No se encuentra el objeto necesario '$folderName' del cuento '${story.metadata.title}'.")
+                    objectDependencies["${storedObject.collection}/${storedObject.folderName}"] = storedObject
+                }
+                storiesJson.put(JSONObject()
+                    .put("collection", story.collection)
+                    .put("directory", story.folderName)
+                    .put("title", story.metadata.title)
+                    .put("sceneCount", story.metadata.scenes.size))
+            }
+            val objectsJson = JSONArray()
+            objectDependencies.values.forEach { storedObject ->
+                addDirectory(zip, storedObject.directory,
+                    "objetos/${storedObject.collection}/${storedObject.folderName}", includeStatistics = false)
+                objectsJson.put(JSONObject()
+                    .put("collection", storedObject.collection)
+                    .put("directory", storedObject.folderName)
+                    .put("name", storedObject.metadata.name)
+                    .put("image", storedObject.metadata.image))
+            }
+            manifest.put("stories", storiesJson)
+            manifest.put("objectDependencies", objectsJson)
+
             zip.putNextEntry(ZipEntry(MANIFEST))
             zip.write(manifest.toString(2).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
