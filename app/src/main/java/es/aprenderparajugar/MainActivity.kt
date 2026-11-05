@@ -594,6 +594,7 @@ private fun AprenderApp() {
     var storedStoryObjects by remember { mutableStateOf(emptyList<StoredObject>()) }
     val storyObjectInventoryState = remember(context) { StoryObjectInventoryState(context) }
     var storedInventoryFolders by storyObjectInventoryState.folders
+    var storyInventoryMessage by remember { mutableStateOf("") }
     var storyObjectCollectionMenuExpanded by remember { mutableStateOf(false) }
     val storyObjectCollectionsState = remember(preferences) { StoryObjectCollectionsState(preferences) }
     var storyObjectCollections by storyObjectCollectionsState.collections
@@ -1176,6 +1177,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
             "stories" -> { screen = "home" }
+            "story-inventory" -> { screen = "home"; storyInventoryMessage = "" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
             "category-select" -> { screen = "cards-options"; cardsStartMessage = "" }
@@ -5346,6 +5348,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 onExit = { screen = "stories"; selectedStoryPath = null }
             )
         }
+    } else if (screen == "story-inventory") {
+        StoryObjectInventoryScreen(
+            objects = storedStoryObjects,
+            ownedFolders = storedInventoryFolders,
+            balanceSeconds = balanceSeconds,
+            message = storyInventoryMessage,
+            fontFamily = exerciseFontFamily,
+            onBack = { screen = "home"; storyInventoryMessage = "" },
+            onPurchase = { stored ->
+                val result = InventoryRepository.purchase(context, stored.folderName)
+                balanceSeconds = result.balanceSeconds
+                storyObjectInventoryState.refresh(context)
+                storyInventoryMessage = result.message
+            }
+        )
     } else if (screen == "cards-options") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
@@ -5559,6 +5576,31 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             Text("Cuentos", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF87451F))
                             Text("Leer, escuchar y descubrir historias", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
                             Text(if (gameActiveStories) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveStories) Color(0xFF87451F) else Color(0xFFB3261E))
+                        }
+                    }
+                }
+            }
+            item {
+                Card(
+                    Modifier.fillMaxWidth().clickable {
+                        storedStoryObjects = ObjectRepository.list(context)
+                        storyObjectInventoryState.refresh(context)
+                        storyInventoryMessage = ""
+                        screen = "story-inventory"
+                    },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8E5FA)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB9AFE8))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(modeCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Box(
+                            Modifier.width(modeImageSize).height(modeImageSize).background(Color(0xFFD8D0F4), RoundedCornerShape(18.dp)),
+                            contentAlignment = Alignment.Center
+                        ) { Text("🎒", fontSize = if (homeWidth >= 700) 72.sp else 48.sp) }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Inventario", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82))
+                            Text("Tus objetos conseguidos y los que puedes comprar", fontSize = modeDescriptionSize, color = Color(0xFF62578D))
+                            Text("VER OBJETOS  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82))
                         }
                     }
                 }
