@@ -2611,29 +2611,50 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item { Spacer(Modifier.height(8.dp)); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
                         items(storyEditorScenes.size) { index ->
+                            val sceneName = storyEditorScenes[index]
+                            val sceneFolder = runCatching { StoryRepository.sceneFolderName(sceneName) }.getOrNull()
+                            val currentStoredStory = storedStories.firstOrNull {
+                                it.folderName == editingStoryFolder && it.collection == editingStoryCollectionFolder
+                            }
+                            val sceneSummary = if (sceneName == storyEditorSelectedScene) {
+                                storyEditorSummary
+                            } else if (sceneFolder != null && currentStoredStory != null) {
+                                runCatching { StoryRepository.readScene(currentStoredStory, sceneFolder).metadata.illustrationSummary }.getOrNull().orEmpty()
+                            } else {
+                                ""
+                            }
                             Card(Modifier.fillMaxWidth().clickable {
-                                storyEditorSelectedScene = storyEditorScenes[index]
-                                val folder = runCatching { StoryRepository.sceneFolderName(storyEditorScenes[index]) }.getOrNull()
-                                val stored = storedStories.firstOrNull { it.folderName == editingStoryFolder && it.collection == editingStoryCollectionFolder }
+                                storyEditorSelectedScene = sceneName
+                                val folder = sceneFolder
+                                val stored = currentStoredStory
                                 val savedScene = if (folder != null && stored != null) runCatching { StoryRepository.readScene(stored, folder).metadata }.getOrNull() else null
                                 storyEditorSummary = savedScene?.illustrationSummary.orEmpty()
                                 storyEditorSceneText = savedScene?.text.orEmpty()
-                                storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.illustration) }
-                                storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.ambientAudio) }
-                                storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.narrationAudio) }
+                                storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(sceneName, savedScene?.illustration) }
+                                storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(sceneName, savedScene?.ambientAudio) }
+                                storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(sceneName, savedScene?.narrationAudio) }
                                 storyEditorObjectTiming = if (savedScene?.awardTiming == "onEnter") "Al entrar" else "Al salir"
-                                storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorScenes[index], savedScene?.awardedObject) }
+                                storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(sceneName, savedScene?.awardedObject) }
                                 storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
-                                    put(storyEditorScenes[index], savedScene?.keepPreviousAmbient ?: false)
+                                    put(sceneName, savedScene?.keepPreviousAmbient ?: false)
                                 }
                                 parentSection = "stories-scene-editor"
                             }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text("📖", fontSize = 22.sp)
                                     Spacer(Modifier.width(10.dp))
-                                    Text(storyEditorScenes[index], fontWeight = FontWeight.SemiBold)
-                                    Spacer(Modifier.weight(1f))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(sceneName, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            sceneSummary.ifBlank { "Sin resumen de ilustración" },
+                                            fontSize = 12.sp,
+                                            color = if (sceneSummary.isBlank()) Color(0xFF98A2B3) else Color(0xFF667085),
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Spacer(Modifier.width(8.dp))
                                     Text("›", fontSize = 24.sp, color = Color(0xFF87451F))
                                 }
                             }
