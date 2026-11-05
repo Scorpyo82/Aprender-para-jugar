@@ -4662,7 +4662,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     ?.takeIf { it.isNotBlank() && it != "play-time" } ?: "home"
                 preferences.edit().remove("play_time_return_screen").apply()
                 screen = returnScreen
-            }, modifier = Modifier.fillMaxWidth()) { Text("Volver a la aplicación") }
+            }, modifier = Modifier.fillMaxWidth()) { Text("¡Volver a aprender!") }
         }
     } else if (screen == "result" || screen == "sequence-result") {
         val rewardStars = when {
