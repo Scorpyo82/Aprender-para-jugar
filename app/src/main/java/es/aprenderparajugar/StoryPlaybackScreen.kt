@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
 
 private val StoryBackground = Color(0xFF101827)
@@ -62,9 +66,8 @@ internal fun StoryCoverScreen(story: StoredStory, fontFamily: FontFamily, onBack
     val activity = LocalContext.current as? Activity
     val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
     DisposableEffect(activity) {
-        val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        onDispose { activity?.requestedOrientation = previousOrientation }
+        onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
     val cover = remember(story.directory.absolutePath, story.metadata.cover) {
         story.metadata.cover?.let { File(story.directory, it) }
@@ -125,8 +128,17 @@ internal fun StoryPlayerScreen(
     val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
 
     DisposableEffect(activity) {
-        val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        val window = activity?.window
+        val insetsController = window?.let { WindowInsetsControllerCompat(it, it.decorView) }
+        val previousSystemBarsVisible = window?.let {
+            WindowInsetsCompat.toWindowInsetsCompat(it.decorView.rootWindowInsets, it.decorView)
+                .isVisible(WindowInsetsCompat.Type.systemBars())
+        } ?: true
+        val previousBehavior = insetsController?.systemBarsBehavior
+        insetsController?.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        insetsController?.hide(WindowInsetsCompat.Type.systemBars())
         val lifecycleObserver = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
@@ -159,7 +171,10 @@ internal fun StoryPlayerScreen(
             safelyStopAndRelease(ambientPlayer)
             safelyStopAndRelease(narrationPlayer)
             engine.stop()
-            activity?.requestedOrientation = previousOrientation
+            if (previousSystemBarsVisible) insetsController?.show(WindowInsetsCompat.Type.systemBars())
+            else insetsController?.hide(WindowInsetsCompat.Type.systemBars())
+            previousBehavior?.let { insetsController?.systemBarsBehavior = it }
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
@@ -347,18 +362,38 @@ internal fun StoryPlayerScreen(
     if (backpackOpen) {
         AlertDialog(
             onDismissRequest = { backpackOpen = false },
-            title = { Text("Mochila de Zorro") },
+            title = { Text("Mochila de Zorro", fontFamily = fontFamily) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (snapshot.inventory.isEmpty()) Text("La mochila está vacía.")
+                    if (snapshot.inventory.isEmpty()) Text("La mochila está vacía.", fontFamily = fontFamily)
                     snapshot.inventory.forEach { item ->
+                        val objectImage = remember(item.directory.absolutePath, item.metadata.image) {
+                            File(item.directory, item.metadata.image).takeIf { it.isFile }
+                                ?.let { BitmapFactory.decodeFile(it.absolutePath) }
+                        }
                         OutlinedButton(
                             onClick = {
                                 snapshot = engine.chooseObject(item.folderName)
                                 backpackOpen = false
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(item.metadata.name) }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (objectImage != null) {
+                                    Image(
+                                        bitmap = objectImage.asImageBitmap(),
+                                        contentDescription = item.metadata.name,
+                                        modifier = Modifier.size(64.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                                Text(item.metadata.name, fontFamily = fontFamily)
+                            }
+                        }
                     }
                 }
             },
