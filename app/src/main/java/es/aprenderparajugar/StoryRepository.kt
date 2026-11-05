@@ -314,6 +314,50 @@ object StoryRepository {
         return StoredStoryScene(sceneDirectory, safeScene, StorySceneJsonCodec.decode(JSONObject(file.readText(Charsets.UTF_8))))
     }
 
+    /**
+     * Devuelve los orígenes ambientales efectivos que pueden llegar a una escena.
+     * Recorre hacia atrás las escenas que heredan el ambiente y detiene cada ruta
+     * en la primera escena que establece su propio ambiente (o silencio).
+     */
+    fun findAmbientSourceCandidates(story: StoredStory, targetSceneFolder: String): List<StoredStoryScene> {
+        require(targetSceneFolder in story.metadata.scenes) { "La escena no pertenece a este cuento." }
+        val incoming = mutableMapOf<String, MutableList<String>>()
+        story.metadata.connections.forEach { (origin, destinations) ->
+            destinations.forEach { destination ->
+                incoming.getOrPut(destination) { mutableListOf() }.add(origin)
+            }
+        }
+        val candidates = linkedMapOf<String, StoredStoryScene>()
+
+        fun traceInheritedPath(sceneFolder: String, visited: Set<String>) {
+            val predecessors = incoming[sceneFolder].orEmpty()
+            if (predecessors.isEmpty()) {
+                val rootScene = readScene(story, sceneFolder)
+                candidates.putIfAbsent(sceneFolder, rootScene)
+                return
+            }
+            predecessors.forEach { predecessor ->
+                if (predecessor in visited) return@forEach
+                val previousScene = readScene(story, predecessor)
+                if (previousScene.metadata.keepPreviousAmbient) {
+                    traceInheritedPath(predecessor, visited + predecessor)
+                } else {
+                    candidates.putIfAbsent(predecessor, previousScene)
+                }
+            }
+        }
+
+        incoming[targetSceneFolder].orEmpty().forEach { predecessor ->
+            val previousScene = readScene(story, predecessor)
+            if (previousScene.metadata.keepPreviousAmbient) {
+                traceInheritedPath(predecessor, setOf(targetSceneFolder, predecessor))
+            } else {
+                candidates.putIfAbsent(predecessor, previousScene)
+            }
+        }
+        return candidates.values.sortedBy { it.metadata.title.lowercase() }
+    }
+
     /** Copia un recurso elegido por el usuario a la carpeta privada del cuento o escena. */
     fun importMedia(context: Context, source: android.net.Uri, targetDirectory: File, baseName: String): String {
         require(baseName.matches(Regex("[a-zA-Z0-9_-]+"))) { "El nombre del recurso no es válido." }

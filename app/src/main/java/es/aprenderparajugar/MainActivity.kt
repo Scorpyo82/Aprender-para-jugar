@@ -622,6 +622,10 @@ private fun AprenderApp() {
     var storyEditorSelectedScene by storyEditorState.selectedScene
     var storyAmbientDuringNarration by remember { mutableIntStateOf(preferences.getInt("story_ambient_during_narration_percent", 20).coerceIn(0, 30)) }
     var storySceneTest by remember { mutableStateOf<StoredStoryScene?>(null) }
+    var storySceneTestAmbientOverride by remember { mutableStateOf(false) }
+    var storySceneTestAmbientFile by remember { mutableStateOf<File?>(null) }
+    var storyScenePendingTest by remember { mutableStateOf<StoredStoryScene?>(null) }
+    var storyAmbientSourceCandidates by remember { mutableStateOf<List<StoredStoryScene>>(emptyList()) }
     var storyEditorSceneText by storyEditorState.sceneText
     var storyEditorObjectTiming by storyEditorState.objectTiming
     var storyEditorAwardedObjectByScene by storyEditorState.awardedObjectByScene
@@ -2918,7 +2922,32 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     runCatching {
                                         val stored = persistStoryDraft() ?: error(storyEditorMessage.ifBlank { "Guarda primero el cuento." })
                                         val folder = StoryRepository.sceneFolderName(storyEditorSelectedScene)
-                                        storySceneTest = StoryRepository.readScene(stored, folder)
+                                        val targetScene = StoryRepository.readScene(stored, folder)
+                                        if (targetScene.metadata.keepPreviousAmbient) {
+                                            val candidates = StoryRepository.findAmbientSourceCandidates(stored, folder)
+                                            when {
+                                                candidates.size > 1 -> {
+                                                    storyScenePendingTest = targetScene
+                                                    storyAmbientSourceCandidates = candidates
+                                                }
+                                                candidates.size == 1 -> {
+                                                    val source = candidates.single()
+                                                    storySceneTestAmbientFile = source.metadata.ambientAudio
+                                                        ?.let { File(source.directory, it) }?.takeIf { it.isFile }
+                                                    storySceneTestAmbientOverride = true
+                                                    storySceneTest = targetScene
+                                                }
+                                                else -> {
+                                                    storySceneTestAmbientFile = null
+                                                    storySceneTestAmbientOverride = true
+                                                    storySceneTest = targetScene
+                                                }
+                                            }
+                                        } else {
+                                            storySceneTestAmbientFile = null
+                                            storySceneTestAmbientOverride = false
+                                            storySceneTest = targetScene
+                                        }
                                     }.onFailure { storyEditorMessage = it.message ?: "No se pudo iniciar la prueba." }
                                 },
                                 modifier = Modifier.fillMaxWidth()
@@ -2929,7 +2958,28 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             if (storySceneTest != null) StorySceneTestDialog(
                                 scene = storySceneTest!!,
                                 ambientDuringNarrationPercent = storyAmbientDuringNarration,
-                                onExit = { storySceneTest = null }
+                                ambientAudioOverride = storySceneTestAmbientFile,
+                                useAmbientAudioOverride = storySceneTestAmbientOverride,
+                                onExit = {
+                                    storySceneTest = null
+                                    storySceneTestAmbientFile = null
+                                    storySceneTestAmbientOverride = false
+                                }
+                            )
+                            if (storyScenePendingTest != null) StoryAmbientSourceDialog(
+                                candidates = storyAmbientSourceCandidates,
+                                onSelect = { source ->
+                                    storySceneTestAmbientFile = source.metadata.ambientAudio
+                                        ?.let { File(source.directory, it) }?.takeIf { it.isFile }
+                                    storySceneTestAmbientOverride = true
+                                    storySceneTest = storyScenePendingTest
+                                    storyScenePendingTest = null
+                                    storyAmbientSourceCandidates = emptyList()
+                                },
+                                onDismiss = {
+                                    storyScenePendingTest = null
+                                    storyAmbientSourceCandidates = emptyList()
+                                }
                             )
                         }
                         item {

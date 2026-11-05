@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -28,6 +29,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -412,9 +415,65 @@ internal fun StoryPlayerScreen(
 
 
 @Composable
+internal fun StoryAmbientSourceDialog(
+    candidates: List<StoredStoryScene>,
+    onSelect: (StoredStoryScene) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Seleccionar sonido ambiental") },
+        text = {
+            Column {
+                Text(
+                    "Esta escena puede heredar el ambiente de varias escenas anteriores. Elige cuál quieres escuchar en la prueba.",
+                    color = Color(0xFF667085)
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(candidates, key = { it.folderName }) { candidate ->
+                        OutlinedButton(
+                            onClick = { onSelect(candidate) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(
+                                Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(candidate.metadata.title, fontWeight = FontWeight.Bold, color = Color(0xFF493B82))
+                                Text(
+                                    candidate.metadata.illustrationSummary.ifBlank { "Sin resumen de ilustración" },
+                                    color = Color(0xFF667085),
+                                    textAlign = TextAlign.Start
+                                )
+                                Text(
+                                    if (candidate.metadata.keepPreviousAmbient || candidate.metadata.ambientAudio == null)
+                                        "Esta ruta llega sin sonido ambiental propio"
+                                    else "Esta escena aporta el sonido ambiental",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF8A6A35)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
 internal fun StorySceneTestDialog(
     scene: StoredStoryScene,
     ambientDuringNarrationPercent: Int,
+    ambientAudioOverride: File? = null,
+    useAmbientAudioOverride: Boolean = false,
     onExit: () -> Unit
 ) {
     var ambientPlayer by remember(scene.directory.absolutePath) { mutableStateOf<MediaPlayer?>(null) }
@@ -426,8 +485,12 @@ internal fun StorySceneTestDialog(
             ?.takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
     }
 
-    DisposableEffect(scene.directory.absolutePath, scene.metadata.ambientAudio, scene.metadata.narrationAudio) {
-        val ambientFile = scene.metadata.ambientAudio?.let { File(scene.directory, it) }?.takeIf { it.isFile }
+    DisposableEffect(scene.directory.absolutePath, scene.metadata.ambientAudio, scene.metadata.narrationAudio, useAmbientAudioOverride, ambientAudioOverride?.absolutePath) {
+        val ambientFile = if (useAmbientAudioOverride) {
+            ambientAudioOverride?.takeIf { it.isFile }
+        } else {
+            scene.metadata.ambientAudio?.let { File(scene.directory, it) }?.takeIf { it.isFile }
+        }
         val narrationFile = scene.metadata.narrationAudio?.let { File(scene.directory, it) }?.takeIf { it.isFile }
         ambientPlayer = ambientFile?.let { file -> runCatching {
             MediaPlayer().apply {
