@@ -1160,6 +1160,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 "stories-scene-editor" -> parentSection = "stories-editor"
                 "stories-object-create", "stories-object-collection", "stories-object-inventory" -> parentSection = "stories-objects"
                 "active-games", "sound-settings", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
+                "music", "stories-audio" -> parentSection = "sound-settings"
                 "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
                 "learning-stats", "usage-stats" -> parentSection = "statistics-menu"
                 "game-modes" -> parentSection = "menu"
