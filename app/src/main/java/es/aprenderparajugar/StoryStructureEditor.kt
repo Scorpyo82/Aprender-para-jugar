@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun StoryStructureEditor(
     scenes: List<String>,
+    sceneSummaries: Map<String, String>,
     connections: Map<String, List<String>>,
     conditions: List<StoryConnectionCondition>,
     availableObjects: List<StoredObject>,
@@ -57,6 +58,10 @@ internal fun StoryStructureEditor(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(origin, fontWeight = FontWeight.Bold)
+                    Text(
+                        sceneSummaries[origin].orEmpty().ifBlank { "Sin resumen de ilustración" },
+                        color = if (sceneSummaries[origin].isNullOrBlank()) Color(0xFF98A2B3) else Color(0xFF667085)
+                    )
                     if (destinations.isEmpty()) {
                         Text("Sin salidas configuradas", color = Color(0xFF667085))
                     }
