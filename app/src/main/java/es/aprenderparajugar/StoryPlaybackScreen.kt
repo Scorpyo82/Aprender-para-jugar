@@ -3,16 +3,18 @@ package es.aprenderparajugar
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.media.MediaPlayer
 import android.graphics.BitmapFactory
+import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,15 +37,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.io.File
 
+private val StoryBackground = Color(0xFF101827)
+private val StoryGold = Color(0xFFFFD968)
+private val StoryPanel = Color(0xFF2A3548)
+
+/**
+ * El reproductor reserva siempre un marco 16:9 para las ilustraciones.
+ * Las imágenes originales se muestran completas y sin deformación (Fit).
+ */
 @Composable
 internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: () -> Unit) {
     val activity = LocalContext.current as? Activity
@@ -59,14 +68,27 @@ internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: ()
             ?.let { BitmapFactory.decodeFile(it.absolutePath) }
     }
     Column(
-        Modifier.fillMaxSize().background(Color(0xFF101827)).padding(24.dp),
+        Modifier.fillMaxSize().background(StoryBackground).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
     ) {
         Text(story.metadata.title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
-        if (portraitWarning) Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = Color(0xFFFFD968), textAlign = TextAlign.Center)
-        if (cover != null) Image(cover.asImageBitmap(), contentDescription = "Portada de ${story.metadata.title}", modifier = Modifier.weight(1f).fillMaxWidth(), contentScale = ContentScale.Fit)
-        else Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text("📖", fontSize = 100.sp) }
+        if (portraitWarning) Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, textAlign = TextAlign.Center)
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            val frameModifier = if (maxWidth / maxHeight > 16f / 9f) {
+                Modifier.fillMaxHeight().aspectRatio(16f / 9f)
+            } else {
+                Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+            }
+            Box(frameModifier.background(Color(0xFF080D16), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                if (cover != null) Image(
+                    cover.asImageBitmap(),
+                    contentDescription = "Portada de ${story.metadata.title}",
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                    contentScale = ContentScale.Fit
+                ) else Text("📖", fontSize = 100.sp)
+            }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Volver") }
             Button(onClick = onPlay, modifier = Modifier.weight(1f)) { Text("▶ Play") }
@@ -144,40 +166,123 @@ internal fun StoryPlayerScreen(
 
     BackHandler(enabled = true) { /* La salida se realiza desde el control explícito. */ }
 
-    Box(Modifier.fillMaxSize().background(Color(0xFF101827)).padding(14.dp)) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("⏱ ${balanceSeconds / 60} min ${balanceSeconds % 60} s", color = Color(0xFFFFD968), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                Text(story.metadata.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+    Column(
+        Modifier.fillMaxSize().background(StoryBackground).padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Franja superior: información siempre fuera de la ilustración.
+        Row(
+            Modifier.fillMaxWidth().height(34.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "⏱ ${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+                color = StoryGold,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(story.metadata.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+
+        // Marco 16:9 centrado en el espacio disponible. El tamaño se limita por
+        // el ancho o por el alto disponible, sin alterar nunca la proporción.
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            val frameModifier = if (maxWidth / maxHeight > 16f / 9f) {
+                Modifier.fillMaxHeight().aspectRatio(16f / 9f)
+            } else {
+                Modifier.fillMaxWidth().aspectRatio(16f / 9f)
             }
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (image != null) Image(image.asImageBitmap(), contentDescription = snapshot.scene.metadata.title, modifier = Modifier.weight(1.25f).fillMaxSize(), contentScale = ContentScale.Fit)
-                Column(Modifier.weight(1f).fillMaxSize(), verticalArrangement = Arrangement.Center) {
-                    Text(snapshot.scene.metadata.title, color = Color(0xFFFFD968), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(snapshot.scene.metadata.text, color = Color.White, fontSize = 17.sp)
+            Box(
+                frameModifier.background(Color(0xFF080D16), RoundedCornerShape(14.dp))
+            ) {
+                if (image != null) {
+                    Image(
+                        bitmap = image.asImageBitmap(),
+                        contentDescription = snapshot.scene.metadata.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("📖", color = Color.White, fontSize = 54.sp)
+                    }
                 }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { backpackOpen = true }) { Text("🎒 Mochila (${snapshot.inventory.size})") }
-                if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
-                    OutlinedButton(onClick = {
-                        narrationPlayer?.let { player -> runCatching { player.seekTo(0); player.start() } }
-                        narrationFinished = false
-                    }) { Text("↻ Repetir") }
-                }
-                if (snapshot.isFinished) {
-                    Button(onClick = {
-                        engine.finish()
-                        safelyStopAndRelease(ambientPlayer); ambientPlayer = null
-                        safelyStopAndRelease(narrationPlayer); narrationPlayer = null
-                        onExit()
-                    }) { Text("Fin") }
-                } else if (snapshot.canAdvance) {
-                    Button(onClick = { engine.advance()?.let { snapshot = it } }) { Text("»") }
+
+                // Controles anclados al marco 16:9, nunca a los límites
+                // de la imagen original que se está mostrando dentro.
+                Row(
+                    Modifier.align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = { backpackOpen = true },
+                        shape = RoundedCornerShape(24.dp)
+                    ) { Text("🎒 ${snapshot.inventory.size}") }
+
+                    if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
+                        OutlinedButton(
+                            onClick = {
+                                narrationPlayer?.let { player -> runCatching { player.seekTo(0); player.start() } }
+                                narrationFinished = false
+                            },
+                            shape = RoundedCornerShape(24.dp)
+                        ) { Text("↻") }
+                    } else {
+                        // Conserva el hueco central para que el siguiente no cambie de posición.
+                        Text(" ", color = Color.Transparent)
+                    }
+
+                    if (snapshot.isFinished) {
+                        Button(
+                            onClick = {
+                                engine.finish()
+                                safelyStopAndRelease(ambientPlayer); ambientPlayer = null
+                                safelyStopAndRelease(narrationPlayer); narrationPlayer = null
+                                onExit()
+                            },
+                            shape = RoundedCornerShape(24.dp)
+                        ) { Text("Fin") }
+                    } else if (snapshot.canAdvance) {
+                        Button(
+                            onClick = { engine.advance()?.let { snapshot = it } },
+                            shape = RoundedCornerShape(24.dp)
+                        ) { Text("»") }
+                    }
                 }
             }
         }
-        if (portraitWarning) Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = Color.White, modifier = Modifier.align(Alignment.BottomCenter))
+
+        // Diálogo separado de la ilustración, siempre en la franja inferior.
+        Column(
+            Modifier.fillMaxWidth()
+                .background(StoryPanel, RoundedCornerShape(14.dp))
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                snapshot.scene.metadata.title,
+                color = StoryGold,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1
+            )
+            Text(
+                snapshot.scene.metadata.text,
+                color = Color.White,
+                fontSize = 16.sp,
+                lineHeight = 20.sp
+            )
+        }
+        if (portraitWarning) {
+            Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, fontSize = 12.sp)
+        }
     }
 
     if (backpackOpen) {
