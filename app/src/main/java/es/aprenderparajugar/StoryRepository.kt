@@ -243,6 +243,21 @@ object StoryRepository {
             ?.forEach { it.delete() }
     }
 
+    /** Elimina físicamente una colección y todo su contenido tras confirmar la acción en la interfaz. */
+    fun deleteCollection(context: Context, collection: String) {
+        val root = rootDirectory(context).canonicalFile
+        val target = File(root, safeSegment(collection, "La colección")).canonicalFile
+        require(target.parentFile == root && target != root) {
+            "La ubicación de la colección no es válida."
+        }
+        if (target.exists()) {
+            check(target.isDirectory) { "La colección no es una carpeta válida." }
+            check(target.walkBottomUp().all { it.delete() || !it.exists() }) {
+                "No se pudo eliminar todo el contenido de la colección."
+            }
+        }
+    }
+
     fun rootDirectory(context: Context): File = ensureDirectory(File(context.filesDir, ROOT))
 
     fun list(context: Context): List<StoredStory> {
