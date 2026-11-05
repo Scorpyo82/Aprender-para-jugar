@@ -857,32 +857,51 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             musicMessage = "Música seleccionada. Se reproducirá en bucle cuando el sonido esté activado."
         }
     }
-    DisposableEffect(musicUri, soundEnabled, appInForeground, screen) {
+    var backgroundMusicPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+
+    // El reproductor general solo se recrea si cambia la pista seleccionada.
+    // Cambiar de actividad nunca destruye ni reinicia la música.
+    DisposableEffect(musicUri) {
         var player: MediaPlayer? = null
-        // La narración y el ambiente del cuento sustituyen temporalmente la música general.
-        if (soundEnabled && appInForeground && screen != "story-player") {
-            try {
-                player = if (musicUri.isNullOrBlank()) {
-                    MediaPlayer.create(context, R.raw.musica_infantil_2)
-                } else {
-                    MediaPlayer.create(context, Uri.parse(musicUri))
-                }
-                player?.apply {
-                    isLooping = true
-                    setVolume(0.22f, 0.22f)
-                    start()
-                }
-                if (player == null) {
-                    musicMessage = "No se ha podido cargar la música."
-                }
-            } catch (_: Exception) {
-                musicMessage = "No se ha podido reproducir la música. Prueba con otro MP3."
+        try {
+            player = if (musicUri.isNullOrBlank()) {
+                MediaPlayer.create(context, R.raw.musica_infantil_2)
+            } else {
+                MediaPlayer.create(context, Uri.parse(musicUri))
             }
+            player?.apply {
+                isLooping = true
+                setVolume(0.22f, 0.22f)
+            }
+            if (player == null) {
+                musicMessage = "No se ha podido cargar la música."
+            }
+            backgroundMusicPlayer = player
+        } catch (_: Exception) {
+            backgroundMusicPlayer = null
+            musicMessage = "No se ha podido reproducir la música. Prueba con otro MP3."
         }
         onDispose {
+            if (backgroundMusicPlayer === player) backgroundMusicPlayer = null
             try { player?.stop() } catch (_: Exception) { }
             player?.release()
         }
+    }
+
+    // Al entrar en Cuentos se pausa la música general; al salir se reanuda
+    // desde la posición conservada. El resto de la navegación no la afecta.
+    DisposableEffect(backgroundMusicPlayer, soundEnabled, appInForeground, screen) {
+        val player = backgroundMusicPlayer
+        if (player != null) {
+            try {
+                if (soundEnabled && appInForeground && screen != "story-player") {
+                    if (!player.isPlaying) player.start()
+                } else {
+                    if (player.isPlaying) player.pause()
+                }
+            } catch (_: Exception) { }
+        }
+        onDispose { }
     }
     var mode by remember { mutableStateOf("Al azar") }
     var cardsStartMessage by remember { mutableStateOf("") }
