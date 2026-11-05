@@ -3166,7 +3166,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     storedStoryObjects = savedObjects
                                     parentSection = "stories-object-collection"
                                 }
-                            }, enabled = storyObjectNameDraft.isNotBlank() && storyObjectSelectedCollection.isNotBlank() && storyObjectPictureDraft.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Guardar objeto") }
+                            }, enabled = storyObjectNameDraft.isNotBlank() && storyObjectSelectedCollection.isNotBlank() && storyObjectPictureDraft.isNotBlank() && (!storyObjectAvailableInStore || (storyObjectStorePriceMinutes.toIntOrNull() ?: 0) > 0), modifier = Modifier.fillMaxWidth()) { Text("Guardar objeto") }
                             if (storyObjectMessage.isNotBlank()) Text(storyObjectMessage, color = if (storyObjectMessage.contains("correctamente")) Color(0xFF24733B) else Color(0xFFB3261E))
                         }
                         item {
