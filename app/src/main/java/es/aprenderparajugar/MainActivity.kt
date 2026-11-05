@@ -2685,6 +2685,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item {
                             StoryStructureScreen(
                                 scenes = storyEditorScenes,
+                                sceneSummaries = storyEditorScenes.associateWith { scene ->
+                                    if (scene == storyEditorSelectedScene) {
+                                        storyEditorSummary
+                                    } else {
+                                        val folder = runCatching { StoryRepository.sceneFolderName(scene) }.getOrNull()
+                                        val stored = storedStories.firstOrNull {
+                                            it.folderName == editingStoryFolder && it.collection == editingStoryCollectionFolder
+                                        }
+                                        if (folder != null && stored != null) {
+                                            runCatching { StoryRepository.readScene(stored, folder).metadata.illustrationSummary }.getOrNull().orEmpty()
+                                        } else ""
+                                    }
+                                },
                                 initialConnections = storyEditorState.connections.value,
                                 initialConditions = storyEditorState.connectionConditions.value,
                                 initialStartScene = storyEditorState.startScene.value,
