@@ -831,7 +831,17 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     preferences.edit().putBoolean("device_setup_in_progress", false).apply()
                     setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
                 }
-                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> appInForeground = false
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                    appInForeground = false
+                    // Remember the exact activity screen before Android Home/backgrounding.
+                    // Ignore temporary document pickers, setup flows and the timer gate itself.
+                    if (screen != "play-time" &&
+                        !preferences.getBoolean("content_picker_active", false) &&
+                        !preferences.getBoolean("device_setup_in_progress", false) &&
+                        !preferences.getBoolean("parent_area_active", false)) {
+                        preferences.edit().putString("play_time_return_screen", screen).commit()
+                    }
+                }
                 else -> Unit
             }
         }
@@ -1336,7 +1346,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         .putBoolean("play_paused_for_screen_lock", false)
                         .commit()
                     screen = "home"
-                } else if (screen == "home") {
+                } else if (
+                    !preferences.getBoolean("content_picker_active", false) &&
+                    !preferences.getBoolean("device_setup_in_progress", false) &&
+                    !preferences.getBoolean("parent_area_active", false)
+                ) {
+                    // Every return from Android Home passes through the countdown gate,
+                    // regardless of which game, story, board or menu was left open.
                     screen = "play-time"
                 }
             } else if (deadline > 0L) {
@@ -4622,12 +4638,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("🎮 Tiempo de juego", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+            Text("⏳ Tiempo fuera de la aplicación", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(12.dp))
-            Text("Este es el tiempo que has ganado al aprender.", fontSize = 16.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("Tu tiempo de juego sigue descontándose mientras estás fuera. Cuando quieras, puedes volver a tu actividad.", fontSize = 16.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(24.dp))
             Text(String.format(java.util.Locale.ROOT, "%02d:%02d", balanceSeconds / 60, balanceSeconds % 60), fontSize = 54.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF267A55))
-            Text("El tiempo sigue descontándose aunque uses otras aplicaciones.", fontSize = 15.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("Tiempo de juego restante", fontSize = 15.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(24.dp))
             Button(onClick = {
                 val deadline = preferences.getLong("play_deadline_ms", 0L)
@@ -4642,8 +4658,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     .commit()
                 context.stopService(Intent(context, PlayTimeService::class.java))
                 balanceSeconds = remaining
-                screen = "home"
-            }, modifier = Modifier.fillMaxWidth()) { Text("Terminar juego y volver") }
+                val returnScreen = preferences.getString("play_time_return_screen", "home")
+                    ?.takeIf { it.isNotBlank() && it != "play-time" } ?: "home"
+                preferences.edit().remove("play_time_return_screen").apply()
+                screen = returnScreen
+            }, modifier = Modifier.fillMaxWidth()) { Text("Volver a la aplicación") }
         }
     } else if (screen == "result" || screen == "sequence-result") {
         val rewardStars = when {
