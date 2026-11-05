@@ -5131,6 +5131,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         } else {
             StoryCoverScreen(
                 story = selectedStory,
+                fontFamily = exerciseFontFamily,
                 onBack = { screen = "stories"; selectedStoryPath = null },
                 onPlay = { screen = "story-player" }
             )
@@ -5146,6 +5147,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             StoryPlayerScreen(
                 story = selectedStory,
                 balanceSeconds = balanceSeconds,
+                fontFamily = exerciseFontFamily,
                 onExit = { screen = "stories"; selectedStoryPath = null }
             )
         }
