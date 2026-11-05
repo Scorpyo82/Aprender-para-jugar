@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -114,6 +115,9 @@ internal fun StoryPlayerScreen(
     var snapshot by remember(story.directory.absolutePath) { mutableStateOf(engine.start()) }
     var backpackOpen by remember { mutableStateOf(false) }
     var narrationFinished by remember { mutableStateOf(false) }
+    var exitConfirmation by remember { mutableStateOf(false) }
+    var resumeAmbientOnReturn by remember { mutableStateOf(false) }
+    var resumeNarrationOnReturn by remember { mutableStateOf(false) }
     var ambientPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var narrationPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
@@ -121,7 +125,27 @@ internal fun StoryPlayerScreen(
     DisposableEffect(activity) {
         val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        val lifecycleObserver = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                    resumeAmbientOnReturn = runCatching { ambientPlayer?.isPlaying == true }.getOrDefault(false)
+                    resumeNarrationOnReturn = runCatching { narrationPlayer?.isPlaying == true }.getOrDefault(false)
+                    if (resumeAmbientOnReturn) runCatching { ambientPlayer?.pause() }
+                    if (resumeNarrationOnReturn) runCatching { narrationPlayer?.pause() }
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                    if (resumeAmbientOnReturn) runCatching { ambientPlayer?.start() }
+                    if (resumeNarrationOnReturn) runCatching { narrationPlayer?.start() }
+                    resumeAmbientOnReturn = false
+                    resumeNarrationOnReturn = false
+                }
+                else -> Unit
+            }
+        }
+        activity?.lifecycle?.addObserver(lifecycleObserver)
         onDispose {
+            activity?.lifecycle?.removeObserver(lifecycleObserver)
             safelyStopAndRelease(ambientPlayer)
             safelyStopAndRelease(narrationPlayer)
             engine.stop()
@@ -177,23 +201,6 @@ internal fun StoryPlayerScreen(
         Modifier.fillMaxSize().background(StoryBackground).padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Franja superior: información siempre fuera de la ilustración.
-        Row(
-            Modifier.fillMaxWidth().height(34.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "⏱ ${balanceSeconds / 60} min ${balanceSeconds % 60} s",
-                color = StoryGold,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(story.metadata.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        }
-
-        // Marco 16:9 centrado en el espacio disponible. El tamaño se limita por
-        // el ancho o por el alto disponible, sin alterar nunca la proporción.
         BoxWithConstraints(
             Modifier.fillMaxWidth().weight(1f),
             contentAlignment = Alignment.Center
@@ -203,9 +210,7 @@ internal fun StoryPlayerScreen(
             } else {
                 Modifier.fillMaxWidth().aspectRatio(16f / 9f)
             }
-            Box(
-                frameModifier.background(Color(0xFF080D16), RoundedCornerShape(14.dp))
-            ) {
+            Box(frameModifier.background(Color(0xFF080D16), RoundedCornerShape(14.dp))) {
                 if (image != null) {
                     Image(
                         bitmap = image.asImageBitmap(),
@@ -219,8 +224,13 @@ internal fun StoryPlayerScreen(
                     }
                 }
 
-                // Controles anclados al marco 16:9, nunca a los límites
-                // de la imagen original que se está mostrando dentro.
+                OutlinedButton(
+                    onClick = { exitConfirmation = true },
+                    modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(2.dp, Color.White)
+                ) { Text("×", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold) }
+
                 Row(
                     Modifier.align(Alignment.BottomCenter)
                         .fillMaxWidth()
@@ -230,8 +240,9 @@ internal fun StoryPlayerScreen(
                 ) {
                     OutlinedButton(
                         onClick = { backpackOpen = true },
-                        shape = RoundedCornerShape(24.dp)
-                    ) { Text("🎒 ${snapshot.inventory.size}") }
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(2.dp, Color.White)
+                    ) { Text("🎒 ${snapshot.inventory.size}", color = Color.White) }
 
                     if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
                         OutlinedButton(
@@ -239,10 +250,10 @@ internal fun StoryPlayerScreen(
                                 narrationPlayer?.let { player -> runCatching { player.seekTo(0); player.start() } }
                                 narrationFinished = false
                             },
-                            shape = RoundedCornerShape(24.dp)
-                        ) { Text("↻") }
+                            shape = RoundedCornerShape(24.dp),
+                            border = BorderStroke(2.dp, Color.White)
+                        ) { Text("↻", color = Color.White, fontSize = 20.sp) }
                     } else {
-                        // Conserva el hueco central para que el siguiente no cambie de posición.
                         Text(" ", color = Color.Transparent)
                     }
 
@@ -266,30 +277,38 @@ internal fun StoryPlayerScreen(
             }
         }
 
-        // Diálogo separado de la ilustración, siempre en la franja inferior.
         Column(
             Modifier.fillMaxWidth()
                 .background(StoryPanel, RoundedCornerShape(14.dp))
-                .padding(horizontal = 18.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+                .padding(horizontal = 18.dp, vertical = 10.dp)
         ) {
-            Text(
-                snapshot.scene.metadata.title,
-                color = StoryGold,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1
-            )
             Text(
                 snapshot.scene.metadata.text,
                 color = Color.White,
-                fontSize = 16.sp,
-                lineHeight = 20.sp
+                fontSize = 17.sp,
+                lineHeight = 22.sp
             )
         }
-        if (portraitWarning) {
-            Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, fontSize = 12.sp)
-        }
+    }
+
+    if (exitConfirmation) {
+        AlertDialog(
+            onDismissRequest = { exitConfirmation = false },
+            title = { Text("¿Quieres salir del cuento?") },
+            text = { Text("Puedes volver a la cartelera y continuar aprendiendo cuando quieras.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    exitConfirmation = false
+                    safelyStopAndRelease(ambientPlayer); ambientPlayer = null
+                    safelyStopAndRelease(narrationPlayer); narrationPlayer = null
+                    engine.stop()
+                    onExit()
+                }) { Text("Salir") }
+            },
+            dismissButton = {
+                TextButton(onClick = { exitConfirmation = false }) { Text("Seguir leyendo") }
+            }
+        )
     }
 
     if (backpackOpen) {
