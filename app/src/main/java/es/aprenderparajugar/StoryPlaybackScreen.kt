@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,7 +55,7 @@ private val StoryPanel = Color(0xFF2A3548)
  * Las imágenes originales se muestran completas y sin deformación (Fit).
  */
 @Composable
-internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: () -> Unit) {
+internal fun StoryCoverScreen(story: StoredStory, fontFamily: FontFamily, onBack: () -> Unit, onPlay: () -> Unit) {
     val activity = LocalContext.current as? Activity
     val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
     DisposableEffect(activity) {
@@ -72,8 +73,10 @@ internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: ()
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
     ) {
-        Text(story.metadata.title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
-        if (portraitWarning) Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, textAlign = TextAlign.Center)
+        Text(
+            fontFamily = fontFamily,story.metadata.title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+        if (portraitWarning) Text(
+            fontFamily = fontFamily,"Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, textAlign = TextAlign.Center)
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             val frameModifier = if (maxWidth / maxHeight > 16f / 9f) {
                 Modifier.fillMaxHeight().aspectRatio(16f / 9f)
@@ -86,12 +89,15 @@ internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: ()
                     contentDescription = "Portada de ${story.metadata.title}",
                     modifier = Modifier.fillMaxSize().padding(8.dp),
                     contentScale = ContentScale.Fit
-                ) else Text("📖", fontSize = 100.sp)
+                ) else Text(
+            fontFamily = fontFamily,"📖", fontSize = 100.sp)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Volver") }
-            Button(onClick = onPlay, modifier = Modifier.weight(1f)) { Text("▶ Play") }
+            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text(
+            fontFamily = fontFamily,"Volver") }
+            Button(onClick = onPlay, modifier = Modifier.weight(1f)) { Text(
+            fontFamily = fontFamily,"▶ Play") }
         }
     }
 }
@@ -100,6 +106,7 @@ internal fun StoryCoverScreen(story: StoredStory, onBack: () -> Unit, onPlay: ()
 internal fun StoryPlayerScreen(
     story: StoredStory,
     balanceSeconds: Int,
+    fontFamily: FontFamily,
     onExit: () -> Unit
 ) {
     val context = LocalContext.current
@@ -177,12 +184,14 @@ internal fun StoryPlayerScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
+            fontFamily = fontFamily,
                 "⏱ ${balanceSeconds / 60} min ${balanceSeconds % 60} s",
                 color = StoryGold,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.ExtraBold
             )
-            Text(story.metadata.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(
+            fontFamily = fontFamily,story.metadata.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
 
         // Marco 16:9 centrado en el espacio disponible. El tamaño se limita por
@@ -208,7 +217,8 @@ internal fun StoryPlayerScreen(
                     )
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("📖", color = Color.White, fontSize = 54.sp)
+                        Text(
+            fontFamily = fontFamily,"📖", color = Color.White, fontSize = 54.sp)
                     }
                 }
 
@@ -224,7 +234,8 @@ internal fun StoryPlayerScreen(
                     OutlinedButton(
                         onClick = { backpackOpen = true },
                         shape = RoundedCornerShape(24.dp)
-                    ) { Text("🎒 ${snapshot.inventory.size}") }
+                    ) { Text(
+            fontFamily = fontFamily,"🎒 ${snapshot.inventory.size}") }
 
                     if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
                         OutlinedButton(
@@ -233,10 +244,12 @@ internal fun StoryPlayerScreen(
                                 narrationFinished = false
                             },
                             shape = RoundedCornerShape(24.dp)
-                        ) { Text("↻") }
+                        ) { Text(
+            fontFamily = fontFamily,"↻") }
                     } else {
                         // Conserva el hueco central para que el siguiente no cambie de posición.
-                        Text(" ", color = Color.Transparent)
+                        Text(
+            fontFamily = fontFamily," ", color = Color.Transparent)
                     }
 
                     if (snapshot.isFinished) {
@@ -248,12 +261,14 @@ internal fun StoryPlayerScreen(
                                 onExit()
                             },
                             shape = RoundedCornerShape(24.dp)
-                        ) { Text("Fin") }
+                        ) { Text(
+            fontFamily = fontFamily,"Fin") }
                     } else if (snapshot.canAdvance) {
                         Button(
                             onClick = { engine.advance()?.let { snapshot = it } },
                             shape = RoundedCornerShape(24.dp)
-                        ) { Text("»") }
+                        ) { Text(
+            fontFamily = fontFamily,"»") }
                     }
                 }
             }
@@ -267,6 +282,7 @@ internal fun StoryPlayerScreen(
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Text(
+            fontFamily = fontFamily,
                 snapshot.scene.metadata.title,
                 color = StoryGold,
                 fontSize = 17.sp,
@@ -274,6 +290,7 @@ internal fun StoryPlayerScreen(
                 maxLines = 1
             )
             Text(
+            fontFamily = fontFamily,
                 snapshot.scene.metadata.text,
                 color = Color.White,
                 fontSize = 16.sp,
@@ -281,17 +298,20 @@ internal fun StoryPlayerScreen(
             )
         }
         if (portraitWarning) {
-            Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, fontSize = 12.sp)
+            Text(
+            fontFamily = fontFamily,"Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, fontSize = 12.sp)
         }
     }
 
     if (backpackOpen) {
         AlertDialog(
             onDismissRequest = { backpackOpen = false },
-            title = { Text("Mochila de Zorro") },
+            title = { Text(
+            fontFamily = fontFamily,"Mochila de Zorro") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (snapshot.inventory.isEmpty()) Text("La mochila está vacía.")
+                    if (snapshot.inventory.isEmpty()) Text(
+            fontFamily = fontFamily,"La mochila está vacía.")
                     snapshot.inventory.forEach { item ->
                         OutlinedButton(
                             onClick = {
@@ -299,11 +319,13 @@ internal fun StoryPlayerScreen(
                                 backpackOpen = false
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(item.metadata.name) }
+                        ) { Text(
+            fontFamily = fontFamily,item.metadata.name) }
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { backpackOpen = false }) { Text("Cerrar") } }
+            confirmButton = { TextButton(onClick = { backpackOpen = false }) { Text(
+            fontFamily = fontFamily,"Cerrar") } }
         )
     }
 }
