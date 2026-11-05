@@ -589,6 +589,7 @@ private fun AprenderApp() {
     var storyObjectEditingFolder by storyObjectEditorState.editingFolder
     var storyObjectImageChanged by storyObjectEditorState.imageChanged
     var storyObjectAvailableInStore by storyObjectEditorState.availableInStore
+    var storyObjectStorePriceMinutes by storyObjectEditorState.storePriceMinutes
     var storyObjectMessage by storyObjectEditorState.message
     var storedStoryObjects by remember { mutableStateOf(emptyList<StoredObject>()) }
     val storyObjectInventoryState = remember(context) { StoryObjectInventoryState(context) }
@@ -3143,6 +3144,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     Text("Aparece en la tienda", fontWeight = FontWeight.SemiBold)
                                 }
                                 Text("Indica si este objeto se ofrece en la tienda del juego.", fontSize = 12.sp, color = Color(0xFF667085))
+                                if (storyObjectAvailableInStore) { OutlinedTextField(value = storyObjectStorePriceMinutes, onValueChange = { storyObjectStorePriceMinutes = it.filter(Char::isDigit).take(5) }, label = { Text("Precio en minutos") }, suffix = { Text("min") }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number), modifier = Modifier.fillMaxWidth()) }
                             }
                         }
                         item {
