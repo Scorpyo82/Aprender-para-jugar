@@ -131,11 +131,15 @@ internal fun StoryPlayerScreen(
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE,
                 androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
-                    resumeAmbientOnReturn = runCatching { ambientPlayer?.isPlaying == true }.getOrDefault(false)
-                    resumeNarrationOnReturn = runCatching { narrationPlayer?.isPlaying == true }.getOrDefault(false)
-                    if (resumeAmbientOnReturn) runCatching { ambientPlayer?.pause() }
-                    if (resumeNarrationOnReturn) runCatching { narrationPlayer?.pause() }
-                    if (resumeNarrationOnReturn) narrationIsPlaying = false
+                    if (runCatching { ambientPlayer?.isPlaying == true }.getOrDefault(false)) {
+                        resumeAmbientOnReturn = true
+                        runCatching { ambientPlayer?.pause() }
+                    }
+                    if (runCatching { narrationPlayer?.isPlaying == true }.getOrDefault(false)) {
+                        resumeNarrationOnReturn = true
+                        runCatching { narrationPlayer?.pause() }
+                        narrationIsPlaying = false
+                    }
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
                     if (resumeAmbientOnReturn) runCatching { ambientPlayer?.start() }
