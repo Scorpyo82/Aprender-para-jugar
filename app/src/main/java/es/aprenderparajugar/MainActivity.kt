@@ -857,9 +857,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             musicMessage = "Música seleccionada. Se reproducirá en bucle cuando el sonido esté activado."
         }
     }
-    DisposableEffect(musicUri, soundEnabled, appInForeground) {
+    DisposableEffect(musicUri, soundEnabled, appInForeground, screen) {
         var player: MediaPlayer? = null
-        if (soundEnabled && appInForeground) {
+        // La narración y el ambiente del cuento sustituyen temporalmente la música general.
+        if (soundEnabled && appInForeground && screen != "story-player") {
             try {
                 player = if (musicUri.isNullOrBlank()) {
                     MediaPlayer.create(context, R.raw.musica_infantil_2)
