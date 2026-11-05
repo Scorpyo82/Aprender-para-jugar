@@ -5144,12 +5144,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     ) {
                                         Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Box(
-                                                Modifier.fillMaxWidth().aspectRatio(0.72f).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(11.dp)),
+                                                Modifier.fillMaxWidth().aspectRatio(16f / 9f).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(11.dp)),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (coverFile != null) {
                                                     AndroidView(
-                                                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
                                                         update = { view -> view.setImageURI(Uri.fromFile(coverFile)) },
                                                         modifier = Modifier.fillMaxSize()
                                                     )
@@ -5175,10 +5175,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Box(Modifier.width(72.dp).height(96.dp).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.width(160.dp).aspectRatio(16f / 9f).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                             if (coverFile != null) {
                                 AndroidView(
-                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
                                     update = { view -> view.setImageURI(Uri.fromFile(coverFile)) },
                                     modifier = Modifier.fillMaxSize()
                                 )
