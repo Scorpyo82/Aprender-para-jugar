@@ -48,6 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -220,9 +222,14 @@ internal fun StoryPlayerScreen(
         } else narrationFinished = true
     }
 
+    val audioPreferences = remember(context) { context.getSharedPreferences("aprender_para_jugar", android.content.Context.MODE_PRIVATE) }
+    val ambientDuringNarration = remember(audioPreferences) {
+        audioPreferences.getInt("story_ambient_during_narration_percent", 20).coerceIn(0, 30) / 100f
+    }
+
     LaunchedEffect(ambientPlayer, narrationIsPlaying) {
         val player = ambientPlayer ?: return@LaunchedEffect
-        val targetVolume = if (narrationIsPlaying) 0.30f else 1f
+        val targetVolume = if (narrationIsPlaying) ambientDuringNarration else 1f
         val startVolume = ambientVolume
         val steps = 10
         for (step in 1..steps) {
@@ -400,6 +407,100 @@ internal fun StoryPlayerScreen(
             confirmButton = { TextButton(onClick = { backpackOpen = false }) { Text("Cerrar") } }
         )
     }
+    }
+}
+
+
+@Composable
+internal fun StorySceneTestDialog(
+    scene: StoredStoryScene,
+    ambientDuringNarrationPercent: Int,
+    onExit: () -> Unit
+) {
+    var ambientPlayer by remember(scene.directory.absolutePath) { mutableStateOf<MediaPlayer?>(null) }
+    var narrationPlayer by remember(scene.directory.absolutePath) { mutableStateOf<MediaPlayer?>(null) }
+    var narrationIsPlaying by remember(scene.directory.absolutePath) { mutableStateOf(false) }
+    var ambientCurrentVolume by remember(scene.directory.absolutePath) { mutableStateOf(1f) }
+    val image = remember(scene.directory.absolutePath, scene.metadata.illustration) {
+        scene.metadata.illustration?.let { File(scene.directory, it) }
+            ?.takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
+    }
+
+    DisposableEffect(scene.directory.absolutePath, scene.metadata.ambientAudio, scene.metadata.narrationAudio) {
+        val ambientFile = scene.metadata.ambientAudio?.let { File(scene.directory, it) }?.takeIf { it.isFile }
+        val narrationFile = scene.metadata.narrationAudio?.let { File(scene.directory, it) }?.takeIf { it.isFile }
+        ambientPlayer = ambientFile?.let { file -> runCatching {
+            MediaPlayer().apply {
+                setDataSource(file.absolutePath)
+                isLooping = true
+                prepare()
+                start()
+            }
+        }.getOrNull() }
+        narrationPlayer = narrationFile?.let { file -> runCatching {
+            MediaPlayer().apply {
+                setDataSource(file.absolutePath)
+                setOnCompletionListener { narrationIsPlaying = false }
+                prepare()
+                start()
+                narrationIsPlaying = true
+            }
+        }.getOrNull() }
+        onDispose {
+            safelyStopAndRelease(ambientPlayer)
+            safelyStopAndRelease(narrationPlayer)
+            ambientPlayer = null
+            narrationPlayer = null
+        }
+    }
+
+    LaunchedEffect(ambientPlayer, narrationIsPlaying, ambientDuringNarrationPercent) {
+        val player = ambientPlayer ?: return@LaunchedEffect
+        val target = if (narrationIsPlaying) ambientDuringNarrationPercent.coerceIn(0, 30) / 100f else 1f
+        val start = ambientCurrentVolume
+        for (step in 1..10) {
+            val volume = start + (target - start) * (step / 10f)
+            runCatching { player.setVolume(volume, volume) }
+            ambientCurrentVolume = volume
+            kotlinx.coroutines.delay(25)
+        }
+    }
+
+    Dialog(onDismissRequest = onExit, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.fillMaxSize().background(StoryBackground).padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Prueba de escena", color = StoryGold, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = onExit, border = BorderStroke(1.dp, Color.White)) {
+                    Text("Salir del test", color = Color.White)
+                }
+            }
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val frameModifier = if (maxWidth / maxHeight > 16f / 9f) {
+                    Modifier.fillMaxHeight().aspectRatio(16f / 9f)
+                } else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                Box(frameModifier.background(Color(0xFF080D16), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                    if (image != null) Image(
+                        bitmap = image.asImageBitmap(),
+                        contentDescription = scene.metadata.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    ) else Text("📖", color = Color.White, fontSize = 54.sp)
+                }
+            }
+            Column(Modifier.fillMaxWidth().background(StoryPanel, RoundedCornerShape(14.dp)).padding(16.dp)) {
+                Text(scene.metadata.text, color = Color.White, fontSize = 17.sp, lineHeight = 22.sp)
+            }
+            Text(
+                if (narrationPlayer != null) "Narración en reproducción · Ambiente al " + ambientDuringNarrationPercent.coerceIn(0, 30) + " %"
+                else "Ambiente al 100 % · Sin narración asignada",
+                color = Color.LightGray,
+                fontSize = 12.sp
+            )
+        }
     }
 }
 
