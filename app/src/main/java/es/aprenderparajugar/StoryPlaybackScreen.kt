@@ -110,7 +110,7 @@ internal fun StoryPlayerScreen(
     onExit: () -> Unit
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = context as? androidx.activity.ComponentActivity
     val engine = remember(story.directory.absolutePath) { StoryPlaybackEngine(context, story) }
     var snapshot by remember(story.directory.absolutePath) { mutableStateOf(engine.start()) }
     var backpackOpen by remember { mutableStateOf(false) }
