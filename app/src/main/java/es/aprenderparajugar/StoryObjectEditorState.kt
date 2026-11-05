@@ -18,6 +18,7 @@ internal class StoryObjectEditorState {
     val editingFolder: MutableState<String?> = mutableStateOf(null)
     val imageChanged: MutableState<Boolean> = mutableStateOf(false)
     val availableInStore: MutableState<Boolean> = mutableStateOf(false)
+    val storePriceMinutes: MutableState<String> = mutableStateOf("")
     val message: MutableState<String> = mutableStateOf("")
     val selectedCollection: MutableState<String> = mutableStateOf("")
 
@@ -28,6 +29,7 @@ internal class StoryObjectEditorState {
         selectedCollection.value = ""
         imageChanged.value = false
         availableInStore.value = false
+        storePriceMinutes.value = ""
         message.value = ""
     }
 
@@ -38,6 +40,7 @@ internal class StoryObjectEditorState {
         selectedCollection.value = stored.collection
         imageChanged.value = false
         availableInStore.value = stored.metadata.availableInStore
+        storePriceMinutes.value = stored.metadata.storePriceMinutes.takeIf { it > 0 }?.toString().orEmpty()
         message.value = ""
     }
 
@@ -54,10 +57,11 @@ internal class StoryObjectEditorState {
         }
         if ((NameRules.validationError(cleanName) != null && cleanName != existing?.metadata?.name) ||
             (NameRules.validationError(collection) != null && collection != existing?.collection) ||
-            pictureDraft.value.isBlank()) {
+            pictureDraft.value.isBlank() ||
+            (availableInStore.value && (storePriceMinutes.value.toIntOrNull() ?: 0) <= 0)) {
             message.value = NameRules.validationError(cleanName)?.takeIf { cleanName != existing?.metadata?.name }
                 ?: NameRules.validationError(collection)?.takeIf { collection != existing?.collection }
-                ?: "Selecciona una imagen."
+                ?: if (pictureDraft.value.isBlank()) "Selecciona una imagen." else "Indica un precio válido en minutos para la tienda."
             return null
         }
 
@@ -83,7 +87,7 @@ internal class StoryObjectEditorState {
             val folderName = existing?.folderName ?: cleanName.lowercase()
                 .replace(Regex("[^\\p{L}\\p{N}_-]+"), "_")
                 .trim('_')
-            ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName, availableInStore.value), imageBytes)
+            ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName, availableInStore.value, if (availableInStore.value) storePriceMinutes.value.toInt() else 0), imageBytes)
             reset()
             message.value = "Objeto guardado correctamente."
             ObjectRepository.list(context)
