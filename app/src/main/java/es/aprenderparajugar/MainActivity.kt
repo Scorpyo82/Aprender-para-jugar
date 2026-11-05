@@ -599,7 +599,7 @@ private fun AprenderApp() {
     var storyObjectSelectedCollection by storyObjectEditorState.selectedCollection
     var storyObjectCollectionMessage by storyObjectCollectionsState.message
     var storyObjectCollectionToDelete by storyObjectCollectionsState.collectionToDelete
-    val storyCollectionsState = remember(preferences) { StoryCollectionsState(preferences) }
+    val storyCollectionsState = remember(preferences) { StoryCollectionsState(context, preferences) }
     var storyCollections by storyCollectionsState.collections
     var storyCollectionDraft by storyCollectionsState.draft
     var storyCollectionMessage by storyCollectionsState.message
@@ -2902,8 +2902,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 Text("Eliminar colección y cuentos", fontWeight = FontWeight.SemiBold)
                                                 Text("Se eliminarán también todos los cuentos que pertenezcan a esta colección.", fontSize = 13.sp, color = Color(0xFFB3261E))
                                                 Button(onClick = {
-                                                    storyCollectionsState.deleteCollection(name)
-                                                    editingStoryCollection = null
+                                                    runCatching {
+                                                        storyCollectionsState.deleteCollection(name)
+                                                        storedStories = StoryRepository.list(context)
+                                                        if (selectedStoriesCollection == StoryRepository.collectionFolderName(name)) {
+                                                            selectedStoriesCollection = null
+                                                        }
+                                                        editingStoryCollection = null
+                                                    }.onFailure {
+                                                        storyCollectionMessage = it.message ?: "No se pudo eliminar la colección."
+                                                    }
                                                 }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección y cuentos") }
                                                 Text("Eliminar colección y reasignar cuentos a:", fontWeight = FontWeight.SemiBold)
                                                 storyCollections.filterNot { it == name }.forEach { destination ->
