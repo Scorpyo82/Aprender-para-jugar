@@ -2831,7 +2831,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                         AndroidView(
-                                            factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                            factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
                                             update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(selectedObject.directory, selectedObject.metadata.image))) } },
                                             modifier = Modifier.width(64.dp).height(64.dp)
                                         )
@@ -3125,7 +3125,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         collectionObjects.forEach { stored ->
                                             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                                 AndroidView(
-                                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
                                                     update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
                                                     modifier = Modifier.width(64.dp).height(64.dp)
                                                 )
@@ -5012,7 +5012,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     ) {
                                         Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Box(
-                                                Modifier.fillMaxWidth().aspectRatio(0.72f).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(11.dp)),
+                                                Modifier.fillMaxWidth().aspectRatio(16f / 9f).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(11.dp)),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (coverFile != null) {
@@ -5130,7 +5130,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 ) {
                                     Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Box(
-                                            Modifier.fillMaxWidth().aspectRatio(0.72f).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(11.dp)),
+                                            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clipToBounds().background(Color(0xFF29384D), RoundedCornerShape(11.dp)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             if (coverFile != null) {
