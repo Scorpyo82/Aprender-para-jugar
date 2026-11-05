@@ -69,6 +69,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -617,6 +618,8 @@ private fun AprenderApp() {
     var storyEditorSummary by storyEditorState.summary
     var storyEditorScenes by storyEditorState.scenes
     var storyEditorSelectedScene by storyEditorState.selectedScene
+    var storyAmbientDuringNarration by remember { mutableIntStateOf(preferences.getInt("story_ambient_during_narration_percent", 20).coerceIn(0, 30)) }
+    var storySceneTest by remember { mutableStateOf<StoredStoryScene?>(null) }
     var storyEditorSceneText by storyEditorState.sceneText
     var storyEditorObjectTiming by storyEditorState.objectTiming
     var storyEditorAwardedObjectByScene by storyEditorState.awardedObjectByScene
@@ -2885,6 +2888,42 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             } else if (storedStoryObjects.isEmpty()) {
                                 Text("Todavía no hay objetos en la biblioteca. Puedes crearlos desde Gestión de objetos.", fontSize = 12.sp, color = Color(0xFF667085))
                             }
+                        }
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Volumen ambiental durante la narración", fontWeight = FontWeight.SemiBold)
+                                Text("$storyAmbientDuringNarration % del volumen original (máximo 30 %)", fontSize = 13.sp, color = Color(0xFF667085))
+                                Slider(
+                                    value = storyAmbientDuringNarration.toFloat(),
+                                    onValueChange = { value ->
+                                        storyAmbientDuringNarration = value.toInt().coerceIn(0, 30)
+                                        preferences.edit().putInt("story_ambient_during_narration_percent", storyAmbientDuringNarration).apply()
+                                    },
+                                    valueRange = 0f..30f,
+                                    steps = 29
+                                )
+                                Text("Al terminar la narración, el ambiente vuelve al 100 %. Este ajuste se aplica a todos los cuentos.", fontSize = 12.sp, color = Color(0xFF667085))
+                            }
+                        }
+                        item {
+                            OutlinedButton(
+                                onClick = {
+                                    runCatching {
+                                        val stored = persistStoryDraft() ?: error(storyEditorMessage.ifBlank { "Guarda primero el cuento." })
+                                        val folder = StoryRepository.sceneFolderName(storyEditorSelectedScene)
+                                        storySceneTest = StoryRepository.readScene(stored, folder)
+                                    }.onFailure { storyEditorMessage = it.message ?: "No se pudo iniciar la prueba." }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("▶ Probar escena") }
+                            Text("Reproduce la escena sin permitir interacciones.", fontSize = 12.sp, color = Color(0xFF667085))
+                        }
+                        item {
+                            if (storySceneTest != null) StorySceneTestDialog(
+                                scene = storySceneTest!!,
+                                ambientDuringNarrationPercent = storyAmbientDuringNarration,
+                                onExit = { storySceneTest = null }
+                            )
                         }
                         item {
                             Text("Momento de obtención", fontWeight = FontWeight.SemiBold)
