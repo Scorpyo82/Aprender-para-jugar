@@ -13,7 +13,8 @@ import java.io.File
 data class ObjectMetadata(
     val name: String,
     val image: String,
-    val availableInStore: Boolean = false
+    val availableInStore: Boolean = false,
+    val storePriceMinutes: Int = 0
 )
 
 data class StoredObject(
@@ -32,13 +33,15 @@ object ObjectJsonCodec {
             .put("name", metadata.name.trim())
             .put("image", metadata.image)
             .put("availableInStore", metadata.availableInStore)
+            .put("storePriceMinutes", metadata.storePriceMinutes)
     }
 
     fun decode(json: JSONObject): ObjectMetadata {
         val metadata = ObjectMetadata(
             name = json.optString("name").trim(),
             image = json.optString("image"),
-            availableInStore = json.optBoolean("availableInStore", false)
+            availableInStore = json.optBoolean("availableInStore", false),
+            storePriceMinutes = json.optInt("storePriceMinutes", 0)
         )
         validate(metadata)
         return metadata
@@ -48,6 +51,10 @@ object ObjectJsonCodec {
         require(metadata.name.isNotBlank()) { "El nombre del objeto no puede estar vacío." }
         require(isSafeRelativeFileName(metadata.image)) {
             "La imagen debe ser un nombre de archivo relativo válido."
+        }
+        require(metadata.storePriceMinutes >= 0) { "El precio no puede ser negativo." }
+        require(!metadata.availableInStore || metadata.storePriceMinutes > 0) {
+            "Indica un precio en minutos para los objetos disponibles en la tienda."
         }
     }
 
