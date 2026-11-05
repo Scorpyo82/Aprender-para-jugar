@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun StoryStructureScreen(
     scenes: List<String>,
+    sceneSummaries: Map<String, String>,
     initialConnections: Map<String, List<String>>,
     initialConditions: List<StoryConnectionCondition>,
     initialStartScene: String,
@@ -65,6 +66,7 @@ internal fun StoryStructureScreen(
         }
         StoryStructureEditor(
             scenes = scenes,
+            sceneSummaries = sceneSummaries,
             connections = connections,
             conditions = conditions,
             availableObjects = availableObjects,
