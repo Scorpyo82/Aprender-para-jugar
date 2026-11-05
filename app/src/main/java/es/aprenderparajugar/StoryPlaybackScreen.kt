@@ -115,6 +115,8 @@ internal fun StoryPlayerScreen(
     var snapshot by remember(story.directory.absolutePath) { mutableStateOf(engine.start()) }
     var backpackOpen by remember { mutableStateOf(false) }
     var narrationFinished by remember { mutableStateOf(false) }
+    var narrationIsPlaying by remember { mutableStateOf(false) }
+    var ambientVolume by remember { mutableStateOf(1f) }
     var exitConfirmation by remember { mutableStateOf(false) }
     var resumeAmbientOnReturn by remember { mutableStateOf(false) }
     var resumeNarrationOnReturn by remember { mutableStateOf(false) }
@@ -133,10 +135,14 @@ internal fun StoryPlayerScreen(
                     resumeNarrationOnReturn = runCatching { narrationPlayer?.isPlaying == true }.getOrDefault(false)
                     if (resumeAmbientOnReturn) runCatching { ambientPlayer?.pause() }
                     if (resumeNarrationOnReturn) runCatching { narrationPlayer?.pause() }
+                    if (resumeNarrationOnReturn) narrationIsPlaying = false
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
                     if (resumeAmbientOnReturn) runCatching { ambientPlayer?.start() }
-                    if (resumeNarrationOnReturn) runCatching { narrationPlayer?.start() }
+                    if (resumeNarrationOnReturn) {
+                        runCatching { narrationPlayer?.start() }
+                        narrationIsPlaying = true
+                    }
                     resumeAmbientOnReturn = false
                     resumeNarrationOnReturn = false
                 }
@@ -159,6 +165,7 @@ internal fun StoryPlayerScreen(
             ambientPlayer = null
             val audio = snapshot.scene.metadata.ambientAudio?.let { File(snapshot.scene.directory, it) }?.takeIf { it.isFile }
             if (audio != null) {
+                ambientVolume = 1f
                 ambientPlayer = runCatching {
                     MediaPlayer().apply {
                         setDataSource(audio.absolutePath)
@@ -174,19 +181,38 @@ internal fun StoryPlayerScreen(
     LaunchedEffect(snapshot.scene.folderName, snapshot.scene.metadata.narrationAudio) {
         safelyStopAndRelease(narrationPlayer)
         narrationPlayer = null
+        narrationIsPlaying = false
         narrationFinished = false
         val audio = snapshot.scene.metadata.narrationAudio?.let { File(snapshot.scene.directory, it) }?.takeIf { it.isFile }
         if (audio != null) {
             narrationPlayer = runCatching {
                 MediaPlayer().apply {
                     setDataSource(audio.absolutePath)
-                    setOnCompletionListener { narrationFinished = true }
+                    setOnCompletionListener {
+                        narrationIsPlaying = false
+                        narrationFinished = true
+                    }
                     prepare()
                     start()
                 }
             }.getOrNull()
             if (narrationPlayer == null) narrationFinished = true
+            else narrationIsPlaying = true
         } else narrationFinished = true
+    }
+
+    LaunchedEffect(ambientPlayer, narrationIsPlaying) {
+        val player = ambientPlayer ?: return@LaunchedEffect
+        val targetVolume = if (narrationIsPlaying) 0.30f else 1f
+        val startVolume = ambientVolume
+        val steps = 10
+        for (step in 1..steps) {
+            val fraction = step / steps.toFloat()
+            val volume = startVolume + (targetVolume - startVolume) * fraction
+            runCatching { player.setVolume(volume, volume) }
+            ambientVolume = volume
+            kotlinx.coroutines.delay(25)
+        }
     }
 
     val image = remember(snapshot.scene.directory.absolutePath, snapshot.scene.metadata.illustration) {
@@ -247,7 +273,10 @@ internal fun StoryPlayerScreen(
                     if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
                         OutlinedButton(
                             onClick = {
-                                narrationPlayer?.let { player -> runCatching { player.seekTo(0); player.start() } }
+                                narrationPlayer?.let { player ->
+                                    runCatching { player.seekTo(0); player.start() }
+                                    narrationIsPlaying = true
+                                }
                                 narrationFinished = false
                             },
                             shape = RoundedCornerShape(24.dp),
