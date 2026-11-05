@@ -1,5 +1,6 @@
 package es.aprenderparajugar
 
+import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -11,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
  * eliminación, junto con su persistencia, quedan fuera de AprenderApp.
  */
 internal class StoryCollectionsState(
+    private val context: Context,
     private val preferences: SharedPreferences
 ) {
     val collections: MutableState<List<String>> = mutableStateOf(
@@ -68,6 +70,7 @@ internal class StoryCollectionsState(
     }
 
     fun deleteCollection(name: String) {
+        StoryRepository.deleteCollection(context, name)
         collections.value = collections.value.filterNot { it == name }
         disabledCollections.value = disabledCollections.value - name
         preferences.edit()
