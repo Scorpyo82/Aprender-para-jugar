@@ -109,11 +109,28 @@ internal class StoryPlaybackEngine(
         )
     }
 
+    /**
+     * Registra la recompensa de salida antes de avanzar. Solo devuelve coleccionables
+     * nuevos; si el niño vuelve a pulsar Siguiente, el inventario evita duplicados.
+     */
+    fun claimCurrentSceneExitCollectible(): StoredObject? {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        val metadata = runCatching { StoryRepository.readScene(story, currentSceneFolder).metadata }.getOrNull()
+            ?: return null
+        if (metadata.awardTiming != "onExit") return null
+        val objectFolder = metadata.awardedObject ?: return null
+        val stored = ObjectRepository.list(context).firstOrNull { it.folderName == objectFolder } ?: return null
+        if (!stored.metadata.collectible || InventoryRepository.contains(context, objectFolder)) return null
+        return runCatching {
+            InventoryRepository.add(context, objectFolder)
+            stored
+        }.getOrNull()
+    }
+
     private fun award(sceneFolder: String, timing: String) {
         val metadata = runCatching { StoryRepository.readScene(story, sceneFolder).metadata }.getOrNull() ?: return
         if (metadata.awardTiming != timing) return
         val objectFolder = metadata.awardedObject ?: return
-        // InventoryRepository.add is idempotent because inventory entries are a Set.
         runCatching { InventoryRepository.add(context, objectFolder) }
     }
 }

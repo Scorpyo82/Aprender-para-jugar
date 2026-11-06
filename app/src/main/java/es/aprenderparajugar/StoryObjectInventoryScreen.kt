@@ -57,10 +57,11 @@ internal fun StoryObjectInventoryScreen(
     message: String,
     fontFamily: FontFamily,
     onBack: () -> Unit,
-    onPurchase: (StoredObject) -> Unit
+    onPurchase: (StoredObject) -> Boolean
 ) {
     var selectedCollectible by remember { mutableStateOf<StoredObject?>(null) }
     var pendingPurchase by remember { mutableStateOf<StoredObject?>(null) }
+    var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
     val visibleObjects = objects.filter { it.folderName in ownedFolders || it.metadata.availableInStore }.sortedBy { it.metadata.name.lowercase() }
     val ordinaryObjects = visibleObjects.filterNot { it.metadata.collectible }
     val collectibles = visibleObjects.filter { it.metadata.collectible }
@@ -188,10 +189,17 @@ internal fun StoryObjectInventoryScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = { pendingPurchase = null; onPurchase(pending) }, enabled = enoughBalance) { Text("Comprar", fontFamily = fontFamily) }
+                Button(onClick = {
+                    pendingPurchase = null
+                    val purchased = onPurchase(pending)
+                    if (purchased && pending.metadata.collectible) celebrationObject = pending
+                }, enabled = enoughBalance) { Text("Comprar", fontFamily = fontFamily) }
             },
             dismissButton = { OutlinedButton(onClick = { pendingPurchase = null }) { Text("Cancelar", fontFamily = fontFamily) } }
         )
+    }
+    celebrationObject?.let { awarded ->
+        CollectibleCelebrationDialog(awarded, fontFamily) { celebrationObject = null }
     }
     selectedCollectible?.let { selected ->
         AlertDialog(
@@ -243,7 +251,7 @@ private fun formatInventoryTime(seconds: Int): String {
 }
 
 /** Reproduce GIF sin dependencias externas; en miniaturas dibuja únicamente el primer fotograma. */
-private class GifObjectView(context: android.content.Context) : View(context) {
+internal class GifObjectView(context: android.content.Context) : View(context) {
     private var sourcePath: String? = null
     private var movie: Movie? = null
     private var animateMovie = false
