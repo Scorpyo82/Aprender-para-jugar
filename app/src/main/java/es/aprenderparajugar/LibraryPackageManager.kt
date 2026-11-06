@@ -290,10 +290,6 @@ internal object LibraryPackageManager {
                 StoryInfo(key, collection, directory, title, storedStory.metadata.scenes.size)
             }
             require(storyInfos.map { it.key }.distinct().size == storyInfos.size) { "El manifiesto repite cuentos." }
-            require(modalitiesJson.length() > 0 || storyInfos.isNotEmpty() || objectInfos.isNotEmpty()) {
-                "El paquete no contiene bibliotecas, cuentos ni objetos."
-            }
-
             val objectsJson = manifest.optJSONArray("objectDependencies") ?: JSONArray()
             val objectInfos = (0 until objectsJson.length()).map { index ->
                 val item = objectsJson.getJSONObject(index)
@@ -312,6 +308,9 @@ internal object LibraryPackageManager {
                 ObjectDependencyInfo(key, collection, directory, name)
             }
             require(objectInfos.map { it.key }.distinct().size == objectInfos.size) { "El manifiesto repite objetos." }
+            require(modalitiesJson.length() > 0 || storyInfos.isNotEmpty() || objectInfos.isNotEmpty()) {
+                "El paquete no contiene bibliotecas, cuentos ni objetos."
+            }
 
             // Comprueba que todas las referencias de objetos del cuento estén resueltas
             // dentro del paquete; evita importar historias con dependencias rotas.
