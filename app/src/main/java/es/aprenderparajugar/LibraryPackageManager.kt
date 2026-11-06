@@ -363,6 +363,7 @@ internal object LibraryPackageManager {
                 if (existing.metadata.image != incoming.metadata.image) add("Archivo de imagen: ${existing.metadata.image} → ${incoming.metadata.image}")
                 if (!sameImageBytes) add("El contenido de la imagen es diferente")
                 if (existing.metadata.availableInStore != incoming.metadata.availableInStore) add("Aparece en la tienda: ${if (existing.metadata.availableInStore) "Sí" else "No"} → ${if (incoming.metadata.availableInStore) "Sí" else "No"}")
+                if (existing.metadata.collectible != incoming.metadata.collectible) add("Es coleccionable: ${if (existing.metadata.collectible) "Sí" else "No"} → ${if (incoming.metadata.collectible) "Sí" else "No"}")
             }
             val displayedDifferences = if (differences.isEmpty()) {
                 listOf("Las dos fichas tienen el mismo nombre, imagen y disponibilidad en la tienda.")
@@ -427,6 +428,8 @@ internal object LibraryPackageManager {
                     val sameDefinition = existing.metadata.name == incomingObject.metadata.name &&
                         existing.metadata.image == incomingObject.metadata.image &&
                         existing.metadata.availableInStore == incomingObject.metadata.availableInStore &&
+                        existing.metadata.collectible == incomingObject.metadata.collectible &&
+                        existing.metadata.collectible == incomingObject.metadata.collectible &&
                         runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
                         ) }.getOrDefault(false)
