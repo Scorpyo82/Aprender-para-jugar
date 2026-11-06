@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
     // onPause is earlier than onStop and closes the race with the accessibility service/Home.
     private fun persistAndStartEarnedCountdown() {
         val prefs = getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
+        if (prefs.getString(RewardMode.PREFERENCE_KEY, "time") == "stars") return
         if (prefs.getBoolean("device_setup_in_progress", false) ||
             prefs.getBoolean("parent_area_active", false) ||
             prefs.getBoolean("manual_exit_allowed", false) ||
@@ -182,7 +183,7 @@ class MainActivity : ComponentActivity() {
         // A manual launch re-arms the focus guard after a parent-authorized exit.
         getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
             .edit().putBoolean("manual_exit_allowed", false).apply()
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (getSharedPreferences("aprender_para_jugar", MODE_PRIVATE).getString(RewardMode.PREFERENCE_KEY, "time") != "stars" && Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
         }
         setContent {
@@ -550,6 +551,7 @@ private fun AprenderApp() {
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
+    var rewardMode by remember { mutableStateOf(RewardMode.fromPreferences(preferences)) }
     var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
@@ -959,7 +961,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var feedback by cardsGameState.feedback
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
-    var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup) "device-setup" else "menu") }
+    var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup && !rewardMode.isStars) "device-setup" else "menu") }
     var linkedExerciseFont by remember { mutableStateOf(preferences.getBoolean("linked_exercise_font_v1", true)) }
     val exerciseFontFamily = if (linkedExerciseFont) FontFamily(Font(R.font.playwrite_es)) else FontFamily.Default
     var transferExportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
@@ -1155,7 +1157,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     fun finishWelcomeTour() {
         preferences.edit().putBoolean("welcome_tour_seen", true).apply()
         when (tourReturnTarget) {
-            "parent-setup" -> { screen = "parent"; parentSection = "device-setup" }
+            "parent-setup" -> { screen = "parent"; parentSection = if (rewardMode.isStars) "menu" else "device-setup" }
             "parent-menu" -> { screen = "parent"; parentSection = "menu" }
             else -> screen = "home"
         }
@@ -1542,6 +1544,31 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "stories-settings" -> "Organiza los cuentos y sus recursos"; "stories-content-settings" -> "Administra las historias y sus colecciones"; "stories-library" -> "Crea, edita y organiza cuentos ilustrados"; "stories-collections" -> "Organiza cuentos en colecciones, sagas y universos narrativos"; "stories-objects" -> "Administra los objetos y el inventario"; "stories-object-create" -> "Define nuevos objetos para reutilizarlos en los cuentos"; "stories-object-collection" -> "Consulta y administra todos los objetos de la biblioteca común"; "stories-object-inventory" -> "Consulta y gestiona los objetos que posee el niño"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "sound-settings" -> "Configura el sonido general y el audio de los cuentos"; "music" -> "Configura la música de fondo"; "stories-audio" -> "Ajusta el volumen ambiental durante las narraciones"; "typography" -> "Elige la letra que se utilizará en los ejercicios"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "basic-library" -> "Descarga e instalación del contenido inicial"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; "library-delete" -> "Elimina de forma permanente una o varias bibliotecas"; "statistics-menu" -> "Consulta el aprendizaje y el uso de las modalidades"; "learning-stats" -> "Observaciones orientativas basadas en los intentos registrados"; "usage-stats" -> "Partidas completadas por modalidad, tipo y dificultad"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
+                item {
+                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF2FF))) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Modo de funcionamiento", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Elige cómo se presentará el mismo saldo de recompensas.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = !rewardMode.isStars, onClick = {
+                                    if (rewardMode.isStars) {
+                                        rewardMode = RewardMode.TIME
+                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
+                                        parentSection = "device-setup"
+                                    }
+                                }, label = { Text("⏱ Tiempo") })
+                                FilterChip(selected = rewardMode.isStars, onClick = {
+                                    if (!rewardMode.isStars) {
+                                        rewardMode = RewardMode.STARS
+                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").putLong("play_deadline_ms", 0L).putBoolean("play_session_authorized", false).putBoolean("play_paused_for_screen_lock", false).apply()
+                                        context.stopService(Intent(context, PlayTimeService::class.java))
+                                    }
+                                }, label = { Text("⭐ Estrellas") })
+                            }
+                            Text(if (rewardMode.isStars) "No se necesitan permisos de control de salida del dispositivo." else "El modo Tiempo utiliza los permisos de protección y control de salida.", fontSize = 12.sp, color = Color(0xFF667085))
+                        }
+                    }
+                }
                 item {
                     Card(Modifier.fillMaxWidth().clickable {
                         tourReturnTarget = "parent-menu"
@@ -4399,24 +4426,25 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "rewards" -> item {
                         Text("Saldo de juego", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Saldo actual: ${balanceSeconds / 60} min ${balanceSeconds % 60} s", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (rewardMode.isStars) "Saldo actual: ${formatRewardBalance(balanceSeconds, rewardMode)} estrellas" else "Saldo actual: ${balanceSeconds / 60} min ${balanceSeconds % 60} s", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = {
                                 val updated = (balanceSeconds + 60).coerceAtMost(24 * 60 * 60)
                                 balanceSeconds = updated
                                 preferences.edit().putInt("balance_seconds", updated).apply()
-                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text("+1 minuto") }
+                            }, enabled = !rewardMode.isStars && balanceSeconds < 24 * 60 * 60) { Text("+1 minuto") }
                             OutlinedButton(onClick = {
                                 val updated = (balanceSeconds + 5 * 60).coerceAtMost(24 * 60 * 60)
                                 balanceSeconds = updated
                                 preferences.edit().putInt("balance_seconds", updated).apply()
-                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text("+5 minutos") }
+                            }, enabled = !rewardMode.isStars && balanceSeconds < 24 * 60 * 60) { Text("+5 minutos") }
                             OutlinedButton(onClick = {
                                 balanceSeconds = 0
                                 preferences.edit().putInt("balance_seconds", 0).putLong("play_deadline_ms", 0L).putLong("expiry_last_launch_ms", 0L).putBoolean("play_session_authorized", false).apply()
                                 context.stopService(Intent(context, PlayTimeService::class.java))
-                            }, enabled = balanceSeconds > 0) { Text("Poner a cero") }
+                            }, enabled = !rewardMode.isStars && balanceSeconds > 0) { Text("Poner a cero") }
                         }
+                        if (rewardMode.isStars) Text("El ajuste manual del saldo y los límites de tiempo solo están disponibles en el modo Tiempo.", fontSize = 12.sp, color = Color(0xFF667085))
                         Spacer(Modifier.height(12.dp))
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Cada bloque agrupa una opción concreta. Los cambios se guardan automáticamente.", fontSize = 14.sp, color = Color(0xFF667085))
@@ -4451,7 +4479,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         Text(when (wrongAnswerPenalty) { "none" -> "Los errores no reducen la recompensa de esta partida."; "full" -> "Cada respuesta incorrecta resta el equivalente al tiempo que vale un acierto."; else -> "Cada respuesta incorrecta resta la mitad del tiempo que vale un acierto." }, fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("3. Recompensa por dificultad", fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Text("Tiempo que se añade al saldo según la dificultad del ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("Minutos/Estrellas que se añaden al saldo según la dificultad del ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
                         listOf("Fácil", "Normal", "Difícil").forEach { level ->
                             val minutes = when (level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
                             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -4987,7 +5015,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        String.format(java.util.Locale.ROOT, "%02d:%02d", balanceSeconds / 60, balanceSeconds % 60),
+                        formatRewardBalance(balanceSeconds, rewardMode),
                         fontSize = 54.sp,
                         fontWeight = FontWeight.ExtraBold,
                         fontFamily = exerciseFontFamily,
@@ -5069,8 +5097,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             Spacer(Modifier.height(8.dp))
             Text(rewardMessage, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(18.dp))
-            Text("+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
-            Text("MINUTOS GANADOS", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
+            Text(if (rewardMode.isStars) "+${formatRewardBalance(lastEarnedSeconds, rewardMode)} ⭐" else "+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
+            Text(if (rewardMode.isStars) "ESTRELLAS GANADAS" else "MINUTOS GANADOS", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
             Spacer(Modifier.height(14.dp))
             Text("$resultCorrectCount de $resultTotalCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
             Spacer(Modifier.height(24.dp))
@@ -5572,6 +5600,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             objects = storedStoryObjects,
             ownedFolders = storedInventoryFolders,
             balanceSeconds = balanceSeconds,
+            isStarsMode = rewardMode.isStars,
             message = storyInventoryMessage,
             fontFamily = exerciseFontFamily,
             onBack = { screen = "home"; storyInventoryMessage = "" },
