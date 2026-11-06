@@ -14,7 +14,8 @@ data class ObjectMetadata(
     val name: String,
     val image: String,
     val availableInStore: Boolean = false,
-    val storePriceMinutes: Int = 0
+    val storePriceMinutes: Int = 0,
+    val collectible: Boolean = false
 )
 
 data class StoredObject(
@@ -34,6 +35,7 @@ object ObjectJsonCodec {
             .put("image", metadata.image)
             .put("availableInStore", metadata.availableInStore)
             .put("storePriceMinutes", metadata.storePriceMinutes)
+            .put("collectible", metadata.collectible)
     }
 
     fun decode(json: JSONObject): ObjectMetadata {
@@ -41,7 +43,8 @@ object ObjectJsonCodec {
             name = json.optString("name").trim(),
             image = json.optString("image"),
             availableInStore = json.optBoolean("availableInStore", false),
-            storePriceMinutes = json.optInt("storePriceMinutes", 0)
+            storePriceMinutes = json.optInt("storePriceMinutes", 0),
+            collectible = json.optBoolean("collectible", false)
         )
         validate(metadata)
         return metadata
