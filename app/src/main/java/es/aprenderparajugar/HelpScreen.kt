@@ -76,7 +76,7 @@ private val helpTopics = listOf(
 )
 
 @Composable
-internal fun HelpScreen(onBack: () -> Unit) {
+internal fun HelpScreen(isStarsMode: Boolean, onBack: () -> Unit) {
     var selectedTopic by remember { mutableStateOf<String?>(null) }
     val topic = helpTopics.firstOrNull { it.title == selectedTopic }
 
@@ -117,7 +117,11 @@ internal fun HelpScreen(onBack: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(heading, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text(body, fontSize = 15.sp, lineHeight = 21.sp)
+                        Text(if (isStarsMode) when (heading) {
+                            "Pantalla principal" -> "La pantalla de inicio reúne Tarjetas, Secuencias, Palabras, Cuentos y el inventario. Aquí puedes consultar las estrellas acumuladas y acceder a la ayuda."
+                            "Sonido y tiempo" -> "El control de sonido permite activar o desactivar el audio. Las estrellas se ganan al completar actividades y pueden utilizarse para comprar objetos. El modo Estrellas no controla el tiempo de uso del dispositivo."
+                            else -> body
+                        } else body, fontSize = 15.sp, lineHeight = 21.sp)
                     }
                 }
             }
