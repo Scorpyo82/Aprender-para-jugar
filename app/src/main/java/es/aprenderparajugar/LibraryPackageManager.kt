@@ -155,7 +155,10 @@ internal object LibraryPackageManager {
                     .put("collection", storedObject.collection)
                     .put("directory", storedObject.folderName)
                     .put("name", storedObject.metadata.name)
-                    .put("image", storedObject.metadata.image))
+                    .put("image", storedObject.metadata.image)
+                    .put("availableInStore", storedObject.metadata.availableInStore)
+                    .put("storePriceMinutes", storedObject.metadata.storePriceMinutes)
+                    .put("collectible", storedObject.metadata.collectible))
             }
             manifest.put("stories", storiesJson)
             manifest.put("objectDependencies", objectsJson)
@@ -363,10 +366,11 @@ internal object LibraryPackageManager {
                 if (existing.metadata.image != incoming.metadata.image) add("Archivo de imagen: ${existing.metadata.image} → ${incoming.metadata.image}")
                 if (!sameImageBytes) add("El contenido de la imagen es diferente")
                 if (existing.metadata.availableInStore != incoming.metadata.availableInStore) add("Aparece en la tienda: ${if (existing.metadata.availableInStore) "Sí" else "No"} → ${if (incoming.metadata.availableInStore) "Sí" else "No"}")
+                if (existing.metadata.storePriceMinutes != incoming.metadata.storePriceMinutes) add("Precio: ${existing.metadata.storePriceMinutes} min → ${incoming.metadata.storePriceMinutes} min")
                 if (existing.metadata.collectible != incoming.metadata.collectible) add("Es coleccionable: ${if (existing.metadata.collectible) "Sí" else "No"} → ${if (incoming.metadata.collectible) "Sí" else "No"}")
             }
             val displayedDifferences = if (differences.isEmpty()) {
-                listOf("Las dos fichas tienen el mismo nombre, imagen y disponibilidad en la tienda.")
+                listOf("Las dos fichas tienen el mismo nombre, imagen, precio, disponibilidad y tipo de objeto.")
             } else differences
             val references = StoryRepository.list(context).filter { story ->
                 val refs = linkedSetOf<String>()
@@ -428,6 +432,7 @@ internal object LibraryPackageManager {
                     val sameDefinition = existing.metadata.name == incomingObject.metadata.name &&
                         existing.metadata.image == incomingObject.metadata.image &&
                         existing.metadata.availableInStore == incomingObject.metadata.availableInStore &&
+                        existing.metadata.storePriceMinutes == incomingObject.metadata.storePriceMinutes &&
                         existing.metadata.collectible == incomingObject.metadata.collectible &&
                         runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
@@ -466,6 +471,8 @@ internal object LibraryPackageManager {
                     existing.metadata.name == incomingObject.metadata.name &&
                     existing.metadata.image == incomingObject.metadata.image &&
                     existing.metadata.availableInStore == incomingObject.metadata.availableInStore &&
+                    existing.metadata.storePriceMinutes == incomingObject.metadata.storePriceMinutes &&
+                    existing.metadata.collectible == incomingObject.metadata.collectible &&
                     runCatching {
                         File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
