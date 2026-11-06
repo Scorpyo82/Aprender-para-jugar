@@ -30,6 +30,7 @@ class PlayTimeService : Service() {
     }
 
     private fun pauseForScreenLock() {
+        if (prefs.getString(RewardMode.PREFERENCE_KEY, "time") == "stars") return
         val deadline = prefs.getLong("play_deadline_ms", 0L)
         if (deadline <= 0L) return
         val remaining = ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
@@ -52,6 +53,7 @@ class PlayTimeService : Service() {
     }
 
     private fun resumeAfterScreenUnlock() {
+        if (prefs.getString(RewardMode.PREFERENCE_KEY, "time") == "stars") return
         if (!prefs.getBoolean("play_paused_for_screen_lock", false)) return
         val remaining = prefs.getInt("balance_seconds", 0).coerceAtLeast(0)
         prefs.edit()
