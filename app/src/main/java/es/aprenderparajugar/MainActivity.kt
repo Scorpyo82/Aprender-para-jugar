@@ -810,7 +810,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             when {
                 initialPinSetupPending -> "pin-setup"
                 firstLaunchNeedsSetup -> "parent"
-                else -> "home"
+                else -> if (!preferences.getBoolean("welcome_tour_seen", false)) "tour" else "home"
             }
         )
     }
@@ -4687,7 +4687,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
             }
-            item { OutlinedButton(onClick = { screen = "home"; parentSection = "menu" }, modifier = Modifier.fillMaxWidth()) { Text("Salir de configuración") } }
+            item { OutlinedButton(onClick = {
+                tourReturnTarget = "home"
+                screen = if (!preferences.getBoolean("welcome_tour_seen", false)) "tour" else "home"
+                parentSection = "menu"
+            }, modifier = Modifier.fillMaxWidth()) { Text("Salir de configuración") } }
         }
     } else if (screen == "exercise") {
         val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
