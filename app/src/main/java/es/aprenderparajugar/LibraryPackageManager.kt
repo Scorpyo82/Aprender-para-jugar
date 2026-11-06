@@ -429,7 +429,6 @@ internal object LibraryPackageManager {
                         existing.metadata.image == incomingObject.metadata.image &&
                         existing.metadata.availableInStore == incomingObject.metadata.availableInStore &&
                         existing.metadata.collectible == incomingObject.metadata.collectible &&
-                        existing.metadata.collectible == incomingObject.metadata.collectible &&
                         runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
                         ) }.getOrDefault(false)
