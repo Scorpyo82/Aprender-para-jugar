@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun WelcomeTourScreen(onFinish: () -> Unit) {
+internal fun WelcomeTourScreen(
+    selectedMode: RewardMode,
+    onModeSelected: (RewardMode) -> Unit,
+    onFinish: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -62,6 +67,38 @@ internal fun WelcomeTourScreen(onFinish: () -> Unit) {
             fontSize = 14.sp,
             color = Color(0xFF667085)
         )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF1FF))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text("Elige el modo para iniciar la aplicación", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = selectedMode == RewardMode.TIME,
+                        onClick = { onModeSelected(RewardMode.TIME) },
+                        label = { Text("⏱ Tiempo") }
+                    )
+                    FilterChip(
+                        selected = selectedMode == RewardMode.STARS,
+                        onClick = { onModeSelected(RewardMode.STARS) },
+                        label = { Text("⭐ Estrellas") }
+                    )
+                }
+                Text(
+                    if (selectedMode == RewardMode.TIME)
+                        "Se comprobarán los permisos de protección. Solo se mostrarán los pasos que estén pendientes."
+                    else
+                        "La aplicación iniciará sin solicitar permisos especiales de control del dispositivo.",
+                    fontSize = 13.sp,
+                    color = Color(0xFF667085)
+                )
+            }
+        }
         TourModeCard(
             title = "Modo con tiempo",
             symbol = "⏱️",
