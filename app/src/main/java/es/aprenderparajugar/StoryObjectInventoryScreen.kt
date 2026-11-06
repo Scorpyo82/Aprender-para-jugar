@@ -142,7 +142,7 @@ internal fun StoryObjectInventoryScreen(
                                 Text(if (owned) "✓ CONSEGUIDO · Pulsa para ampliar" else "Descubre qué se esconde", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (owned) Color(0xFF24733B) else Color(0xFF6B55A2), fontFamily = fontFamily)
                                 if (!owned && stored.metadata.availableInStore) {
                                     Text("Precio · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
-                                    Button(onClick = { pendingPurchase = stored }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente") }
+                                    Button(onClick = { pendingPurchase = stored }, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Ver precio") }
                                 }
                             }
                         }
@@ -220,7 +220,7 @@ private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSec
                 if (owned) Text("✓ CONSEGUIDO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24733B), fontFamily = fontFamily)
                 else {
                     Text("Disponible en tienda · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B55A2), fontFamily = fontFamily)
-                    Button(onClick = { onRequestPurchase(stored) }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente", fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = fontFamily) }
+                    Button(onClick = { onRequestPurchase(stored) }, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Ver precio", fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = fontFamily) }
                 }
             }
         }
