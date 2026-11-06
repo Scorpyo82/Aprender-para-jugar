@@ -1426,7 +1426,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             !preferences.getBoolean("content_picker_active", false)) {
             preferences.edit().putBoolean(
                 "parent_area_active",
-                appInForeground && (screen == "parent-pin" || screen == "parent" || screen == "exit-pin")
+                appInForeground && (screen == "parent-pin" || screen == "parent" || screen == "exit-pin" || screen == "tour")
             ).apply()
         }
     }
