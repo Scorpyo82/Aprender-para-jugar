@@ -1338,7 +1338,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
 
     androidx.compose.runtime.LaunchedEffect(screen, appInForeground) {
-        while (screen == "play-time" && appInForeground) {
+        while (!rewardMode.isStars && screen == "play-time" && appInForeground) {
             val deadline = preferences.getLong("play_deadline_ms", 0L)
             val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else preferences.getInt("balance_seconds", 0).coerceAtLeast(0)
             if (remaining != balanceSeconds) {
@@ -1363,8 +1363,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     // When the app regains focus while play time is running, show the live countdown
     // first. From there the parent/child can explicitly end the session, bank only the
     // remaining seconds, and return to learning to earn more time.
-    androidx.compose.runtime.LaunchedEffect(appInForeground) {
-        if (appInForeground) {
+    androidx.compose.runtime.LaunchedEffect(appInForeground, rewardMode) {
+        if (appInForeground && !rewardMode.isStars) {
             // Fallback for devices where ACTION_USER_PRESENT is missed: resuming
             // the app proves the screen is unlocked, so restart the saved countdown.
             if (preferences.getBoolean("play_paused_for_screen_lock", false)) {
@@ -1519,7 +1519,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             },
             onFinish = { finishWelcomeTour() }
         )
-    } else if (screen == "exit-pin") {
+    } else if (screen == "exit-pin" && !rewardMode.isStars) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text("🔒 Salir de la aplicación", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
             Spacer(Modifier.height(8.dp))
@@ -5002,7 +5002,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 Text("Dificultad: ${target.difficulty}", fontSize = 13.sp, color = Color(0xFF667085))
             }
         }
-    } else if (screen == "play-time") {
+    } else if (screen == "play-time" && !rewardMode.isStars) {
         Column(
             modifier = Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
@@ -5381,7 +5381,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Elegir otro ejercicio") }
                     }
-                    item { Text("Has ganado tiempo para jugar por completar el ejercicio.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                    item { Text(if (rewardMode.isStars) "Has ganado estrellas por completar el ejercicio." else "Has ganado tiempo para jugar por completar el ejercicio.", fontSize = 14.sp, color = Color(0xFF667085)) }
                 }
             }
         }
