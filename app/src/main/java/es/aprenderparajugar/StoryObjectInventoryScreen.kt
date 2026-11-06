@@ -168,6 +168,16 @@ internal fun StoryObjectInventoryScreen(
             title = { Text("Confirmar compra", fontWeight = FontWeight.Bold, color = Color(0xFF493B82)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val previewFile = java.io.File(pending.directory, pending.metadata.image)
+                    if (previewFile.extension.equals("gif", true)) {
+                        AndroidView(factory = { ctx -> GifObjectView(ctx) }, update = { it.setGif(previewFile, animate = false) }, modifier = Modifier.fillMaxWidth().height(112.dp))
+                    } else {
+                        AndroidView(
+                            factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
+                            update = { view -> runCatching { view.setImageURI(Uri.fromFile(previewFile)) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                            modifier = Modifier.fillMaxWidth().height(112.dp)
+                        )
+                    }
                     Text("¿Quieres conseguir «${pending.metadata.name}»?")
                     Text("Precio: ${pending.metadata.storePriceMinutes} minutos", fontWeight = FontWeight.Bold)
                     Text("Tu saldo actual: ${formatInventoryTime(balanceSeconds)}")
