@@ -4278,16 +4278,35 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
                             Button(onClick = {
                                 val clean = wordDraft.trim()
-                                if (NameRules.validationError(clean) != null || pictureDraft.isBlank() || categoryDraft.isBlank()) libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
-                                else if (pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord }) libraryMessage = "Esa palabra ya existe."
-                                else {
-                                    pairs = if (editingWord == null) pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft) else pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
-                                    pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
-                                    wordDraft = ""; pictureDraft = ""; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; editingWord = null; libraryMessage = "Palabra guardada."; libraryPage = "list"
+                                when {
+                                    NameRules.validationError(clean) != null -> libraryMessage = NameRules.validationError(clean)!!
+                                    pictureDraft.isBlank() || categoryDraft.isBlank() -> libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
+                                    pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord } -> libraryMessage = "Esa palabra ya existe."
+                                    else -> {
+                                        val updatedPairs = if (editingWord == null) {
+                                            pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft)
+                                        } else {
+                                            pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
+                                        }
+                                        runCatching {
+                                            ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, updatedPairs)
+                                        }.onSuccess { savedPairs ->
+                                            pairs = savedPairs
+                                            wordDraft = ""
+                                            pictureDraft = ""
+                                            categoryDraft = "Primeras palabras"
+                                            difficultyDraft = "Fácil"
+                                            editingWord = null
+                                            libraryMessage = "Tarjeta guardada correctamente."
+                                            libraryPage = "list"
+                                        }.onFailure { error ->
+                                            libraryMessage = "No se ha podido guardar la tarjeta: ${error.message ?: "error de almacenamiento"}. Comprueba la imagen y la categoría e inténtalo de nuevo."
+                                        }
+                                    }
                                 }
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar palabra") }
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar tarjeta") }
                             OutlinedButton(onClick = { libraryPage = "list"; editingWord = null; libraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a la biblioteca") }
-                            if (libraryMessage.isNotBlank()) Text(libraryMessage, color = Color(0xFF24733B))
+                            if (libraryMessage.isNotBlank()) Text(libraryMessage, color = if (libraryMessage.startsWith("No se ha podido")) Color(0xFFB3261E) else Color(0xFF24733B))
                         }
                     }
                     "categories" -> item {
