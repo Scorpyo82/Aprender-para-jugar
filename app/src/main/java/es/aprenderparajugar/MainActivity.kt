@@ -1509,7 +1509,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 rewardMode = selected
                 preferences.edit().putString(RewardMode.PREFERENCE_KEY, if (selected.isStars) "stars" else "time").apply()
                 if (selected.isStars) {
+                    val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
+                    if (activeDeadline > 0L) {
+                        balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
+                    }
                     preferences.edit()
+                        .putInt("balance_seconds", balanceSeconds)
                         .putLong("play_deadline_ms", 0L)
                         .putBoolean("play_session_authorized", false)
                         .putBoolean("play_paused_for_screen_lock", false)
@@ -1588,7 +1593,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 FilterChip(selected = rewardMode.isStars, onClick = {
                                     if (!rewardMode.isStars) {
                                         rewardMode = RewardMode.STARS
-                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").putLong("play_deadline_ms", 0L).putBoolean("play_session_authorized", false).putBoolean("play_paused_for_screen_lock", false).apply()
+                                        val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
+                                        if (activeDeadline > 0L) {
+                                            balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
+                                        }
+                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").putInt("balance_seconds", balanceSeconds).putLong("play_deadline_ms", 0L).putBoolean("play_session_authorized", false).putBoolean("play_paused_for_screen_lock", false).apply()
                                         context.stopService(Intent(context, PlayTimeService::class.java))
                                     }
                                 }, label = { Text("⭐ Estrellas") })
