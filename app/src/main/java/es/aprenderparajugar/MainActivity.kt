@@ -1593,7 +1593,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     }
                                 }, label = { Text("⭐ Estrellas") })
                             }
-                            Text(if (rewardMode.isStars) "No se necesitan permisos de control de salida del dispositivo." else "El modo Tiempo utiliza los permisos de protección y control de salida.", fontSize = 12.sp, color = Color(0xFF667085))
+                            
                         }
                     }
                 }
@@ -1637,7 +1637,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "rewards" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⏱️", fontSize = 30.sp)
-                            Column { Text("Recompensas y límites", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Minutos de recompensa por dificultad", color = Color(0xFF667085)) }
+                            Column { Text("Recompensas y límites", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Minutos/Estrellas por dificultad", color = Color(0xFF667085)) }
                         }
                     }
                 }
@@ -4460,25 +4460,25 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 val updated = (balanceSeconds + 60).coerceAtMost(24 * 60 * 60)
                                 balanceSeconds = updated
                                 preferences.edit().putInt("balance_seconds", updated).apply()
-                            }, enabled = !rewardMode.isStars && balanceSeconds < 24 * 60 * 60) { Text("+1 minuto") }
+                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text(if (rewardMode.isStars) "+1 estrella" else "+1 minuto") }
                             OutlinedButton(onClick = {
                                 val updated = (balanceSeconds + 5 * 60).coerceAtMost(24 * 60 * 60)
                                 balanceSeconds = updated
                                 preferences.edit().putInt("balance_seconds", updated).apply()
-                            }, enabled = !rewardMode.isStars && balanceSeconds < 24 * 60 * 60) { Text("+5 minutos") }
+                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text(if (rewardMode.isStars) "+5 estrellas" else "+5 minutos") }
                             OutlinedButton(onClick = {
                                 balanceSeconds = 0
                                 preferences.edit().putInt("balance_seconds", 0).putLong("play_deadline_ms", 0L).putLong("expiry_last_launch_ms", 0L).putBoolean("play_session_authorized", false).apply()
                                 context.stopService(Intent(context, PlayTimeService::class.java))
-                            }, enabled = !rewardMode.isStars && balanceSeconds > 0) { Text("Poner a cero") }
+                            }, enabled = balanceSeconds > 0) { Text("Poner a cero") }
                         }
-                        if (rewardMode.isStars) Text("El ajuste manual del saldo y los límites de tiempo solo están disponibles en el modo Tiempo.", fontSize = 12.sp, color = Color(0xFF667085))
+                        
                         Spacer(Modifier.height(12.dp))
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Cada bloque agrupa una opción concreta. Los cambios se guardan automáticamente.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("1. Acceso al tiempo de juego", fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Text("Tiempo mínimo de saldo necesario para iniciar una nueva sesión.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("1. Acceso al tiempo de juego", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (rewardMode.isStars) Color.Gray else Color.Unspecified)
+                        Text(if (rewardMode.isStars) "Solo disponible en modo Tiempo: saldo mínimo para salir a jugar fuera de la aplicación." else "Tiempo mínimo de saldo necesario para iniciar una nueva sesión.", fontSize = 14.sp, color = Color(0xFF667085))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = {
                                 minimumPlayMinutes = (minimumPlayMinutes - 1).coerceAtLeast(0)
@@ -4504,7 +4504,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 DropdownMenuItem(text = { Text("Cada fallo resta el 100 % del valor de un acierto") }, onClick = { wrongAnswerPenalty = "full"; preferences.edit().putString("wrong_answer_penalty", wrongAnswerPenalty).apply(); penaltyMenuExpanded = false })
                             }
                         }
-                        Text(when (wrongAnswerPenalty) { "none" -> "Los errores no reducen la recompensa de esta partida."; "full" -> "Cada respuesta incorrecta resta el equivalente al tiempo que vale un acierto."; else -> "Cada respuesta incorrecta resta la mitad del tiempo que vale un acierto." }, fontSize = 14.sp, color = Color(0xFF667085))
+                        Text(when (wrongAnswerPenalty) { "none" -> "Los errores no reducen la recompensa de esta partida."; "full" -> "Cada respuesta incorrecta resta el equivalente a un acierto."; else -> "Cada respuesta incorrecta resta la mitad de la recompensa de un acierto." }, fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("3. Recompensa por dificultad", fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         Text("Minutos/Estrellas que se añaden al saldo según la dificultad del ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
@@ -5761,14 +5761,19 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             item {
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD968)), border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFE8B95D)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text("⏱️", fontSize = 38.sp)
+                        Text(if (rewardMode.isStars) "⭐" else "⏱️", fontSize = 38.sp)
                         Column(Modifier.weight(1f)) {
-                            Text("Tiempo acumulado", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF79501C))
+                            Text(if (rewardMode.isStars) "Estrellas acumuladas" else "Tiempo acumulado", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF79501C))
                             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (rewardMode.isStars) {
+                                    Text(formatRewardBalance(balanceSeconds, rewardMode), fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
+                                    Text("⭐", fontSize = 25.sp)
+                                } else {
                                 Text("$balanceMinutes", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
                                 Text("min", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
                                 Text("$balanceRemainderSeconds", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF59357D))
                                 Text("s", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
+                                }
                             }
                         }
                         
@@ -5897,7 +5902,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             if (!rewardMode.isStars) item {
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
-                Text(if (rewardMode.isStars) "Completa ejercicios para acumular estrellas." else "Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
+                Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
                 val sessionAlreadyAuthorized = preferences.getBoolean("play_session_authorized", false)
                 val canStartPlaySession = balanceSeconds > 0 &&
                     (sessionAlreadyAuthorized || balanceSeconds >= minimumPlayMinutes * 60)
