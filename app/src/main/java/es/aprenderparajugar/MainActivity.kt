@@ -4592,8 +4592,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         OutlinedButton(onClick = { uriHandler.openUri("https://open.spotify.com/artist/3FnwImaOicMeRPERcj6ueb?si=LBbyDbPYRyyO1Z6ium2P0w") }, modifier = Modifier.fillMaxWidth()) { Text("Escuchar al autor en Spotify") }
                         OutlinedButton(onClick = { uriHandler.openUri("https://www.instagram.com/ezequieldavidurbano/") }, modifier = Modifier.fillMaxWidth()) { Text("Instagram del autor") }
                     }
-                    "device-setup" -> if (rewardMode.isStars) item { Text("La configuración y los permisos de control del dispositivo solo se utilizan en el modo Tiempo.", fontSize = 14.sp, color = Color(0xFF667085)) } else item {
+                    "device-setup" -> item {
                         Text("Asistente de configuración", fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        if (rewardMode.isStars) Text("Puedes dejar estos permisos preparados para cuando quieras utilizar el modo Tiempo. En modo Estrellas no se utilizarán para controlar la salida ni el saldo.", fontSize = 14.sp, color = Color(0xFF667085))
                         setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
                         Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = if (setupAccessibilityEnabled) Color(0xFFE5F5E9) else Color(0xFFF0EDF7))) {
                             Text(if (setupAccessibilityEnabled) "✓ COMPLETADO · Servicio de accesibilidad activado" else "○ PENDIENTE · Activa el servicio de accesibilidad", modifier = Modifier.padding(12.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF6B5AA6))
