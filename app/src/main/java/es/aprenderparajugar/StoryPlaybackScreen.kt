@@ -122,6 +122,7 @@ internal fun StoryPlayerScreen(
     val engine = remember(story.directory.absolutePath) { StoryPlaybackEngine(context, story) }
     var snapshot by remember(story.directory.absolutePath) { mutableStateOf(engine.start()) }
     var backpackOpen by remember { mutableStateOf(false) }
+    var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
     var narrationFinished by remember { mutableStateOf(false) }
     var narrationIsPlaying by remember { mutableStateOf(false) }
     var ambientVolume by remember { mutableStateOf(1f) }

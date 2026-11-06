@@ -5530,6 +5530,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 balanceSeconds = result.balanceSeconds
                 storyObjectInventoryState.refresh(context)
                 storyInventoryMessage = result.message
+                result.success
             }
         )
     } else if (screen == "cards-options") {
