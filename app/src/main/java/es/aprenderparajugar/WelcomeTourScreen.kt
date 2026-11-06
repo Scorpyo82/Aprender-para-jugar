@@ -67,6 +67,16 @@ internal fun WelcomeTourScreen(
             fontSize = 14.sp,
             color = Color(0xFF667085)
         )
+        TourModeCard(
+            title = "Modo con tiempo",
+            symbol = "⏱️",
+            description = "El niño va acumulando un saldo de tiempo al completar ejercicios dentro de la aplicación. Ese saldo no es tiempo para usar la app, sino tiempo que puede pasar fuera de ella, utilizando el dispositivo para otras cosas. Así, la aplicación le anima a volver a aprender: le «persigue» para que siga realizando actividades educativas dentro de ella. La familia establece cuánto tiempo se obtiene por dificultad y los límites de uso."
+        )
+        TourModeCard(
+            title = "Modo con estrellas",
+            symbol = "⭐",
+            description = "El niño gana estrellas al completar ejercicios. Se trata del mismo saldo de recompensas que en el modo Tiempo: cada minuto configurado equivale a una estrella. Puede utilizar las estrellas para conseguir objetos en el inventario y la tienda, sin controles de salida ni bloqueo del dispositivo."
+        )
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -99,16 +109,6 @@ internal fun WelcomeTourScreen(
                 )
             }
         }
-        TourModeCard(
-            title = "Modo con tiempo",
-            symbol = "⏱️",
-            description = "El niño va acumulando un saldo de tiempo al completar ejercicios dentro de la aplicación. Ese saldo no es tiempo para usar la app, sino tiempo que puede pasar fuera de ella, utilizando el dispositivo para otras cosas. Así, la aplicación le anima a volver a aprender: le «persigue» para que siga realizando actividades educativas dentro de ella. La familia establece cuánto tiempo se obtiene por dificultad y los límites de uso."
-        )
-        TourModeCard(
-            title = "Modo con estrellas",
-            symbol = "⭐",
-            description = "El niño gana estrellas al completar ejercicios. Se trata del mismo saldo de recompensas que en el modo Tiempo: cada minuto configurado equivale a una estrella. Puede utilizar las estrellas para conseguir objetos en el inventario y la tienda, sin controles de salida ni bloqueo del dispositivo."
-        )
         TourInfoCard(
             title = "La configuración está en manos de la familia",
             body = "Desde el control parental, protegido por PIN, puedes elegir el modo de funcionamiento (tiempo o estrellas), activar o desactivar las actividades disponibles y ajustar cada modalidad por separado. También puedes adaptar el sonido, la música, la tipografía, las recompensas y otros límites."
