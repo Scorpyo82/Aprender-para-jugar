@@ -799,7 +799,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
     var firstLaunchNeedsSetup by remember { mutableStateOf(!preferences.getBoolean("first_launch_setup_seen", false)) }
     val initialPinSetupPending = remember {
-        firstLaunchNeedsSetup && !preferences.getBoolean("parent_pin_configured", false)
+        !preferences.getBoolean("parent_pin_configured", false) ||
+            preferences.getString("parent_pin", null).isNullOrBlank()
     }
     if (firstLaunchNeedsSetup) {
         preferences.edit().putBoolean("sound_enabled", false).apply()
@@ -988,15 +989,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var penaltyMenuExpanded by remember { mutableStateOf(false) }
     var pinStored by remember {
         mutableStateOf(
-            preferences.getString(
-                "parent_pin",
-                if (initialPinSetupPending) "" else "1234"
-            ) ?: ""
+            preferences.getString("parent_pin", "") ?: ""
         )
     }
     var newPinDraft by remember { mutableStateOf("") }
     var initialPinConfirmDraft by remember { mutableStateOf("") }
     var initialPinError by remember { mutableStateOf("") }
+    var tourReturnTarget by remember { mutableStateOf("home") }
     var categoryDraftName by remember { mutableStateOf("") }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var categoryNames by remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
@@ -1153,9 +1152,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     val balanceMinutes = balanceSeconds / 60
     val balanceRemainderSeconds = balanceSeconds % 60
 
+    fun finishWelcomeTour() {
+        preferences.edit().putBoolean("welcome_tour_seen", true).apply()
+        when (tourReturnTarget) {
+            "parent-setup" -> { screen = "parent"; parentSection = "device-setup" }
+            "parent-menu" -> { screen = "parent"; parentSection = "menu" }
+            else -> screen = "home"
+        }
+    }
+
     BackHandler(enabled = screen != "home" && screen != "play-time") {
         when (screen) {
             "help" -> { screen = "home" }
+            "tour" -> finishWelcomeTour()
             "parent" -> when (parentSection) {
                 "word-library", "word-categories" -> {
                     if (parentSection == "word-library" && wordLibraryPage == "edit") { wordLibraryPage = "list"; wordLibraryMessage = "" }
@@ -1436,6 +1445,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 fontSize = 16.sp,
                 color = Color(0xFF667085)
             )
+            Text(
+                "Guárdalo en un lugar seguro. Si lo olvidas, tendrás que restablecer la aplicación borrando sus datos desde los ajustes de Android. Esto elimina el contenido guardado localmente; conserva copias de tus bibliotecas.",
+                fontSize = 13.sp,
+                color = Color(0xFF8A4B08)
+            )
             Spacer(Modifier.height(18.dp))
             OutlinedTextField(
                 value = newPinDraft,
@@ -1470,14 +1484,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             newPinDraft = ""
                             initialPinConfirmDraft = ""
                             initialPinError = ""
-                            parentSection = "device-setup"
-                            screen = "parent"
+                            tourReturnTarget = if (firstLaunchNeedsSetup) "parent-setup" else "home"
+                            screen = "tour"
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Guardar PIN y continuar") }
         }
+    } else if (screen == "tour") {
+        WelcomeTourScreen(onFinish = { finishWelcomeTour() })
     } else if (screen == "exit-pin") {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text("🔒 Salir de la aplicación", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
@@ -1516,7 +1532,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 else pinError = true
             }, modifier = Modifier.fillMaxWidth()) { Text("Entrar") }
             OutlinedButton(onClick = { screen = "home"; pinEntry = ""; pinError = false }, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
-            Text("Introduce el PIN familiar.", fontSize = 12.sp, color = Color(0xFF667085))
+            Text("Si olvidas el PIN, tendrás que restablecer la aplicación borrando sus datos desde los ajustes de Android. Esta operación elimina el contenido guardado localmente; conserva copias de tus bibliotecas.", fontSize = 12.sp, color = Color(0xFF8A4B08))
         }
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1526,6 +1542,17 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 Text(if (parentSection == "menu") "Configura el contenido y las opciones de la aplicación." else "Control parental · ${when (parentSection) { "game-modes" -> "Elige una modalidad para configurar"; "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"; "cards-settings" -> "Opciones específicas del modo Tarjetas"; "sequences-settings" -> "Opciones del modo Secuencias"; "words-settings" -> "Opciones del modo Palabras"; "stories-settings" -> "Organiza los cuentos y sus recursos"; "stories-content-settings" -> "Administra las historias y sus colecciones"; "stories-library" -> "Crea, edita y organiza cuentos ilustrados"; "stories-collections" -> "Organiza cuentos en colecciones, sagas y universos narrativos"; "stories-objects" -> "Administra los objetos y el inventario"; "stories-object-create" -> "Define nuevos objetos para reutilizarlos en los cuentos"; "stories-object-collection" -> "Consulta y administra todos los objetos de la biblioteca común"; "stories-object-inventory" -> "Consulta y gestiona los objetos que posee el niño"; "words" -> "Gestiona las tarjetas y sus imágenes"; "categories" -> "Organiza el vocabulario"; "rewards" -> "Configura tiempos, recompensas y límites"; "sound-settings" -> "Configura el sonido general y el audio de los cuentos"; "music" -> "Configura la música de fondo"; "stories-audio" -> "Ajusta el volumen ambiental durante las narraciones"; "typography" -> "Elige la letra que se utilizará en los ejercicios"; "security" -> "Protege el acceso y administra el saldo"; "device-setup" -> "Permisos y accesos necesarios para la protección"; "about" -> "Información, propósito y créditos"; "basic-library" -> "Descarga e instalación del contenido inicial"; "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"; "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"; "library-import" -> "Revisa el contenido del paquete antes de importarlo"; "library-delete" -> "Elimina de forma permanente una o varias bibliotecas"; "statistics-menu" -> "Consulta el aprendizaje y el uso de las modalidades"; "learning-stats" -> "Observaciones orientativas basadas en los intentos registrados"; "usage-stats" -> "Partidas completadas por modalidad, tipo y dificultad"; else -> "Configuración" }}", fontSize = 15.sp, color = Color(0xFF667085))
             }
             if (parentSection == "menu") {
+                item {
+                    Card(Modifier.fillMaxWidth().clickable {
+                        tourReturnTarget = "parent-menu"
+                        screen = "tour"
+                    }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDF8))) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("📘", fontSize = 30.sp)
+                            Column { Text("Conoce Aprender para jugar", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Actividades, cuentos, recompensas y cómo personalizarlos", color = Color(0xFF667085)) }
+                        }
+                    }
+                }
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "game-modes" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
