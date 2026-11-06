@@ -126,13 +126,13 @@ internal fun StoryObjectInventoryScreen(
                                     AndroidView(
                                         factory = { ctx -> GifObjectView(ctx) },
                                         update = { view -> view.setGif(imageFile, animate = false) },
-                                        modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(12.dp))
+                                        modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(5.dp))
                                     )
                                 } else {
                                     AndroidView(
                                         factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(180, 180) } },
                                         update = { view -> runCatching { view.setImageURI(Uri.fromFile(imageFile)) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
-                                        modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(12.dp))
+                                        modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(5.dp))
                                     )
                                 }
                                 if (!owned) Text("?", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color.White)
@@ -142,7 +142,7 @@ internal fun StoryObjectInventoryScreen(
                                 Text(if (owned) "✓ CONSEGUIDO · Pulsa para ampliar" else "Descubre qué se esconde", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (owned) Color(0xFF24733B) else Color(0xFF6B55A2), fontFamily = fontFamily)
                                 if (!owned && stored.metadata.availableInStore) {
                                     Text("Precio · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
-                                    Button(onClick = { pendingPurchase = stored }, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Ver precio") }
+                                    Button(onClick = { pendingPurchase = stored }, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Ver precio", fontFamily = fontFamily) }
                                 }
                             }
                         }
@@ -165,38 +165,38 @@ internal fun StoryObjectInventoryScreen(
         val remainingSeconds = (balanceSeconds - priceSeconds).coerceAtLeast(0)
         AlertDialog(
             onDismissRequest = { pendingPurchase = null },
-            title = { Text("Confirmar compra", fontWeight = FontWeight.Bold, color = Color(0xFF493B82)) },
+            title = { Text("Confirmar compra", fontWeight = FontWeight.Bold, color = Color(0xFF493B82), fontFamily = fontFamily) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val previewFile = java.io.File(pending.directory, pending.metadata.image)
                     if (previewFile.extension.equals("gif", true)) {
-                        AndroidView(factory = { ctx -> GifObjectView(ctx) }, update = { it.setGif(previewFile, animate = false) }, modifier = Modifier.fillMaxWidth().height(112.dp))
+                        AndroidView(factory = { ctx -> GifObjectView(ctx) }, update = { it.setGif(previewFile, animate = false) }, modifier = Modifier.fillMaxWidth().height(112.dp).blur(5.dp))
                     } else {
                         AndroidView(
                             factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
                             update = { view -> runCatching { view.setImageURI(Uri.fromFile(previewFile)) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
-                            modifier = Modifier.fillMaxWidth().height(112.dp)
+                            modifier = Modifier.fillMaxWidth().height(112.dp).blur(5.dp)
                         )
                     }
-                    Text("¿Quieres conseguir «${pending.metadata.name}»?")
-                    Text("Precio: ${pending.metadata.storePriceMinutes} minutos", fontWeight = FontWeight.Bold)
-                    Text("Tu saldo actual: ${formatInventoryTime(balanceSeconds)}")
-                    Text("Saldo después de comprar: ${formatInventoryTime(remainingSeconds)}")
+                    Text("¿Quieres descubrir este coleccionable?", fontFamily = fontFamily)
+                    Text("Precio: ${pending.metadata.storePriceMinutes} minutos", fontWeight = FontWeight.Bold, fontFamily = fontFamily)
+                    Text("Tu saldo actual: ${formatInventoryTime(balanceSeconds)}", fontFamily = fontFamily)
+                    Text("Saldo después de comprar: ${formatInventoryTime(remainingSeconds)}", fontFamily = fontFamily)
                     if (!enoughBalance) {
-                        Text("Te faltan ${formatInventoryTime(priceSeconds - balanceSeconds)} para poder comprarlo.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold)
+                        Text("Te faltan ${formatInventoryTime(priceSeconds - balanceSeconds)} para poder comprarlo.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontFamily = fontFamily)
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = { pendingPurchase = null; onPurchase(pending) }, enabled = enoughBalance) { Text("Comprar") }
+                Button(onClick = { pendingPurchase = null; onPurchase(pending) }, enabled = enoughBalance) { Text("Comprar", fontFamily = fontFamily) }
             },
-            dismissButton = { OutlinedButton(onClick = { pendingPurchase = null }) { Text("Cancelar") } }
+            dismissButton = { OutlinedButton(onClick = { pendingPurchase = null }) { Text("Cancelar", fontFamily = fontFamily) } }
         )
     }
     selectedCollectible?.let { selected ->
         AlertDialog(
             onDismissRequest = { selectedCollectible = null },
-            title = { Text(selected.metadata.name, fontWeight = FontWeight.Bold, color = Color(0xFF493B82)) },
+            title = { Text(selected.metadata.name, fontWeight = FontWeight.Bold, color = Color(0xFF493B82), fontFamily = fontFamily) },
             text = {
                 val imageFile = java.io.File(selected.directory, selected.metadata.image)
                 if (imageFile.extension.equals("gif", true)) {
@@ -213,7 +213,7 @@ internal fun StoryObjectInventoryScreen(
                     )
                 }
             },
-            confirmButton = { OutlinedButton(onClick = { selectedCollectible = null }) { Text("Cerrar") } }
+            confirmButton = { OutlinedButton(onClick = { selectedCollectible = null }) { Text("Cerrar", fontFamily = fontFamily) } }
         )
     }
 }
