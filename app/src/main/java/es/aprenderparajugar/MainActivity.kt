@@ -5777,11 +5777,11 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 }
             }
             item {
-                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD968)), border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFE8B95D)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = if (rewardMode.isStars) Color(0xFFDCEBFF) else Color(0xFFFFD968)), border = androidx.compose.foundation.BorderStroke(2.dp, if (rewardMode.isStars) Color(0xFF78A9E6) else Color(0xFFE8B95D)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text(if (rewardMode.isStars) "⭐" else "⏱️", fontSize = 38.sp)
                         Column(Modifier.weight(1f)) {
-                            Text(if (rewardMode.isStars) "Estrellas acumuladas" else "Tiempo acumulado", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF79501C))
+                            Text(if (rewardMode.isStars) "Estrellas acumuladas" else "Tiempo acumulado", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = if (rewardMode.isStars) Color(0xFF244A78) else Color(0xFF79501C))
                             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 if (rewardMode.isStars) {
                                     Text(formatRewardBalance(balanceSeconds, rewardMode), fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
