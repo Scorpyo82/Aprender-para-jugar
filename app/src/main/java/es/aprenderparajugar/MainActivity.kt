@@ -1675,10 +1675,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
                 item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Card(Modifier.fillMaxWidth().clickable(enabled = !rewardMode.isStars) { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (rewardMode.isStars) Color(0xFFF0F0F0) else Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⚙️", fontSize = 30.sp)
-                            Column { Text("Configuración de permisos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Permisos y servicio de accesibilidad", color = Color(0xFF667085)) }
+                            Column { Text("Configuración de permisos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text(if (rewardMode.isStars) "Solo disponible en modo Tiempo" else "Permisos y servicio de accesibilidad", color = Color(0xFF667085)) }
                         }
                     }
                 }
@@ -4547,7 +4547,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         OutlinedButton(onClick = { uriHandler.openUri("https://open.spotify.com/artist/3FnwImaOicMeRPERcj6ueb?si=LBbyDbPYRyyO1Z6ium2P0w") }, modifier = Modifier.fillMaxWidth()) { Text("Escuchar al autor en Spotify") }
                         OutlinedButton(onClick = { uriHandler.openUri("https://www.instagram.com/ezequieldavidurbano/") }, modifier = Modifier.fillMaxWidth()) { Text("Instagram del autor") }
                     }
-                    "device-setup" -> item {
+                    "device-setup" -> if (rewardMode.isStars) item { Text("La configuración y los permisos de control del dispositivo solo se utilizan en el modo Tiempo.", fontSize = 14.sp, color = Color(0xFF667085)) } else item {
                         Text("Asistente de configuración", fontSize = 21.sp, fontWeight = FontWeight.Bold)
                         setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
                         Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = if (setupAccessibilityEnabled) Color(0xFFE5F5E9) else Color(0xFFF0EDF7))) {
@@ -5854,7 +5854,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
             }
-            item {
+            if (!rewardMode.isStars) item {
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
                 Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
