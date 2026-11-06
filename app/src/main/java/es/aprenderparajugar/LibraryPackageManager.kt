@@ -55,9 +55,10 @@ internal object LibraryPackageManager {
         selectedCategories: Map<ContentStorage.Modality, Set<String>>,
         learningStatisticsModalities: Set<ContentStorage.Modality>,
         usageStatisticsModalities: Set<ContentStorage.Modality>,
-        selectedStories: Set<String> = emptySet()
+        selectedStories: Set<String> = emptySet(),
+        selectedObjects: Set<String> = emptySet()
     ) {
-        require(selectedCategories.values.any { it.isNotEmpty() } || selectedStories.isNotEmpty()) { "Selecciona al menos una categoría o cuento." }
+        require(selectedCategories.values.any { it.isNotEmpty() } || selectedStories.isNotEmpty() || selectedObjects.isNotEmpty()) { "Selecciona al menos una categoría, cuento u objeto." }
         val resolver = context.contentResolver
         val output = resolver.openOutputStream(target)?.buffered()
             ?: throw IllegalArgumentException("No se puede escribir en el archivo seleccionado.")
@@ -139,6 +140,14 @@ internal object LibraryPackageManager {
                     .put("directory", story.folderName)
                     .put("title", story.metadata.title)
                     .put("sceneCount", story.metadata.scenes.size))
+            }
+            val availableObjects = ObjectRepository.list(context)
+            val selectedStoredObjects = availableObjects.filter { "${it.collection}/${it.folderName}" in selectedObjects }
+            require(selectedStoredObjects.size == selectedObjects.size) {
+                "Uno o varios objetos seleccionados ya no están disponibles."
+            }
+            selectedStoredObjects.forEach { storedObject ->
+                objectDependencies["${storedObject.collection}/${storedObject.folderName}"] = storedObject
             }
             selectedStoredStories.map { it.collection }.distinct().forEach { collection ->
                 StoryRepository.collectionCoverFile(context, collection)?.let { cover ->
@@ -281,8 +290,8 @@ internal object LibraryPackageManager {
                 StoryInfo(key, collection, directory, title, storedStory.metadata.scenes.size)
             }
             require(storyInfos.map { it.key }.distinct().size == storyInfos.size) { "El manifiesto repite cuentos." }
-            require(modalitiesJson.length() > 0 || storyInfos.isNotEmpty()) {
-                "El paquete no contiene bibliotecas ni cuentos."
+            require(modalitiesJson.length() > 0 || storyInfos.isNotEmpty() || objectInfos.isNotEmpty()) {
+                "El paquete no contiene bibliotecas, cuentos ni objetos."
             }
 
             val objectsJson = manifest.optJSONArray("objectDependencies") ?: JSONArray()
@@ -336,9 +345,12 @@ internal object LibraryPackageManager {
     fun objectConflicts(
         context: Context,
         packageInfo: PackageInfo,
-        selectedStories: Set<String>
+        selectedStories: Set<String>,
+        selectedObjects: Set<String> = emptySet()
     ): List<ObjectConflictInfo> {
         val requiredNames = linkedSetOf<String>()
+        packageInfo.objects.filter { it.key in selectedObjects || it.directory in selectedObjects }
+            .mapTo(requiredNames) { it.directory }
         packageInfo.stories.filter { it.key in selectedStories }.forEach { info ->
             val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
             story.metadata.connectionConditions.mapNotNullTo(requiredNames) { it.requiredObject }
@@ -397,7 +409,8 @@ internal object LibraryPackageManager {
         importUsageStatistics: Boolean,
         selectedStories: Set<String> = emptySet(),
         objectConflictDecisions: Map<String, String> = emptyMap(),
-        storyConflictDecisions: Map<String, String> = emptyMap()
+        storyConflictDecisions: Map<String, String> = emptyMap(),
+        selectedObjects: Set<String> = emptySet()
     ): Int {
         var imported = 0
         val rollbackTargets = mutableListOf<Pair<File, File?>>()
@@ -407,6 +420,7 @@ internal object LibraryPackageManager {
                 "Uno de los cuentos seleccionados no está disponible en el paquete."
             }
             val selectedObjectNames = linkedSetOf<String>()
+            selectedObjectNames.addAll(selectedObjects)
             selectedStoryInfos.forEach { info ->
                 val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
                 story.metadata.connectionConditions.mapNotNullTo(selectedObjectNames) { it.requiredObject }
