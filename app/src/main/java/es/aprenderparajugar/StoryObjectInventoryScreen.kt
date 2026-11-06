@@ -104,7 +104,7 @@ internal fun StoryObjectInventoryScreen(
             if (ordinaryObjects.isNotEmpty()) {
                 item { Text("Objetos", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82), fontFamily = fontFamily) }
                 items(ordinaryObjects, key = { it.folderName }) { stored ->
-                    InventoryObjectCard(stored, stored.folderName in ownedFolders, balanceSeconds, fontFamily) { pendingPurchase = it }
+                    InventoryObjectCard(stored, stored.folderName in ownedFolders, balanceSeconds, isStarsMode, fontFamily) { pendingPurchase = it }
                 }
             }
             if (collectibles.isNotEmpty()) {
@@ -228,7 +228,7 @@ internal fun StoryObjectInventoryScreen(
 }
 
 @Composable
-private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSeconds: Int, fontFamily: FontFamily, onRequestPurchase: (StoredObject) -> Unit) {
+private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSeconds: Int, isStarsMode: Boolean, fontFamily: FontFamily, onRequestPurchase: (StoredObject) -> Unit) {
     val cost = stored.metadata.storePriceMinutes.coerceAtLeast(0) * 60
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (owned) Color(0xFFE7F4E8) else Color.White)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
