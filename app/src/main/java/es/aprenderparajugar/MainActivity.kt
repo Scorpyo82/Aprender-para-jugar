@@ -1719,10 +1719,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
                 item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable(enabled = !rewardMode.isStars) { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (rewardMode.isStars) Color(0xFFF0F0F0) else Color.White)) {
+                    Card(Modifier.fillMaxWidth().clickable { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⚙️", fontSize = 30.sp)
-                            Column { Text("Configuración de permisos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text(if (rewardMode.isStars) "Solo disponible en modo Tiempo" else "Permisos y servicio de accesibilidad", color = Color(0xFF667085)) }
+                            Column { Text("Configuración de permisos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text(if (rewardMode.isStars) "Puedes prepararlos para utilizar el modo Tiempo" else "Permisos y servicio de accesibilidad", color = Color(0xFF667085)) }
                         }
                     }
                 }
@@ -4469,24 +4469,25 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "rewards" -> item {
-                        Text(if (rewardMode.isStars) "Saldo de estrellas" else "Saldo de juego", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("Saldo de recompensas", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text(if (rewardMode.isStars) "Saldo actual: ${formatRewardBalance(balanceSeconds, rewardMode)} estrellas" else "Saldo actual: ${balanceSeconds / 60} min ${balanceSeconds % 60} s", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Unidad: Minutos/Estrellas (equivalencia 1:1)", fontSize = 14.sp, color = Color(0xFF667085))
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedButton(onClick = {
                                 val updated = (balanceSeconds + 60).coerceAtMost(24 * 60 * 60)
                                 balanceSeconds = updated
                                 preferences.edit().putInt("balance_seconds", updated).apply()
-                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text(if (rewardMode.isStars) "+1 estrella" else "+1 minuto") }
+                            }, modifier = Modifier.fillMaxWidth(), enabled = balanceSeconds < 24 * 60 * 60) { Text("Sumar 1 unidad al saldo") }
                             OutlinedButton(onClick = {
                                 val updated = (balanceSeconds + 5 * 60).coerceAtMost(24 * 60 * 60)
                                 balanceSeconds = updated
                                 preferences.edit().putInt("balance_seconds", updated).apply()
-                            }, enabled = balanceSeconds < 24 * 60 * 60) { Text(if (rewardMode.isStars) "+5 estrellas" else "+5 minutos") }
+                            }, modifier = Modifier.fillMaxWidth(), enabled = balanceSeconds < 24 * 60 * 60) { Text("Sumar 5 unidades al saldo") }
                             OutlinedButton(onClick = {
                                 balanceSeconds = 0
                                 preferences.edit().putInt("balance_seconds", 0).putLong("play_deadline_ms", 0L).putLong("expiry_last_launch_ms", 0L).putBoolean("play_session_authorized", false).apply()
                                 context.stopService(Intent(context, PlayTimeService::class.java))
-                            }, enabled = balanceSeconds > 0) { Text("Poner a cero") }
+                            }, modifier = Modifier.fillMaxWidth(), enabled = balanceSeconds > 0) { Text("Poner a cero el saldo") }
                         }
                         
                         Spacer(Modifier.height(12.dp))
@@ -5783,7 +5784,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 if (rewardMode.isStars) {
                                     Text(formatRewardBalance(balanceSeconds, rewardMode), fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
-                                    Text("⭐", fontSize = 25.sp)
+                                    Text("⭐", fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFFE5A900))
                                 } else {
                                 Text("$balanceMinutes", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
                                 Text("min", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
