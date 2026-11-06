@@ -1,12 +1,17 @@
 package es.aprenderparajugar
 
 import android.net.Uri
-import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Movie
+import android.graphics.Paint
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import java.io.FileInputStream
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +60,7 @@ internal fun StoryObjectInventoryScreen(
     onPurchase: (StoredObject) -> Unit
 ) {
     var selectedCollectible by remember { mutableStateOf<StoredObject?>(null) }
+    var pendingPurchase by remember { mutableStateOf<StoredObject?>(null) }
     val visibleObjects = objects.filter { it.folderName in ownedFolders || it.metadata.availableInStore }.sortedBy { it.metadata.name.lowercase() }
     val ordinaryObjects = visibleObjects.filterNot { it.metadata.collectible }
     val collectibles = visibleObjects.filter { it.metadata.collectible }
@@ -115,17 +121,20 @@ internal fun StoryObjectInventoryScreen(
                     ) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {
-                                AndroidView(
-                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(180, 180) } },
-                                    update = { view ->
-                                        val file = java.io.File(stored.directory, stored.metadata.image)
-                                        runCatching {
-                                            if (!owned && file.extension.equals("gif", true)) view.setImageBitmap(BitmapFactory.decodeFile(file.absolutePath))
-                                            else view.setImageURI(Uri.fromFile(file))
-                                        }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) }
-                                    },
-                                    modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(12.dp))
-                                )
+                                val imageFile = java.io.File(stored.directory, stored.metadata.image)
+                                if (imageFile.extension.equals("gif", true)) {
+                                    AndroidView(
+                                        factory = { ctx -> GifObjectView(ctx) },
+                                        update = { view -> view.setGif(imageFile, animate = false) },
+                                        modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(12.dp))
+                                    )
+                                } else {
+                                    AndroidView(
+                                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(180, 180) } },
+                                        update = { view -> runCatching { view.setImageURI(Uri.fromFile(imageFile)) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                                        modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(12.dp))
+                                    )
+                                }
                                 if (!owned) Text("?", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color.White)
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -133,7 +142,7 @@ internal fun StoryObjectInventoryScreen(
                                 Text(if (owned) "✓ CONSEGUIDO · Pulsa para ampliar" else "Descubre qué se esconde", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (owned) Color(0xFF24733B) else Color(0xFF6B55A2), fontFamily = fontFamily)
                                 if (!owned && stored.metadata.availableInStore) {
                                     Text("Precio · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
-                                    Button(onClick = { onPurchase(stored) }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente") }
+                                    Button(onClick = { pendingPurchase = stored }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente") }
                                 }
                             }
                         }
@@ -150,16 +159,49 @@ internal fun StoryObjectInventoryScreen(
         }
         item { Spacer(Modifier.height(8.dp)) }
     }
+    pendingPurchase?.let { pending ->
+        val priceSeconds = pending.metadata.storePriceMinutes.coerceAtLeast(0) * 60
+        val enoughBalance = balanceSeconds >= priceSeconds
+        val remainingSeconds = (balanceSeconds - priceSeconds).coerceAtLeast(0)
+        AlertDialog(
+            onDismissRequest = { pendingPurchase = null },
+            title = { Text("Confirmar compra", fontWeight = FontWeight.Bold, color = Color(0xFF493B82)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("¿Quieres conseguir «${pending.metadata.name}»?")
+                    Text("Precio: ${pending.metadata.storePriceMinutes} minutos", fontWeight = FontWeight.Bold)
+                    Text("Tu saldo actual: ${formatInventoryTime(balanceSeconds)}")
+                    Text("Saldo después de comprar: ${formatInventoryTime(remainingSeconds)}")
+                    if (!enoughBalance) {
+                        Text("Te faltan ${formatInventoryTime(priceSeconds - balanceSeconds)} para poder comprarlo.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { pendingPurchase = null; onPurchase(pending) }, enabled = enoughBalance) { Text("Comprar") }
+            },
+            dismissButton = { OutlinedButton(onClick = { pendingPurchase = null }) { Text("Cancelar") } }
+        )
+    }
     selectedCollectible?.let { selected ->
         AlertDialog(
             onDismissRequest = { selectedCollectible = null },
             title = { Text(selected.metadata.name, fontWeight = FontWeight.Bold, color = Color(0xFF493B82)) },
             text = {
-                AndroidView(
-                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; adjustViewBounds = true } },
-                    update = { view -> runCatching { view.setImageURI(Uri.fromFile(java.io.File(selected.directory, selected.metadata.image))) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
-                    modifier = Modifier.fillMaxWidth().height(320.dp)
-                )
+                val imageFile = java.io.File(selected.directory, selected.metadata.image)
+                if (imageFile.extension.equals("gif", true)) {
+                    AndroidView(
+                        factory = { ctx -> GifObjectView(ctx) },
+                        update = { view -> view.setGif(imageFile, animate = true) },
+                        modifier = Modifier.fillMaxWidth().height(320.dp)
+                    )
+                } else {
+                    AndroidView(
+                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; adjustViewBounds = true } },
+                        update = { view -> runCatching { view.setImageURI(Uri.fromFile(imageFile)) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                        modifier = Modifier.fillMaxWidth().height(320.dp)
+                    )
+                }
             },
             confirmButton = { OutlinedButton(onClick = { selectedCollectible = null }) { Text("Cerrar") } }
         )
@@ -182,5 +224,50 @@ private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSec
                 }
             }
         }
+    }
+}
+
+private fun formatInventoryTime(seconds: Int): String {
+    val safe = seconds.coerceAtLeast(0)
+    return String.format(java.util.Locale.ROOT, "%02d:%02d", safe / 60, safe % 60)
+}
+
+/** Reproduce GIF sin dependencias externas; en miniaturas dibuja únicamente el primer fotograma. */
+private class GifObjectView(context: android.content.Context) : View(context) {
+    private var sourcePath: String? = null
+    private var movie: Movie? = null
+    private var animateMovie = false
+    private var startedAt = 0L
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    fun setGif(file: java.io.File, animate: Boolean) {
+        if (sourcePath == file.absolutePath && animateMovie == animate && movie != null) return
+        sourcePath = file.absolutePath
+        animateMovie = animate
+        movie = runCatching { FileInputStream(file).use { Movie.decodeStream(it) } }.getOrNull()
+        startedAt = android.os.SystemClock.uptimeMillis()
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val currentMovie = movie ?: return
+        val sourceWidth = currentMovie.width().coerceAtLeast(1)
+        val sourceHeight = currentMovie.height().coerceAtLeast(1)
+        val scale = minOf(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight)
+        val drawWidth = sourceWidth * scale
+        val drawHeight = sourceHeight * scale
+        val save = canvas.save()
+        canvas.translate((width - drawWidth) / 2f, (height - drawHeight) / 2f)
+        canvas.scale(scale, scale)
+        if (animateMovie) {
+            val duration = currentMovie.duration().takeIf { it > 0 } ?: 1000
+            currentMovie.setTime(((android.os.SystemClock.uptimeMillis() - startedAt) % duration).toInt())
+        } else {
+            currentMovie.setTime(0)
+        }
+        currentMovie.draw(canvas, 0f, 0f, paint)
+        canvas.restoreToCount(save)
+        if (animateMovie) postInvalidateOnAnimation()
     }
 }
