@@ -99,14 +99,6 @@ internal fun WelcomeTourScreen(
                         label = { Text("⭐ Estrellas") }
                     )
                 }
-                Text(
-                    if (selectedMode == RewardMode.TIME)
-                        "Se comprobarán los permisos de protección. Solo se mostrarán los pasos que estén pendientes."
-                    else
-                        "La aplicación iniciará sin solicitar permisos especiales de control del dispositivo.",
-                    fontSize = 13.sp,
-                    color = Color(0xFF667085)
-                )
             }
         }
         TourInfoCard(
