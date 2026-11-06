@@ -70,10 +70,16 @@ internal fun CollectibleCelebrationDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White.copy(alpha = 0.88f), RoundedCornerShape(18.dp))
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
                         "¡Nuevo coleccionable conseguido!",
-                        color = Color(0xFFFFE082),
+                        color = Color(0xFF49316F),
                         fontSize = 25.sp,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center,
@@ -82,8 +88,8 @@ internal fun CollectibleCelebrationDialog(
                     Spacer(Modifier.height(5.dp))
                     Text(
                         stored.metadata.name,
-                        color = Color.White,
-                        fontSize = 19.sp,
+                        color = Color(0xFF26354A),
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         fontFamily = fontFamily
