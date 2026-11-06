@@ -1,9 +1,11 @@
 package es.aprenderparajugar
 
 import android.net.Uri
+import android.graphics.BitmapFactory
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,12 +21,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,9 +54,10 @@ internal fun StoryObjectInventoryScreen(
     onBack: () -> Unit,
     onPurchase: (StoredObject) -> Unit
 ) {
-    val visibleObjects = objects
-        .filter { it.folderName in ownedFolders || it.metadata.availableInStore }
-        .sortedBy { it.metadata.name.lowercase() }
+    var selectedCollectible by remember { mutableStateOf<StoredObject?>(null) }
+    val visibleObjects = objects.filter { it.folderName in ownedFolders || it.metadata.availableInStore }.sortedBy { it.metadata.name.lowercase() }
+    val ordinaryObjects = visibleObjects.filterNot { it.metadata.collectible }
+    val collectibles = visibleObjects.filter { it.metadata.collectible }
     val ownedCount = visibleObjects.count { it.folderName in ownedFolders }
     val purchasableCount = visibleObjects.count { it.folderName !in ownedFolders && it.metadata.availableInStore }
 
@@ -84,33 +93,47 @@ internal fun StoryObjectInventoryScreen(
                 }
             }
         } else {
-            items(visibleObjects, key = { it.folderName }) { stored ->
-                val owned = stored.folderName in ownedFolders
-                val priceSeconds = stored.metadata.storePriceMinutes.coerceAtLeast(0) * 60
-                val affordable = balanceSeconds >= priceSeconds
-                Card(
-                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (owned) Color(0xFFE7F4E8) else Color.White),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, if (owned) Color(0xFF9BCDA2) else Color(0xFFD8CDEB))
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        AndroidView(
-                            factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(180, 180) } },
-                            update = { view ->
-                                runCatching { view.setImageURI(Uri.fromFile(java.io.File(stored.directory, stored.metadata.image))) }
-                                    .onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) }
-                            },
-                            modifier = Modifier.size(84.dp)
-                        )
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text(stored.metadata.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344), fontFamily = fontFamily)
-                            Text(stored.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085), fontFamily = fontFamily)
-                            if (owned) {
-                                Text("✓ CONSEGUIDO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24733B), fontFamily = fontFamily)
-                            } else {
-                                Text("Disponible en tienda · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B55A2), fontFamily = fontFamily)
-                                Button(onClick = { onPurchase(stored) }, enabled = affordable, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (affordable) "Comprar" else "Saldo insuficiente", fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = fontFamily)
+            if (ordinaryObjects.isNotEmpty()) {
+                item { Text("Objetos", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82), fontFamily = fontFamily) }
+                items(ordinaryObjects, key = { it.folderName }) { stored ->
+                    InventoryObjectCard(stored, stored.folderName in ownedFolders, balanceSeconds, fontFamily, onPurchase)
+                }
+            }
+            if (collectibles.isNotEmpty()) {
+                item {
+                    Text("Coleccionables", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82), fontFamily = fontFamily)
+                    Text("Descubre y reúne piezas especiales.", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
+                }
+                items(collectibles, key = { it.folderName }) { stored ->
+                    val owned = stored.folderName in ownedFolders
+                    val cost = stored.metadata.storePriceMinutes.coerceAtLeast(0) * 60
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable(enabled = owned) { selectedCollectible = stored },
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = if (owned) Color(0xFFE7F4E8) else Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (owned) Color(0xFF9BCDA2) else Color(0xFFD8CDEB))
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {
+                                AndroidView(
+                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(180, 180) } },
+                                    update = { view ->
+                                        val file = java.io.File(stored.directory, stored.metadata.image)
+                                        runCatching {
+                                            if (!owned && file.extension.equals("gif", true)) view.setImageBitmap(BitmapFactory.decodeFile(file.absolutePath))
+                                            else view.setImageURI(Uri.fromFile(file))
+                                        }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) }
+                                    },
+                                    modifier = Modifier.size(84.dp).then(if (owned) Modifier else Modifier.blur(12.dp))
+                                )
+                                if (!owned) Text("?", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color.White)
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(if (owned) stored.metadata.name else "Coleccionable misterioso", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344), fontFamily = fontFamily)
+                                Text(if (owned) "✓ CONSEGUIDO · Pulsa para ampliar" else "Descubre qué se esconde", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (owned) Color(0xFF24733B) else Color(0xFF6B55A2), fontFamily = fontFamily)
+                                if (!owned && stored.metadata.availableInStore) {
+                                    Text("Precio · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
+                                    Button(onClick = { onPurchase(stored) }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente") }
                                 }
                             }
                         }
@@ -126,5 +149,38 @@ internal fun StoryObjectInventoryScreen(
             }
         }
         item { Spacer(Modifier.height(8.dp)) }
+    }
+    selectedCollectible?.let { selected ->
+        AlertDialog(
+            onDismissRequest = { selectedCollectible = null },
+            title = { Text(selected.metadata.name, fontWeight = FontWeight.Bold, color = Color(0xFF493B82)) },
+            text = {
+                AndroidView(
+                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; adjustViewBounds = true } },
+                    update = { view -> runCatching { view.setImageURI(Uri.fromFile(java.io.File(selected.directory, selected.metadata.image))) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                    modifier = Modifier.fillMaxWidth().height(320.dp)
+                )
+            },
+            confirmButton = { OutlinedButton(onClick = { selectedCollectible = null }) { Text("Cerrar") } }
+        )
+    }
+}
+
+@Composable
+private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSeconds: Int, fontFamily: FontFamily, onPurchase: (StoredObject) -> Unit) {
+    val cost = stored.metadata.storePriceMinutes.coerceAtLeast(0) * 60
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (owned) Color(0xFFE7F4E8) else Color.White)) {
+        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(180, 180) } }, update = { view -> runCatching { view.setImageURI(Uri.fromFile(java.io.File(stored.directory, stored.metadata.image))) }.onFailure { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.size(84.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(stored.metadata.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344), fontFamily = fontFamily)
+                Text(stored.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085), fontFamily = fontFamily)
+                if (owned) Text("✓ CONSEGUIDO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24733B), fontFamily = fontFamily)
+                else {
+                    Text("Disponible en tienda · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B55A2), fontFamily = fontFamily)
+                    Button(onClick = { onPurchase(stored) }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente", fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = fontFamily) }
+                }
+            }
+        }
     }
 }
