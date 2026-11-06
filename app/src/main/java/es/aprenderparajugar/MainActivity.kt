@@ -183,9 +183,6 @@ class MainActivity : ComponentActivity() {
         // A manual launch re-arms the focus guard after a parent-authorized exit.
         getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
             .edit().putBoolean("manual_exit_allowed", false).apply()
-        if (getSharedPreferences("aprender_para_jugar", MODE_PRIVATE).getString(RewardMode.PREFERENCE_KEY, "time") != "stars" && Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
-        }
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFFFF8E8)) {
@@ -815,6 +812,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 else -> if (!preferences.getBoolean("welcome_tour_seen", false)) "tour" else "home"
             }
         )
+    }
+    androidx.compose.runtime.LaunchedEffect(rewardMode, screen) {
+        // Do not request notification permission before the family has chosen a mode.
+        // Stars never needs notifications for device-time protection.
+        if (!rewardMode.isStars && (screen == "parent" || screen == "home") &&
+            preferences.getBoolean("welcome_tour_seen", false) &&
+            Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            (context as? ComponentActivity)?.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
+        }
     }
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
     var soundEnabled by remember { mutableStateOf(if (firstLaunchNeedsSetup) false else preferences.getBoolean("sound_enabled", true)) }
