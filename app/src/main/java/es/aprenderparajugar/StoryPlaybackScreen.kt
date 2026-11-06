@@ -332,7 +332,11 @@ internal fun StoryPlayerScreen(
                         ) { Text("Fin") }
                     } else if (snapshot.canAdvance) {
                         Button(
-                            onClick = { engine.advance()?.let { snapshot = it } },
+                            onClick = {
+                                val collectible = engine.claimCurrentSceneExitCollectible()
+                                if (collectible != null) celebrationObject = collectible
+                                else engine.advance()?.let { snapshot = it }
+                            },
                             shape = RoundedCornerShape(24.dp)
                         ) { Text("»") }
                     }
@@ -352,6 +356,10 @@ internal fun StoryPlayerScreen(
                 lineHeight = 22.sp
             )
         }
+    }
+
+    celebrationObject?.let { awarded ->
+        CollectibleCelebrationDialog(awarded, fontFamily) { celebrationObject = null }
     }
 
     if (exitConfirmation) {
