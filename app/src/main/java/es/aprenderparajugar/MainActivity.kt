@@ -3369,7 +3369,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     Text("Es un coleccionable", fontWeight = FontWeight.SemiBold)
                                 }
                                 Text("Los coleccionables tienen una sección especial en el inventario.", fontSize = 12.sp, color = Color(0xFF667085))
-                                if (storyObjectAvailableInStore) { OutlinedTextField(value = storyObjectStorePriceMinutes, onValueChange = { storyObjectStorePriceMinutes = it.filter(Char::isDigit).take(5) }, label = { Text("Precio en minutos") }, suffix = { Text("min") }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number), modifier = Modifier.fillMaxWidth()) }
+                                if (storyObjectAvailableInStore) { OutlinedTextField(value = storyObjectStorePriceMinutes, onValueChange = { storyObjectStorePriceMinutes = it.filter(Char::isDigit).take(5) }, label = { Text("Precio · Minutos/Estrellas") }, suffix = { Text(if (rewardMode.isStars) "⭐" else "min") }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number), modifier = Modifier.fillMaxWidth()) }
                             }
                         }
                         item {
@@ -4455,12 +4455,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             OutlinedButton(onClick = {
                                 minimumPlayMinutes = (minimumPlayMinutes - 1).coerceAtLeast(0)
                                 preferences.edit().putInt("minimum_play_minutes", minimumPlayMinutes).apply()
-                            }, enabled = minimumPlayMinutes > 0) { Text("−") }
-                            Text("$minimumPlayMinutes min", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            }, enabled = !rewardMode.isStars && minimumPlayMinutes > 0) { Text("−") }
+                            Text("$minimumPlayMinutes min", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = if (rewardMode.isStars) Color.Gray else Color.Unspecified)
                             OutlinedButton(onClick = {
                                 minimumPlayMinutes = (minimumPlayMinutes + 1).coerceAtMost(60)
                                 preferences.edit().putInt("minimum_play_minutes", minimumPlayMinutes).apply()
-                            }, enabled = minimumPlayMinutes < 60) { Text("+") }
+                            }, enabled = !rewardMode.isStars && minimumPlayMinutes < 60) { Text("+") }
                         }
                         Text("Entre 0 y 60 minutos. Con 0, cualquier saldo positivo permite empezar.", fontSize = 13.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -4493,7 +4493,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 else -> { easyRewardMinutes = (easyRewardMinutes - 1).coerceAtLeast(0); preferences.edit().putInt("reward_easy_minutes", easyRewardMinutes).apply() }
                                             }
                                         }, enabled = minutes > 0) { Text("−") }
-                                        Text("$minutes min", fontWeight = FontWeight.Bold)
+                                        Text("$minutes Minutos/Estrellas", fontWeight = FontWeight.Bold)
                                         OutlinedButton(onClick = {
                                             when (level) {
                                                 "Normal" -> { normalRewardMinutes = (normalRewardMinutes + 1).coerceAtMost(120); preferences.edit().putInt("reward_normal_minutes", normalRewardMinutes).apply() }
@@ -4818,7 +4818,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     ) {
                         Column(Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(level, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            Text("$minutes min", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("$minutes ${if (rewardMode.isStars) "estrellas" else "min"}", fontSize = 14.sp, color = Color(0xFF667085))
                         }
                     }
                 }
@@ -5212,7 +5212,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(level, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                            Text(if (available) "Premio: $reward min de juego · $availableCount ejercicios" else "Sin ejercicios que cumplan los filtros", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text(if (available) "Premio: $reward ${if (rewardMode.isStars) "estrellas" else "min de juego"} · $availableCount ejercicios" else "Sin ejercicios que cumplan los filtros", fontSize = 14.sp, color = Color(0xFF667085))
                         }
                         Text(if (available) "EMPEZAR  ›" else "NO DISPONIBLE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF39713A) else Color(0xFF9A4E00))
                     }
@@ -5628,7 +5628,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             border = androidx.compose.foundation.BorderStroke(if (difficulty == option) 2.dp else 1.dp, if (difficulty == option) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
                             Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(option, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                Text(when(option) { "Normal" -> "$normalRewardMinutes min"; "Difícil" -> "$hardRewardMinutes min"; else -> "$easyRewardMinutes min" }, fontSize = 12.sp, color = Color(0xFF667085))
+                                Text(when(option) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }.let { "$it ${if (rewardMode.isStars) "⭐" else "min"}" }, fontSize = 12.sp, color = Color(0xFF667085))
                             }
                         }
                     }
@@ -5857,7 +5857,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             if (!rewardMode.isStars) item {
                 OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(4.dp))
-                Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
+                Text(if (rewardMode.isStars) "Completa ejercicios para acumular estrellas." else "Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
                 val sessionAlreadyAuthorized = preferences.getBoolean("play_session_authorized", false)
                 val canStartPlaySession = balanceSeconds > 0 &&
                     (sessionAlreadyAuthorized || balanceSeconds >= minimumPlayMinutes * 60)
