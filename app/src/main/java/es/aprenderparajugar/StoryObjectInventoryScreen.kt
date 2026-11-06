@@ -255,6 +255,7 @@ internal class GifObjectView(context: android.content.Context) : View(context) {
     private var sourcePath: String? = null
     private var movie: Movie? = null
     private var animateMovie = false
+    private var fillBounds = false
     private var startedAt = 0L
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
@@ -262,7 +263,21 @@ internal class GifObjectView(context: android.content.Context) : View(context) {
         if (sourcePath == file.absolutePath && animateMovie == animate && movie != null) return
         sourcePath = file.absolutePath
         animateMovie = animate
+        fillBounds = false
         movie = runCatching { FileInputStream(file).use { Movie.decodeStream(it) } }.getOrNull()
+        startedAt = android.os.SystemClock.uptimeMillis()
+        invalidate()
+    }
+
+    fun setGif(resourceId: Int, animate: Boolean, fill: Boolean = false) {
+        val resourceKey = "resource:$resourceId"
+        if (sourcePath == resourceKey && animateMovie == animate && fillBounds == fill && movie != null) return
+        sourcePath = resourceKey
+        animateMovie = animate
+        fillBounds = fill
+        movie = runCatching {
+            context.resources.openRawResource(resourceId).use { Movie.decodeStream(it) }
+        }.getOrNull()
         startedAt = android.os.SystemClock.uptimeMillis()
         invalidate()
     }
@@ -272,7 +287,7 @@ internal class GifObjectView(context: android.content.Context) : View(context) {
         val currentMovie = movie ?: return
         val sourceWidth = currentMovie.width().coerceAtLeast(1)
         val sourceHeight = currentMovie.height().coerceAtLeast(1)
-        val scale = minOf(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight)
+        val scale = if (fillBounds) maxOf(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight) else minOf(width.toFloat() / sourceWidth, height.toFloat() / sourceHeight)
         val drawWidth = sourceWidth * scale
         val drawHeight = sourceHeight * scale
         val save = canvas.save()

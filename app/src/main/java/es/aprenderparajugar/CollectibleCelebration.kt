@@ -2,13 +2,8 @@ package es.aprenderparajugar
 
 import android.net.Uri
 import android.widget.ImageView
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,13 +38,6 @@ internal fun CollectibleCelebrationDialog(
     fontFamily: FontFamily,
     onContinue: () -> Unit
 ) {
-    val transition = rememberInfiniteTransition(label = "collectible-confetti")
-    val progress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(animation = tween(2200), repeatMode = RepeatMode.Restart),
-        label = "confetti-progress"
-    )
     val imageFile = File(stored.directory, stored.metadata.image)
 
     Dialog(
@@ -64,6 +52,7 @@ internal fun CollectibleCelebrationDialog(
             modifier = Modifier
                 .fillMaxWidth(0.94f)
                 .height(440.dp)
+                .clip(RoundedCornerShape(28.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(Color(0xFF30205F), Color(0xFF172D56), Color(0xFF102D43))
@@ -71,27 +60,11 @@ internal fun CollectibleCelebrationDialog(
                     RoundedCornerShape(28.dp)
                 )
         ) {
-            Canvas(Modifier.fillMaxSize()) {
-                val colors = listOf(
-                    Color(0xFFFFD54F), Color(0xFFFF6B6B), Color(0xFF70E1C1),
-                    Color(0xFF8AB4F8), Color(0xFFFF91D2), Color(0xFFFFFFFF)
-                )
-                for (i in 0 until 54) {
-                    val x = ((i * 67.0) % size.width).toFloat()
-                    val phase = ((i * 0.173f) + progress) % 1f
-                    val y = phase * size.height
-                    val radius = 3.5f + (i % 4) * 1.5f
-                    drawCircle(colors[i % colors.size], radius, androidx.compose.ui.geometry.Offset(x, y))
-                    if (i % 3 == 0) {
-                        drawLine(
-                            colors[(i + 2) % colors.size],
-                            androidx.compose.ui.geometry.Offset(x + 8f, y - 10f),
-                            androidx.compose.ui.geometry.Offset(x - 5f, y + 9f),
-                            strokeWidth = 3f
-                        )
-                    }
-                }
-            }
+            AndroidView(
+                factory = { context -> GifObjectView(context) },
+                update = { it.setGif(R.drawable.celebracion_confeti, animate = true, fill = true) },
+                modifier = Modifier.fillMaxSize()
+            )
             Column(
                 Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
