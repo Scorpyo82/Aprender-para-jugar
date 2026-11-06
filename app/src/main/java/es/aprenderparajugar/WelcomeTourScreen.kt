@@ -65,7 +65,7 @@ internal fun WelcomeTourScreen(onFinish: () -> Unit) {
         TourModeCard(
             title = "Modo con tiempo",
             symbol = "⏱️",
-            description = "El niño dispone de un saldo de tiempo para utilizar la aplicación. Al completar actividades puede ganar minutos que se suman a ese saldo. La familia establece cuánto tiempo se obtiene por dificultad y los límites de uso."
+            description = "El niño va acumulando un saldo de tiempo al completar ejercicios dentro de la aplicación. Ese saldo no es tiempo para usar la app, sino tiempo que puede pasar fuera de ella, utilizando el dispositivo para otras cosas. Así, la aplicación le anima a volver a aprender: le «persigue» para que siga realizando actividades educativas dentro de ella. La familia establece cuánto tiempo se obtiene por dificultad y los límites de uso."
         )
         TourModeCard(
             title = "Modo con estrellas",
