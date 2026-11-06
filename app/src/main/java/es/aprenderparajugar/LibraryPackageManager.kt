@@ -420,7 +420,8 @@ internal object LibraryPackageManager {
                 "Uno de los cuentos seleccionados no está disponible en el paquete."
             }
             val selectedObjectNames = linkedSetOf<String>()
-            selectedObjectNames.addAll(selectedObjects)
+            packageInfo.objects.filter { it.key in selectedObjects || it.directory in selectedObjects }
+                .mapTo(selectedObjectNames) { it.directory }
             selectedStoryInfos.forEach { info ->
                 val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
                 story.metadata.connectionConditions.mapNotNullTo(selectedObjectNames) { it.requiredObject }
