@@ -4583,7 +4583,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         Text("Para que la protección de la aplicación funcione, Android requiere que una persona autorice manualmente el servicio de accesibilidad. Esta guía te llevará a los ajustes necesarios.", fontSize = 15.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!restrictedSettingsDone) {
+Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (restrictedSettingsDone) "✓" else "1", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (restrictedSettingsDone) Color(0xFF24733B) else Color(0xFF667085))
                             Text("Permitir ajustes restringidos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
@@ -4599,7 +4600,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }, modifier = Modifier.fillMaxWidth()) { Text("1. Abrir información de la aplicación") }
                         OutlinedButton(onClick = { restrictedSettingsDone = !restrictedSettingsDone; preferences.edit().putBoolean("restricted_settings_done", restrictedSettingsDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (restrictedSettingsDone) "✓ Paso 1 completado" else "Marcar paso 1 como completado") }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        
+}
+if (!setupAccessibilityEnabled) {
+Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (setupAccessibilityEnabled) "✓" else "2", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (setupAccessibilityEnabled) Color(0xFF24733B) else Color(0xFF667085))
                             Text("Activar accesibilidad", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
@@ -4614,7 +4618,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }, modifier = Modifier.fillMaxWidth()) { Text("2. Abrir ajustes de accesibilidad") }
                         Text("Nota: la aplicación no puede activar estos permisos por sí sola. Si «Permitir ajustes restringidos» no aparece, intenta primero activar el servicio desde Accesibilidad y vuelve después a la información de la aplicación.", fontSize = 13.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        
+}
+if (!batterySettingsDone) {
+Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (batterySettingsDone) "✓" else "3", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (batterySettingsDone) Color(0xFF24733B) else Color(0xFF667085))
                             Text("Evitar que Xiaomi cierre la aplicación", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
@@ -4634,7 +4641,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         OutlinedButton(onClick = { batterySettingsDone = !batterySettingsDone; preferences.edit().putBoolean("battery_setup_done", batterySettingsDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (batterySettingsDone) "✓ Ajustes de batería completados" else "Marcar ajustes de batería como completados") }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        
+}
+if (!xiaomiWindowPermissionDone) {
+Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (xiaomiWindowPermissionDone) "✓" else "4", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (xiaomiWindowPermissionDone) Color(0xFF24733B) else Color(0xFF667085))
                             Text("Permitir ventanas en segundo plano (Xiaomi)", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
@@ -4650,7 +4660,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         OutlinedButton(onClick = { xiaomiWindowPermissionDone = !xiaomiWindowPermissionDone; preferences.edit().putBoolean("xiaomi_window_permission_done", xiaomiWindowPermissionDone).apply() }, modifier = Modifier.fillMaxWidth()) { Text(if (xiaomiWindowPermissionDone) "✓ Permiso de ventanas completado" else "Marcar permiso de ventanas como completado") }
 
                     }
-                    "about" -> item {
+                    
+}
+"about" -> item {
                         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("Acerca de esta app", fontSize = 23.sp, fontWeight = FontWeight.Bold)
