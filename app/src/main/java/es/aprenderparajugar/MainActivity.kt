@@ -965,9 +965,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferExportStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferExportUsageStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferExportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var transferExportObjects by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
     var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferImportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var transferImportObjects by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferObjectConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var transferStoryConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var transferConflictIndex by remember { mutableIntStateOf(0) }
@@ -1113,7 +1115,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
             transferMessage = try {
-                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics, transferExportUsageStatistics, transferExportStories)
+                LibraryPackageManager.export(context, uri, transferExportCategories, transferExportStatistics, transferExportUsageStatistics, transferExportStories, transferExportObjects)
                 "Exportación completada correctamente.".also { parentSection = "library-transfer" }
             } catch (e: Exception) { "No se pudo exportar: ${e.message ?: "error de archivo"}" }
         }
@@ -1127,6 +1129,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 transferPackage = inspected
                 transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
                 transferImportStories = inspected.stories.map { it.key }.toSet()
+                transferImportObjects = emptySet()
                 transferObjectConflictDecisions = emptyMap()
                 transferStoryConflictDecisions = emptyMap()
                 transferConflictIndex = 0
@@ -1797,6 +1800,38 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item { androidx.compose.material3.HorizontalDivider() }
+                        val availableObjectsForExport = ObjectRepository.list(context)
+                        item {
+                            Text("Objetos y coleccionables", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Puedes exportarlos por separado, sin incluir cuentos. Se conservarán imágenes, GIF, precios y configuración.", fontSize = 12.sp, color = Color(0xFF667085))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = availableObjectsForExport.isNotEmpty() && availableObjectsForExport.all { "${it.collection}/${it.folderName}" in transferExportObjects },
+                                    onCheckedChange = { checked -> transferExportObjects = if (checked) availableObjectsForExport.map { "${it.collection}/${it.folderName}" }.toSet() else emptySet() }
+                                )
+                                Text("Seleccionar todos los objetos")
+                            }
+                            availableObjectsForExport.groupBy { it.collection }.toSortedMap().forEach { (collection, objects) ->
+                                Text(collection, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                objects.forEach { stored ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = "${stored.collection}/${stored.folderName}" in transferExportObjects,
+                                            onCheckedChange = { checked ->
+                                                val key = "${stored.collection}/${stored.folderName}"
+                                                transferExportObjects = transferExportObjects.toMutableSet().also { if (checked) it.add(key) else it.remove(key) }
+                                            }
+                                        )
+                                        Column {
+                                            Text(stored.metadata.name)
+                                            Text(if (stored.metadata.collectible) "Coleccionable" else "Objeto", fontSize = 11.sp, color = Color(0xFF667085))
+                                        }
+                                    }
+                                }
+                            }
+                            if (availableObjectsForExport.isEmpty()) Text("No hay objetos guardados para exportar.", fontSize = 12.sp, color = Color(0xFF667085))
+                        }
+                        item { androidx.compose.material3.HorizontalDivider() }
                         ContentStorage.Modality.entries.forEach { modality ->
                             val label = when (modality) { ContentStorage.Modality.TARJETAS -> "Tarjetas"; ContentStorage.Modality.PALABRAS -> "Palabras"; ContentStorage.Modality.SECUENCIAS -> "Secuencias" }
                             val categoriesForModality = options[modality].orEmpty()
@@ -1846,13 +1881,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             Button(
                                 onClick = {
                                     val selected = transferExportCategories.filterValues { it.isNotEmpty() }
-                                    if (selected.isEmpty() && transferExportStories.isEmpty()) transferMessage = "Selecciona al menos una categoría o cuento."
+                                    if (selected.isEmpty() && transferExportStories.isEmpty() && transferExportObjects.isEmpty()) transferMessage = "Selecciona al menos una categoría, cuento u objeto."
                                     else {
                                         preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                         unifiedExportLauncher.launch("biblioteca.zip")
                                     }
                                 },
-                                enabled = transferExportCategories.values.any { it.isNotEmpty() } || transferExportStories.isNotEmpty(),
+                                enabled = transferExportCategories.values.any { it.isNotEmpty() } || transferExportStories.isNotEmpty() || transferExportObjects.isNotEmpty(),
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Exportar selección") }
                         }
@@ -2214,7 +2249,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         }
                                     }
                                 }
-                                val conflictDetails = LibraryPackageManager.objectConflicts(context, info, transferImportStories)
+                                val conflictDetails = LibraryPackageManager.objectConflicts(context, info, transferImportStories, transferImportObjects)
                                 if (storyNameConflicts.isNotEmpty()) {
                                     item {
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2390,7 +2425,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 Text(if (transferImportStatistics) "Al sustituir un ejercicio, se incorporarán también las estadísticas incluidas en el ZIP." else "Si sustituyes un ejercicio sin importar estadísticas, se conservarán las estadísticas que ya tenía en este dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
                             }
                             item {
-                                val finalConflictReview = LibraryPackageManager.objectConflicts(context, info, transferImportStories)
+                                val finalConflictReview = LibraryPackageManager.objectConflicts(context, info, transferImportStories, transferImportObjects)
                                 val resolvedCount = finalConflictReview.count { it.incoming.folderName in transferObjectConflictDecisions }
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text("Resumen de coincidencias", fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -2408,7 +2443,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             item {
                                 Button(onClick = {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions)
+                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions, transferImportObjects)
                                         transferPackage = null
                                         LibraryPackageManager.discard(info)
                                         // La biblioteca de cuentos mantiene una lista en estado Compose.
