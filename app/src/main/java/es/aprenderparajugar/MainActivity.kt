@@ -2374,8 +2374,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                             if (info.objects.isNotEmpty()) {
                                 item {
-                                    Text("Objetos y coleccionables", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("Selecciona los objetos que quieres incorporar. Esta operación no modifica el inventario del niño.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Text("Objetos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text("Se indica si cada elemento es un objeto normal o un coleccionable. Selecciona los que quieres incorporar. Esta operación no modifica el inventario del niño.", fontSize = 12.sp, color = Color(0xFF667085))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(
                                             checked = info.objects.all { it.key in transferImportObjects },
