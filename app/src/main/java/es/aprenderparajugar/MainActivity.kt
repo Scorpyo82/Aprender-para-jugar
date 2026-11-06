@@ -5719,7 +5719,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             if (manualCategoryLimitReached) item { Text("Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit). Podrás volver a elegir categoría mañana.", fontSize = 13.sp, color = Color(0xFF8A4B08)) }
         }
     } else if (screen == "help") {
-        HelpScreen(onBack = { screen = "home" })
+        HelpScreen(isStarsMode = rewardMode.isStars, onBack = { screen = "home" })
     } else if (screen == "category-select") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
