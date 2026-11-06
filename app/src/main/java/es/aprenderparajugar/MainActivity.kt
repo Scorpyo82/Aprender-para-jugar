@@ -1824,7 +1824,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         )
                                         Column {
                                             Text(stored.metadata.name)
-                                            Text(if (stored.metadata.collectible) "Coleccionable" else "Objeto", fontSize = 11.sp, color = Color(0xFF667085))
+                                            Text(
+                                                if (stored.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = if (stored.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
+                                            )
                                         }
                                     }
                                 }
@@ -2405,7 +2410,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             )
                                             Column {
                                                 Text(objectInfo.name, fontWeight = FontWeight.SemiBold)
-                                                Text("${incoming.collection} · ${if (incoming.metadata.collectible) "Coleccionable" else "Objeto"}", fontSize = 12.sp, color = Color(0xFF667085))
+                                                Text(
+                                                    if (incoming.metadata.collectible) "🏆 COLECCIONABLE · ${incoming.collection}" else "📦 OBJETO NORMAL · ${incoming.collection}",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = if (incoming.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
+                                                )
                                                 if (local != null) {
                                                     Text(
                                                         when (transferObjectConflictDecisions[objectInfo.directory]) {

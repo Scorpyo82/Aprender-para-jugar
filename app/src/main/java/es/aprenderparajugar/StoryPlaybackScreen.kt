@@ -318,10 +318,15 @@ internal fun StoryPlayerScreen(
                     if (snapshot.isFinished) {
                         Button(
                             onClick = {
-                                engine.finish()
-                                safelyStopAndRelease(ambientPlayer); ambientPlayer = null
-                                safelyStopAndRelease(narrationPlayer); narrationPlayer = null
-                                onExit()
+                                val collectible = engine.claimCurrentSceneExitCollectible()
+                                if (collectible != null) {
+                                    celebrationObject = collectible
+                                } else {
+                                    engine.finish()
+                                    safelyStopAndRelease(ambientPlayer); ambientPlayer = null
+                                    safelyStopAndRelease(narrationPlayer); narrationPlayer = null
+                                    onExit()
+                                }
                             },
                             shape = RoundedCornerShape(24.dp)
                         ) { Text("Fin") }
