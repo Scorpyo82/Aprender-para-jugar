@@ -102,7 +102,7 @@ internal fun StoryObjectInventoryScreen(
             if (ordinaryObjects.isNotEmpty()) {
                 item { Text("Objetos", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82), fontFamily = fontFamily) }
                 items(ordinaryObjects, key = { it.folderName }) { stored ->
-                    InventoryObjectCard(stored, stored.folderName in ownedFolders, balanceSeconds, fontFamily, onPurchase)
+                    InventoryObjectCard(stored, stored.folderName in ownedFolders, balanceSeconds, fontFamily) { pendingPurchase = it }
                 }
             }
             if (collectibles.isNotEmpty()) {
@@ -209,7 +209,7 @@ internal fun StoryObjectInventoryScreen(
 }
 
 @Composable
-private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSeconds: Int, fontFamily: FontFamily, onPurchase: (StoredObject) -> Unit) {
+private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSeconds: Int, fontFamily: FontFamily, onRequestPurchase: (StoredObject) -> Unit) {
     val cost = stored.metadata.storePriceMinutes.coerceAtLeast(0) * 60
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (owned) Color(0xFFE7F4E8) else Color.White)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -220,7 +220,7 @@ private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSec
                 if (owned) Text("✓ CONSEGUIDO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24733B), fontFamily = fontFamily)
                 else {
                     Text("Disponible en tienda · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B55A2), fontFamily = fontFamily)
-                    Button(onClick = { onPurchase(stored) }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente", fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = fontFamily) }
+                    Button(onClick = { onRequestPurchase(stored) }, enabled = balanceSeconds >= cost, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Saldo insuficiente", fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = fontFamily) }
                 }
             }
         }
