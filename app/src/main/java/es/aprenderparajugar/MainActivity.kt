@@ -1554,7 +1554,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     if (rewardMode.isStars) {
                                         rewardMode = RewardMode.TIME
                                         preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
-                                        parentSection = "device-setup"
+                                        setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
+                                        val deviceSetupComplete = restrictedSettingsDone &&
+                                            setupAccessibilityEnabled &&
+                                            batterySettingsDone &&
+                                            xiaomiWindowPermissionDone
+                                        parentSection = if (deviceSetupComplete) "menu" else "device-setup"
                                     }
                                 }, label = { Text("⏱ Tiempo") })
                                 FilterChip(selected = rewardMode.isStars, onClick = {
