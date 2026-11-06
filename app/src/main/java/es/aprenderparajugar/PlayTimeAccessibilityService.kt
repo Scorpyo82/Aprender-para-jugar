@@ -12,6 +12,7 @@ class PlayTimeAccessibilityService : AccessibilityService() {
     private val prefs by lazy { getSharedPreferences("aprender_para_jugar", MODE_PRIVATE) }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (prefs.getString(RewardMode.PREFERENCE_KEY, "time") == "stars") { handler.removeCallbacks(zeroBalanceCheck); return }
         if (event == null) return
         if (event.packageName?.toString() == packageName) return
         // A parent explicitly confirmed exiting; do not relaunch until the app is opened manually again.
@@ -79,6 +80,7 @@ class PlayTimeAccessibilityService : AccessibilityService() {
     }
 
     private fun enforceLockAfterFocusChange() {
+        if (prefs.getString(RewardMode.PREFERENCE_KEY, "time") == "stars") return
         if (prefs.getBoolean("device_setup_in_progress", false) ||
             prefs.getBoolean("manual_exit_allowed", false) ||
             prefs.getBoolean("parent_area_active", false) ||
