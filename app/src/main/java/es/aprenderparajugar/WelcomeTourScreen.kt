@@ -70,7 +70,7 @@ internal fun WelcomeTourScreen(onFinish: () -> Unit) {
         TourModeCard(
             title = "Modo con estrellas",
             symbol = "⭐",
-            description = "El progreso se recompensa mediante estrellas en lugar de utilizar un saldo de minutos como objetivo principal. El niño puede reunir estrellas al completar actividades y utilizarlas como motivación para avanzar y conseguir recompensas."
+            description = "El niño gana estrellas al completar ejercicios. Se trata del mismo saldo de recompensas que en el modo Tiempo: cada minuto configurado equivale a una estrella. Puede utilizar las estrellas para conseguir objetos en el inventario y la tienda, sin controles de salida ni bloqueo del dispositivo."
         )
         TourInfoCard(
             title = "La configuración está en manos de la familia",
