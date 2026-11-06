@@ -2372,6 +2372,74 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     }
                                 }
                             }
+                            if (info.objects.isNotEmpty()) {
+                                item {
+                                    Text("Objetos y coleccionables", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text("Selecciona los objetos que quieres incorporar. Esta operación no modifica el inventario del niño.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = info.objects.all { it.key in transferImportObjects },
+                                            onCheckedChange = { checked ->
+                                                transferImportObjects = if (checked) info.objects.map { it.key }.toSet() else emptySet()
+                                                transferObjectConflictDecisions = emptyMap()
+                                            }
+                                        )
+                                        Text("Seleccionar todos los objetos")
+                                    }
+                                }
+                                info.objects.forEach { objectInfo ->
+                                    val selected = objectInfo.key in transferImportObjects
+                                    val incoming = ObjectRepository.read(File(info.staging, "objetos/${objectInfo.key}"))
+                                    val local = ObjectRepository.list(context).firstOrNull {
+                                        it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
+                                    }
+                                    item {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = selected,
+                                                onCheckedChange = { checked ->
+                                                    transferImportObjects = transferImportObjects.toMutableSet().also {
+                                                        if (checked) it.add(objectInfo.key) else it.remove(objectInfo.key)
+                                                    }
+                                                }
+                                            )
+                                            Column {
+                                                Text(objectInfo.name, fontWeight = FontWeight.SemiBold)
+                                                Text("${incoming.collection} · ${if (incoming.metadata.collectible) "Coleccionable" else "Objeto"}", fontSize = 12.sp, color = Color(0xFF667085))
+                                                if (local != null) {
+                                                    Text(
+                                                        when (transferObjectConflictDecisions[objectInfo.directory]) {
+                                                            "reuse" -> "Coincidencia: se conservará el objeto local"
+                                                            "overwrite" -> "Coincidencia: se sobrescribirá el objeto local"
+                                                            else -> "Ya existe otro objeto con ese nombre; elige cómo resolverlo"
+                                                        },
+                                                        fontSize = 11.sp,
+                                                        color = Color(0xFF9A6700)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        if (selected && local != null) {
+                                            Column(Modifier.padding(start = 42.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    androidx.compose.material3.RadioButton(
+                                                        selected = transferObjectConflictDecisions[objectInfo.directory] == "reuse",
+                                                        onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (objectInfo.directory to "reuse") }
+                                                    )
+                                                    Text("Conservar el objeto de este dispositivo", fontSize = 12.sp)
+                                                }
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    androidx.compose.material3.RadioButton(
+                                                        selected = transferObjectConflictDecisions[objectInfo.directory] == "overwrite",
+                                                        onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (objectInfo.directory to "overwrite") }
+                                                    )
+                                                    Text("Sobrescribir el objeto existente", fontSize = 12.sp)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             info.modalities.forEach { modalityInfo ->
                                 val modality = modalityInfo.modality
                                 val label = when (modality) { ContentStorage.Modality.TARJETAS -> "Tarjetas"; ContentStorage.Modality.PALABRAS -> "Palabras"; ContentStorage.Modality.SECUENCIAS -> "Secuencias" }
