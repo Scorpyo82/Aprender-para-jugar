@@ -91,12 +91,24 @@ internal fun WelcomeTourScreen(
                     FilterChip(
                         selected = selectedMode == RewardMode.TIME,
                         onClick = { onModeSelected(RewardMode.TIME) },
-                        label = { Text("⏱ Tiempo") }
+                        label = { Text(if (selectedMode == RewardMode.TIME) "✓  ⏱ Tiempo" else "⏱ Tiempo", fontWeight = if (selectedMode == RewardMode.TIME) FontWeight.Bold else FontWeight.Medium) },
+                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                            containerColor = Color(0xFFF7F7FA),
+                            labelColor = Color(0xFF475467),
+                            selectedContainerColor = Color(0xFF5B3A8A),
+                            selectedLabelColor = Color.White
+                        )
                     )
                     FilterChip(
                         selected = selectedMode == RewardMode.STARS,
                         onClick = { onModeSelected(RewardMode.STARS) },
-                        label = { Text("⭐ Estrellas") }
+                        label = { Text(if (selectedMode == RewardMode.STARS) "✓  ⭐ Estrellas" else "⭐ Estrellas", fontWeight = if (selectedMode == RewardMode.STARS) FontWeight.Bold else FontWeight.Medium) },
+                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                            containerColor = Color(0xFFF7F7FA),
+                            labelColor = Color(0xFF475467),
+                            selectedContainerColor = Color(0xFF5B3A8A),
+                            selectedLabelColor = Color.White
+                        )
                     )
                 }
             }
