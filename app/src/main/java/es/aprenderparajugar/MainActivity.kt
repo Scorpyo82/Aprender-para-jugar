@@ -1157,7 +1157,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     fun finishWelcomeTour() {
         preferences.edit().putBoolean("welcome_tour_seen", true).apply()
         when (tourReturnTarget) {
-            "parent-setup" -> { screen = "parent"; parentSection = if (rewardMode.isStars) "menu" else "device-setup" }
+            "parent-setup" -> {
+                setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
+                val deviceSetupComplete = restrictedSettingsDone &&
+                    setupAccessibilityEnabled &&
+                    batterySettingsDone &&
+                    xiaomiWindowPermissionDone
+                screen = "parent"
+                parentSection = if (rewardMode.isStars || deviceSetupComplete) "menu" else "device-setup"
+            }
             "parent-menu" -> { screen = "parent"; parentSection = "menu" }
             else -> screen = "home"
         }
@@ -1495,7 +1503,22 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             ) { Text("Guardar PIN y continuar") }
         }
     } else if (screen == "tour") {
-        WelcomeTourScreen(onFinish = { finishWelcomeTour() })
+        WelcomeTourScreen(
+            selectedMode = rewardMode,
+            onModeSelected = { selected ->
+                rewardMode = selected
+                preferences.edit().putString(RewardMode.PREFERENCE_KEY, if (selected.isStars) "stars" else "time").apply()
+                if (selected.isStars) {
+                    preferences.edit()
+                        .putLong("play_deadline_ms", 0L)
+                        .putBoolean("play_session_authorized", false)
+                        .putBoolean("play_paused_for_screen_lock", false)
+                        .apply()
+                    context.stopService(Intent(context, PlayTimeService::class.java))
+                }
+            },
+            onFinish = { finishWelcomeTour() }
+        )
     } else if (screen == "exit-pin") {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text("🔒 Salir de la aplicación", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
