@@ -56,6 +56,27 @@ internal fun WelcomeTourScreen(onFinish: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
 
+        Text("Primero, elige cómo funcionará la aplicación", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
+        Text(
+            "Desde el área parental puedes escoger el sistema principal de motivación. Esta elección determina cómo se recompensa el progreso del niño.",
+            fontSize = 14.sp,
+            color = Color(0xFF667085)
+        )
+        TourModeCard(
+            title = "Modo con tiempo",
+            symbol = "⏱️",
+            description = "El niño dispone de un saldo de tiempo para utilizar la aplicación. Al completar actividades puede ganar minutos que se suman a ese saldo. La familia establece cuánto tiempo se obtiene por dificultad y los límites de uso."
+        )
+        TourModeCard(
+            title = "Modo con estrellas",
+            symbol = "⭐",
+            description = "El progreso se recompensa mediante estrellas en lugar de utilizar un saldo de minutos como objetivo principal. El niño puede reunir estrellas al completar actividades y utilizarlas como motivación para avanzar y conseguir recompensas."
+        )
+        TourInfoCard(
+            title = "La configuración está en manos de la familia",
+            body = "Desde el control parental, protegido por PIN, puedes elegir el modo de funcionamiento (tiempo o estrellas), activar o desactivar las actividades disponibles y ajustar cada modalidad por separado. También puedes adaptar el sonido, la música, la tipografía, las recompensas y otros límites."
+        )
+
         Text("¿Qué actividades incluye?", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
         TourActivityCard(
             image = R.drawable.activity_cards,
@@ -79,6 +100,10 @@ internal fun WelcomeTourScreen(onFinish: () -> Unit) {
         )
 
         TourInfoCard(
+            title = "Configura cada actividad a vuestro ritmo",
+            body = "Puedes activar o desactivar Tarjetas, Secuencias y Palabras de forma independiente. Cada modalidad tiene sus propios ajustes. Por ejemplo, en Secuencias puedes limitar el número máximo de tarjetas y elegir si el niño verá imágenes con texto, solo imágenes o solo texto."
+        )
+        TourInfoCard(
             title = "La familia también forma parte del aprendizaje",
             body = "Los tutores pueden crear y adaptar ejercicios y cuentos, elegir imágenes, textos y audios, y organizar sus propias bibliotecas. También pueden importar y exportar contenidos para seguir personalizando la experiencia."
         )
@@ -88,7 +113,7 @@ internal fun WelcomeTourScreen(onFinish: () -> Unit) {
         )
         TourInfoCard(
             title = "Aprender también tiene recompensa",
-            body = "Al completar actividades se consiguen recompensas. La aplicación dispone de un inventario y una tienda para descubrir objetos, conseguirlos y utilizarlos como motivación. La familia configura cómo quiere utilizar las recompensas."
+            body = "La aplicación dispone de un inventario y una tienda donde el niño puede consultar lo que ha conseguido y descubrir qué otros objetos puede obtener. Las recompensas forman parte de la motivación y se adaptan al modo de funcionamiento elegido por la familia."
         )
         Text(
             "No se trata de competir ni de hacerlo todo deprisa. Se trata de acompañar, practicar y avanzar a su ritmo.",
@@ -102,6 +127,27 @@ internal fun WelcomeTourScreen(onFinish: () -> Unit) {
             Text("Empezar", fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun TourModeCard(title: String, symbol: String, description: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(symbol, fontSize = 34.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
+                Text(description, fontSize = 14.sp, color = Color(0xFF475467))
+            }
+        }
     }
 }
 
