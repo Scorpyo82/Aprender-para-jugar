@@ -71,6 +71,12 @@ class PlayTimeService : Service() {
     }
     private val tick = object : Runnable {
         override fun run() {
+            if (prefs.getString(RewardMode.PREFERENCE_KEY, "time") == "stars") {
+                handler.removeCallbacks(this)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return
+            }
             val deadline = prefs.getLong("play_deadline_ms", 0L)
             val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else 0
             prefs.edit().putInt("balance_seconds", remaining).apply()
@@ -127,6 +133,12 @@ class PlayTimeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (prefs.getString(RewardMode.PREFERENCE_KEY, "time") == "stars") {
+            handler.removeCallbacks(tick)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             handler.removeCallbacks(tick)
             stopForeground(STOP_FOREGROUND_REMOVE)
