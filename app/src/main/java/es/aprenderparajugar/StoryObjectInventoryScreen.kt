@@ -54,6 +54,7 @@ internal fun StoryObjectInventoryScreen(
     objects: List<StoredObject>,
     ownedFolders: Set<String>,
     balanceSeconds: Int,
+    isStarsMode: Boolean = false,
     message: String,
     fontFamily: FontFamily,
     onBack: () -> Unit,
@@ -82,7 +83,7 @@ internal fun StoryObjectInventoryScreen(
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Tu saldo", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF79501C), fontFamily = fontFamily)
                     Text(
-                        String.format(java.util.Locale.ROOT, "%02d:%02d", balanceSeconds.coerceAtLeast(0) / 60, balanceSeconds.coerceAtLeast(0) % 60),
+                        formatRewardBalance(balanceSeconds, if (isStarsMode) RewardMode.STARS else RewardMode.TIME),
                         fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF267A55), fontFamily = fontFamily
                     )
                     Text("$ownedCount conseguidos · $purchasableCount disponibles para comprar", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
@@ -142,7 +143,7 @@ internal fun StoryObjectInventoryScreen(
                                 Text(if (owned) stored.metadata.name else "Coleccionable misterioso", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344), fontFamily = fontFamily)
                                 Text(if (owned) "✓ CONSEGUIDO · Pulsa para ampliar" else "Descubre qué se esconde", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (owned) Color(0xFF24733B) else Color(0xFF6B55A2), fontFamily = fontFamily)
                                 if (!owned && stored.metadata.availableInStore) {
-                                    Text("Precio · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
+                                    Text(if (isStarsMode) "Precio · ${stored.metadata.storePriceMinutes} ⭐" else "Precio · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, color = Color(0xFF667085), fontFamily = fontFamily)
                                     Button(onClick = { pendingPurchase = stored }, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Ver precio", fontFamily = fontFamily) }
                                 }
                             }
@@ -180,11 +181,11 @@ internal fun StoryObjectInventoryScreen(
                         )
                     }
                     Text("¿Quieres descubrir este coleccionable?", fontFamily = fontFamily)
-                    Text("Precio: ${pending.metadata.storePriceMinutes} minutos", fontWeight = FontWeight.Bold, fontFamily = fontFamily)
-                    Text("Tu saldo actual: ${formatInventoryTime(balanceSeconds)}", fontFamily = fontFamily)
-                    Text("Saldo después de comprar: ${formatInventoryTime(remainingSeconds)}", fontFamily = fontFamily)
+                    Text(if (isStarsMode) "Precio: ${pending.metadata.storePriceMinutes} estrellas" else "Precio: ${pending.metadata.storePriceMinutes} minutos", fontWeight = FontWeight.Bold, fontFamily = fontFamily)
+                    Text(if (isStarsMode) "Tu saldo actual: ${formatRewardBalance(balanceSeconds, RewardMode.STARS)} estrellas" else "Tu saldo actual: ${formatInventoryTime(balanceSeconds)}", fontFamily = fontFamily)
+                    Text(if (isStarsMode) "Saldo después de comprar: ${formatRewardBalance(remainingSeconds, RewardMode.STARS)} estrellas" else "Saldo después de comprar: ${formatInventoryTime(remainingSeconds)}", fontFamily = fontFamily)
                     if (!enoughBalance) {
-                        Text("Te faltan ${formatInventoryTime(priceSeconds - balanceSeconds)} para poder comprarlo.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontFamily = fontFamily)
+                        Text(if (isStarsMode) "Te faltan ${formatRewardBalance(priceSeconds - balanceSeconds, RewardMode.STARS)} estrellas para poder comprarlo." else "Te faltan ${formatInventoryTime(priceSeconds - balanceSeconds)} para poder comprarlo.", color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontFamily = fontFamily)
                     }
                 }
             },
@@ -237,7 +238,7 @@ private fun InventoryObjectCard(stored: StoredObject, owned: Boolean, balanceSec
                 Text(stored.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085), fontFamily = fontFamily)
                 if (owned) Text("✓ CONSEGUIDO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24733B), fontFamily = fontFamily)
                 else {
-                    Text("Disponible en tienda · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B55A2), fontFamily = fontFamily)
+                    Text(if (isStarsMode) "Disponible en tienda · ${stored.metadata.storePriceMinutes} ⭐" else "Disponible en tienda · ${stored.metadata.storePriceMinutes} min", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B55A2), fontFamily = fontFamily)
                     Button(onClick = { onRequestPurchase(stored) }, modifier = Modifier.fillMaxWidth()) { Text(if (balanceSeconds >= cost) "Comprar" else "Ver precio", fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = fontFamily) }
                 }
             }
