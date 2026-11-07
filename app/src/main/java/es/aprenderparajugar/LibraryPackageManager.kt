@@ -323,7 +323,7 @@ internal object LibraryPackageManager {
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) {
                         val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
-                        listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { referenced.add(it) }
+                        (listOfNotNull(scene.awardedObject, scene.requiredObject) + scene.awardedObjects + scene.unlockedObjects).forEach { referenced.add(it) }
                     }
                 }
                 val packagedNames = objectInfos.map { it.directory }.toSet()
@@ -358,7 +358,7 @@ internal object LibraryPackageManager {
                 val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                 if (sceneFile.isFile) {
                     val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
-                    listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { requiredNames.add(it) }
+                    (listOfNotNull(scene.awardedObject, scene.requiredObject) + scene.awardedObjects + scene.unlockedObjects).forEach { requiredNames.add(it) }
                 }
             }
         }
@@ -391,7 +391,7 @@ internal object LibraryPackageManager {
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) runCatching {
                         val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
-                        listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { refs.add(it) }
+                        (listOfNotNull(scene.awardedObject, scene.requiredObject) + scene.awardedObjects + scene.unlockedObjects).forEach { refs.add(it) }
                     }
                 }
                 existing.folderName in refs
@@ -449,6 +449,7 @@ internal object LibraryPackageManager {
                         existing.metadata.availableInStore == incomingObject.metadata.availableInStore &&
                         existing.metadata.storePriceMinutes == incomingObject.metadata.storePriceMinutes &&
                         existing.metadata.collectible == incomingObject.metadata.collectible &&
+                        existing.metadata.requiresUnlock == incomingObject.metadata.requiresUnlock &&
                         runCatching { File(existing.directory, existing.metadata.image).readBytes().contentEquals(
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
                         ) }.getOrDefault(false)
@@ -647,7 +648,9 @@ internal object LibraryPackageManager {
                 val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
                 val remapped = scene.copy(
                     awardedObject = scene.awardedObject?.let { mapping[it] ?: it },
-                    requiredObject = scene.requiredObject?.let { mapping[it] ?: it }
+                    requiredObject = scene.requiredObject?.let { mapping[it] ?: it },
+                    awardedObjects = scene.awardedObjects.map { mapping[it] ?: it }.distinct(),
+                    unlockedObjects = scene.unlockedObjects.map { mapping[it] ?: it }.distinct()
                 )
                 sceneFile.writeText(StorySceneJsonCodec.encode(remapped).toString(2), Charsets.UTF_8)
             }
