@@ -95,7 +95,7 @@ internal fun WelcomeTourScreen(
                         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                             containerColor = Color(0xFFF7F7FA),
                             labelColor = Color(0xFF475467),
-                            selectedContainerColor = Color(0xFF5B3A8A),
+                            selectedContainerColor = Color(0xFF2E7D32),
                             selectedLabelColor = Color.White
                         )
                     )
@@ -106,7 +106,7 @@ internal fun WelcomeTourScreen(
                         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                             containerColor = Color(0xFFF7F7FA),
                             labelColor = Color(0xFF475467),
-                            selectedContainerColor = Color(0xFF5B3A8A),
+                            selectedContainerColor = Color(0xFF2E7D32),
                             selectedLabelColor = Color.White
                         )
                     )
