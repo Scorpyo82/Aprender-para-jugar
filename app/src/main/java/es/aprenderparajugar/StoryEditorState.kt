@@ -162,9 +162,9 @@ internal class StoryEditorState(private val context: Context) {
                         ambientAudio = if (ambientAudio.value.containsKey(selectedScene.value)) ambientAudio.value[selectedScene.value] else existing?.ambientAudio,
                         keepPreviousAmbient = keepAmbientByScene.value[selectedScene.value] ?: false,
                         narrationAudio = if (narrationAudio.value.containsKey(selectedScene.value)) narrationAudio.value[selectedScene.value] else existing?.narrationAudio,
-                        awardedObject = if (awardedObjectByScene.value.containsKey(selectedScene.value)) awardedObjectByScene.value[selectedScene.value] else existing?.awardedObject,
+                        awardedObject = if (awardedObjectsByScene.value.containsKey(selectedScene.value)) null else existing?.awardedObject,
                         awardTiming = if (objectTiming.value == "Al entrar") "onEnter" else "onExit",
-                        awardedObjects = awardedObjectsByScene.value[selectedScene.value] ?: existing?.awardedObjects.orEmpty(),
+                        awardedObjects = awardedObjectsByScene.value[selectedScene.value] ?: (listOfNotNull(existing?.awardedObject) + existing?.awardedObjects.orEmpty()).distinct(),
                         unlockedObjects = unlockedObjectsByScene.value[selectedScene.value] ?: existing?.unlockedObjects.orEmpty()
                     )
                 } else existing ?: StorySceneMetadata(title = scenes.value[index])
