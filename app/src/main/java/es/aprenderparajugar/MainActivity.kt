@@ -2825,7 +2825,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorAmbientAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.ambientAudio }.getOrNull() }
                                 storyEditorNarrationAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.narrationAudio }.getOrNull() }
                                 storyEditorAwardedObjectByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObject }.getOrNull() }
-                                storyEditorAwardedObjectsByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObjects }.getOrDefault(emptyList()) }
+                                storyEditorAwardedObjectsByScene = stored.metadata.scenes.associate { scene ->
+                                    scene to runCatching {
+                                        val metadata = StoryRepository.readScene(stored, scene).metadata
+                                        (listOfNotNull(metadata.awardedObject) + metadata.awardedObjects).distinct()
+                                    }.getOrDefault(emptyList())
+                                }
                                 storyEditorUnlockedObjectsByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.unlockedObjects }.getOrDefault(emptyList()) }
                                 storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
@@ -3188,56 +3193,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
 
-                        item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
-                        item {
-                            val selectedObjectFolder = storyEditorAwardedObjectByScene[storyEditorSelectedScene]
-                            val selectedObject = storedStoryObjects.firstOrNull { it.folderName == selectedObjectFolder }
-                            Box {
-                                OutlinedButton(onClick = {
-                                    storedStoryObjects = ObjectRepository.list(context)
-                                    storyEditorObjectMenuExpanded = true
-                                }, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (selectedObject == null) "Seleccionar objeto" else "Cambiar objeto: " + selectedObject.metadata.name)
-                                }
-                                DropdownMenu(expanded = storyEditorObjectMenuExpanded, onDismissRequest = { storyEditorObjectMenuExpanded = false }) {
-                                    DropdownMenuItem(text = { Text("Sin objeto") }, onClick = {
-                                        storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorSelectedScene, null) }
-                                        storyEditorObjectMenuExpanded = false
-                                    })
-                                    storedStoryObjects.forEach { storedObject ->
-                                        DropdownMenuItem(
-                                            text = { Text(storedObject.metadata.name + " · " + storedObject.collection) },
-                                            onClick = {
-                                                storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorSelectedScene, storedObject.folderName) }
-                                                storyEditorObjectMenuExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                            if (selectedObject != null) {
-                                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        AndroidView(
-                                            factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
-                                            update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(selectedObject.directory, selectedObject.metadata.image))) } },
-                                            modifier = Modifier.width(64.dp).height(64.dp)
-                                        )
-                                        Column(Modifier.weight(1f)) {
-                                            Text(selectedObject.metadata.name, fontWeight = FontWeight.SemiBold)
-                                            Text(selectedObject.collection, fontSize = 12.sp, color = Color(0xFF667085))
-                                        }
-                                        OutlinedButton(onClick = {
-                                            storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(storyEditorSelectedScene, null) }
-                                        }) { Text("Quitar") }
-                                    }
-                                }
-                            } else if (selectedObjectFolder != null) {
-                                Text("El objeto guardado ya no está disponible. Puedes seleccionar otro o quitar la referencia.", fontSize = 12.sp, color = Color(0xFFB3261E))
-                            } else if (storedStoryObjects.isEmpty()) {
-                                Text("Todavía no hay objetos en la biblioteca. Puedes crearlos desde Gestión de objetos.", fontSize = 12.sp, color = Color(0xFF667085))
-                            }
-                        }
                         item {
                             OutlinedButton(
                                 onClick = {
