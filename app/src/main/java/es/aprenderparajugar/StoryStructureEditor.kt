@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -26,10 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/**
- * Editor aislado de la estructura narrativa.
- * Solo configura conexiones y condiciones; nunca consulta ni modifica el inventario del jugador.
- */
+/** Editor de conexiones y condiciones de la estructura narrativa. */
 @Composable
 internal fun StoryStructureEditor(
     scenes: List<String>,
@@ -42,131 +38,88 @@ internal fun StoryStructureEditor(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Estructura y caminos", fontWeight = FontWeight.Bold)
-        Text(
-            "Añade hasta dos salidas por escena. Para crear una bifurcación, al menos una salida debe exigir un objeto. Varias escenas pueden converger en un mismo destino.",
-            color = Color(0xFF667085)
-        )
+        Text("Añade hasta dos salidas por escena. Para crear una bifurcación, al menos una salida debe exigir un objeto. Varias escenas pueden converger en un mismo destino.", color = Color(0xFF667085))
         scenes.forEach { origin ->
             var addMenuExpanded by remember(origin, scenes) { mutableStateOf(false) }
             val destinations = connections[origin].orEmpty()
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4EA))
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4EA))) {
+                Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(origin, fontWeight = FontWeight.Bold)
-                    Text(
-                        sceneSummaries[origin].orEmpty().ifBlank { "Sin resumen de ilustración" },
-                        color = if (sceneSummaries[origin].isNullOrBlank()) Color(0xFF98A2B3) else Color(0xFF667085)
-                    )
-                    if (destinations.isEmpty()) {
-                        Text("Sin salidas configuradas", color = Color(0xFF667085))
-                    }
+                    Text(sceneSummaries[origin].orEmpty().ifBlank { "Sin resumen de ilustración" }, color = if (sceneSummaries[origin].isNullOrBlank()) Color(0xFF98A2B3) else Color(0xFF667085))
+                    if (destinations.isEmpty()) Text("Sin salidas configuradas", color = Color(0xFF667085))
                     destinations.forEach { destination ->
-                        val condition = conditions.firstOrNull {
-                            it.fromScene == origin && it.toScene == destination
-                        }
+                        val isLost = destination == STORY_LOST_DESTINATION
+                        val condition = conditions.firstOrNull { it.fromScene == origin && it.toScene == destination }
                         var objectMenuExpanded by remember(origin, destination) { mutableStateOf(false) }
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("↳ $destination", modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
-                                OutlinedButton(onClick = {
-                                    onConnectionsChange(
-                                        connections.toMutableMap().apply {
-                                            put(origin, destinations.filterNot { it == destination })
-                                        }
-                                    )
-                                    onConditionsChange(conditions.filterNot {
-                                        it.fromScene == origin && it.toScene == destination
-                                    })
-                                }) { Text("Quitar") }
-                            }
-                            OutlinedButton(
-                                onClick = { objectMenuExpanded = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                val selected = availableObjects.firstOrNull { it.folderName == condition?.requiredObject }
-                                Text(selected?.metadata?.name ?: "Sin condición de objeto")
-                            }
-                            DropdownMenu(
-                                expanded = objectMenuExpanded,
-                                onDismissRequest = { objectMenuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Sin condición de objeto") },
-                                    onClick = {
-                                        val next = conditions.filterNot {
-                                            it.fromScene == origin && it.toScene == destination
-                                        }
-                                        onConditionsChange(next)
-                                        objectMenuExpanded = false
+                        var replacementMenuExpanded by remember(origin, destination, scenes) { mutableStateOf(false) }
+                        Column(modifier = Modifier.fillMaxWidth().padding(start = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (isLost) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("↳ HUÉRFANA", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
+                                        Text("El destino fue eliminado. Asigna otra escena o quita esta salida.", color = Color(0xFFB3261E))
                                     }
-                                )
-                                availableObjects.forEach { storedObject ->
-                                    DropdownMenuItem(
-                                        text = { Text(storedObject.metadata.name) },
-                                        onClick = {
-                                            val next = conditions.filterNot {
-                                                it.fromScene == origin && it.toScene == destination
-                                            } + StoryConnectionCondition(
-                                                fromScene = origin,
-                                                toScene = destination,
-                                                requiredObject = storedObject.folderName,
-                                                consumeRequiredObject = condition?.consumeRequiredObject ?: false
-                                            )
+                                    OutlinedButton(onClick = {
+                                        onConnectionsChange(connections.toMutableMap().apply { put(origin, destinations.filterNot { it == STORY_LOST_DESTINATION }) })
+                                    }) { Text("Quitar") }
+                                }
+                                OutlinedButton(onClick = { replacementMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) { Text("Reasignar destino") }
+                                DropdownMenu(expanded = replacementMenuExpanded, onDismissRequest = { replacementMenuExpanded = false }) {
+                                    scenes.filter { it != origin && it !in destinations }.forEach { target ->
+                                        DropdownMenuItem(text = { Text(target) }, onClick = {
+                                            onConnectionsChange(connections.toMutableMap().apply {
+                                                put(origin, destinations.map { if (it == STORY_LOST_DESTINATION) target else it })
+                                            })
+                                            replacementMenuExpanded = false
+                                        })
+                                    }
+                                }
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("↳ $destination", modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                                    OutlinedButton(onClick = {
+                                        onConnectionsChange(connections.toMutableMap().apply { put(origin, destinations.filterNot { it == destination }) })
+                                        onConditionsChange(conditions.filterNot { it.fromScene == origin && it.toScene == destination })
+                                    }) { Text("Quitar") }
+                                }
+                                OutlinedButton(onClick = { objectMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    val selected = availableObjects.firstOrNull { it.folderName == condition?.requiredObject }
+                                    Text(selected?.metadata?.name ?: "Sin condición de objeto")
+                                }
+                                DropdownMenu(expanded = objectMenuExpanded, onDismissRequest = { objectMenuExpanded = false }) {
+                                    DropdownMenuItem(text = { Text("Sin condición de objeto") }, onClick = {
+                                        onConditionsChange(conditions.filterNot { it.fromScene == origin && it.toScene == destination })
+                                        objectMenuExpanded = false
+                                    })
+                                    availableObjects.forEach { storedObject ->
+                                        DropdownMenuItem(text = { Text(storedObject.metadata.name) }, onClick = {
+                                            val next = conditions.filterNot { it.fromScene == origin && it.toScene == destination } +
+                                                StoryConnectionCondition(origin, destination, storedObject.folderName, condition?.consumeRequiredObject ?: false)
                                             onConditionsChange(next)
                                             objectMenuExpanded = false
-                                        }
-                                    )
+                                        })
+                                    }
                                 }
-                            }
-                            if (condition?.requiredObject != null) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = condition.consumeRequiredObject,
-                                        onCheckedChange = { checked ->
-                                            onConditionsChange(
-                                                conditions.map {
-                                                    if (it.fromScene == origin && it.toScene == destination)
-                                                        it.copy(consumeRequiredObject = checked)
-                                                    else it
-                                                }
-                                            )
-                                        }
-                                    )
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Se consume")
+                                if (condition?.requiredObject != null) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = condition.consumeRequiredObject, onCheckedChange = { checked ->
+                                            onConditionsChange(conditions.map { if (it.fromScene == origin && it.toScene == destination) it.copy(consumeRequiredObject = checked) else it })
+                                        })
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Se consume")
+                                    }
                                 }
                             }
                         }
                     }
                     if (destinations.size < 2) {
-                        OutlinedButton(
-                            onClick = { addMenuExpanded = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("＋ Añadir salida") }
-                        DropdownMenu(
-                            expanded = addMenuExpanded,
-                            onDismissRequest = { addMenuExpanded = false }
-                        ) {
+                        OutlinedButton(onClick = { addMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir salida") }
+                        DropdownMenu(expanded = addMenuExpanded, onDismissRequest = { addMenuExpanded = false }) {
                             scenes.filter { it != origin && it !in destinations }.forEach { target ->
-                                DropdownMenuItem(
-                                    text = { Text(target) },
-                                    onClick = {
-                                        onConnectionsChange(
-                                            connections.toMutableMap().apply {
-                                                put(origin, destinations + target)
-                                            }
-                                        )
-                                        addMenuExpanded = false
-                                    }
-                                )
+                                DropdownMenuItem(text = { Text(target) }, onClick = {
+                                    onConnectionsChange(connections.toMutableMap().apply { put(origin, destinations + target) })
+                                    addMenuExpanded = false
+                                })
                             }
                         }
                     }
@@ -174,10 +127,7 @@ internal fun StoryStructureEditor(
             }
         }
         if (availableObjects.isEmpty()) {
-            Text(
-                "No hay objetos disponibles. Puedes crear conexiones normales, pero para guardar una bifurcación necesitarás configurar al menos una condición por objeto.",
-                color = Color(0xFF8A5A00)
-            )
+            Text("No hay objetos disponibles. Puedes crear conexiones normales, pero para guardar una bifurcación necesitarás configurar al menos una condición por objeto.", color = Color(0xFF8A5A00))
         }
     }
 }

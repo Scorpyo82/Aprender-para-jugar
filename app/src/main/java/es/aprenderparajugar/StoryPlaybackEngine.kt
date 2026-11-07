@@ -30,6 +30,9 @@ internal class StoryPlaybackEngine(
     private var finished = false
 
     fun start(): Snapshot {
+        require(story.metadata.connections.values.none { STORY_LOST_DESTINATION in it }) {
+            "Este cuento tiene conexiones huérfanas. Repara su estructura narrativa antes de reproducirlo."
+        }
         currentSceneFolder = story.metadata.startScene
         started = true
         finished = false

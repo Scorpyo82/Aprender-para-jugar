@@ -41,7 +41,7 @@ internal class StoryEditorState(private val context: Context) {
         val visibleByFolder = metadata.scenes.associate { it to it.replace('_', ' ') }
         startScene.value = visibleByFolder[metadata.startScene] ?: visibleByFolder.values.firstOrNull().orEmpty()
         connections.value = metadata.scenes.associate { folder ->
-            visibleByFolder.getValue(folder) to metadata.connections[folder].orEmpty().mapNotNull(visibleByFolder::get)
+            visibleByFolder.getValue(folder) to metadata.connections[folder].orEmpty().map { destination -> if (destination == STORY_LOST_DESTINATION) STORY_LOST_DESTINATION else visibleByFolder[destination] ?: STORY_LOST_DESTINATION }
         }
         connectionConditions.value = metadata.connectionConditions.mapNotNull { condition ->
             val from = visibleByFolder[condition.fromScene] ?: return@mapNotNull null
@@ -64,7 +64,7 @@ internal class StoryEditorState(private val context: Context) {
         val valid = sceneNames.toSet()
         val next = connections.value
             .filterKeys { it in valid }
-            .mapValues { (_, destinations) -> destinations.filter { it in valid }.distinct().take(2) }
+            .mapValues { (_, destinations) -> destinations.filter { it == STORY_LOST_DESTINATION || it in valid }.distinct().take(2) }
             .toMutableMap()
         sceneNames.forEach { next.putIfAbsent(it, emptyList()) }
         sceneNames.zipWithNext().forEach { (previous, current) ->
@@ -75,8 +75,33 @@ internal class StoryEditorState(private val context: Context) {
         connections.value = next
         val edges = next.flatMap { (from, destinations) -> destinations.map { from to it } }.toSet()
         connectionConditions.value = connectionConditions.value.filter {
-            (it.fromScene to it.toScene) in edges
+            it.toScene != STORY_LOST_DESTINATION && (it.fromScene to it.toScene) in edges
         }
+    }
+
+    fun removeScene(sceneName: String): Boolean {
+        val currentScenes = scenes.value
+        if (sceneName !in currentScenes || currentScenes.size <= 1) return false
+        val remaining = currentScenes.filterNot { it == sceneName }
+        val currentConnections = connections.value
+        scenes.value = remaining
+        connections.value = remaining.associateWith { origin ->
+            if (origin == sceneName) emptyList()
+            else currentConnections[origin].orEmpty().map { if (it == sceneName) STORY_LOST_DESTINATION else it }.distinct().take(2)
+        }
+        connectionConditions.value = connectionConditions.value.filter { it.fromScene != sceneName && it.toScene != sceneName }
+        illustrations.value = illustrations.value - sceneName
+        ambientAudio.value = ambientAudio.value - sceneName
+        narrationAudio.value = narrationAudio.value - sceneName
+        awardedObjectByScene.value = awardedObjectByScene.value - sceneName
+        keepAmbientByScene.value = keepAmbientByScene.value - sceneName
+        if (selectedScene.value == sceneName) {
+            selectedScene.value = ""
+            sceneText.value = ""
+            summary.value = ""
+        }
+        if (startScene.value == sceneName) startScene.value = remaining.first()
+        return true
     }
 
     fun persist(): StoredStory? {
@@ -104,7 +129,7 @@ internal class StoryEditorState(private val context: Context) {
             val folderByVisible = scenes.value.zip(sceneFolders).toMap()
             val persistedConnections = connections.value.mapNotNull { (from, destinations) ->
                 val folderFrom = folderByVisible[from] ?: return@mapNotNull null
-                folderFrom to destinations.mapNotNull(folderByVisible::get).distinct().take(2)
+                folderFrom to destinations.map { if (it == STORY_LOST_DESTINATION) it else folderByVisible[it] ?: STORY_LOST_DESTINATION }.distinct().take(2)
             }.toMap()
             val persistedConditions = connectionConditions.value.mapNotNull { condition ->
                 val from = folderByVisible[condition.fromScene] ?: return@mapNotNull null
@@ -138,6 +163,9 @@ internal class StoryEditorState(private val context: Context) {
                     )
                 } else existing ?: StorySceneMetadata(title = scenes.value[index])
                 StoryRepository.saveScene(stored, sceneFolder, sceneMetadata)
+            }
+            originalStory?.metadata?.scenes.orEmpty().filterNot { it in sceneFolders }.forEach { removedScene ->
+                StoryRepository.deleteSceneDirectory(stored, removedScene)
             }
             editingFolder.value = storyFolder
             editingCollectionFolder.value = collectionFolder

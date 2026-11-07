@@ -5,6 +5,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
+/** Destino reservado para una salida cuyo destino fue eliminado. */
+internal const val STORY_LOST_DESTINATION = "Lost"
+
 /** Datos generales y grafo narrativo de un cuento. */
 data class StoryMetadata(
     val title: String,
@@ -112,14 +115,14 @@ object StoryJsonCodec {
         require(isSafeSegment(metadata.collection)) { "La colección del cuento no es válida." }
         require(isSafeSegment(metadata.startScene)) { "La escena inicial no es válida." }
         require(metadata.scenes.isNotEmpty()) { "El cuento debe contener al menos una escena." }
-        require(metadata.scenes.all(::isSafeSegment)) { "Hay un nombre de escena no válido." }
+        require(metadata.scenes.all(::isSafeSegment) && STORY_LOST_DESTINATION !in metadata.scenes) { "Hay un nombre de escena no válido o reservado." }
         require(metadata.scenes.distinct().size == metadata.scenes.size) { "Hay nombres de escena duplicados." }
         require(metadata.startScene in metadata.scenes) { "La escena inicial no pertenece al cuento." }
         require(metadata.connections.keys.all { it in metadata.scenes }) { "Hay conexiones desde escenas desconocidas." }
         metadata.connections.forEach { (origin, destinations) ->
             require(destinations.size <= 2) { "Una escena no puede tener más de dos salidas." }
             require(destinations.distinct().size == destinations.size) { "Una escena no puede conectarse dos veces con el mismo destino." }
-            require(destinations.all { it in metadata.scenes }) { "Una conexión apunta a una escena inexistente." }
+            require(destinations.all { it == STORY_LOST_DESTINATION || it in metadata.scenes }) { "Una conexión apunta a una escena inexistente." }
             require(origin !in destinations) { "Una escena no puede conectarse consigo misma." }
         }
         val edges = metadata.connections.flatMap { (origin, destinations) -> destinations.map { origin to it } }.toSet()
@@ -127,7 +130,7 @@ object StoryJsonCodec {
             "Una conexión no puede tener condiciones duplicadas."
         }
         metadata.connectionConditions.forEach { condition ->
-            require((condition.fromScene to condition.toScene) in edges) { "Hay una condición asociada a una conexión inexistente." }
+            require(condition.toScene != STORY_LOST_DESTINATION && (condition.fromScene to condition.toScene) in edges) { "Hay una condición asociada a una conexión inexistente." }
             require(condition.requiredObject == null || isSafeSegment(condition.requiredObject)) { "La referencia al objeto requerido no es válida." }
             require(condition.requiredObject != null || !condition.consumeRequiredObject) { "No se puede consumir un objeto si no se ha seleccionado ninguno." }
         }
@@ -299,6 +302,18 @@ object StoryRepository {
         val scenesRoot = ensureDirectory(File(target, SCENES_DIRECTORY))
         metadata.scenes.forEach { scene -> ensureDirectory(File(scenesRoot, safeSegment(scene, "La escena"))) }
         return read(target)
+    }
+
+    fun deleteSceneDirectory(story: StoredStory, sceneFolderName: String) {
+        val safeScene = safeSegment(sceneFolderName, "La escena")
+        val storyRoot = story.directory.canonicalFile
+        val scenesRoot = File(storyRoot, SCENES_DIRECTORY).canonicalFile
+        val target = File(scenesRoot, safeScene).canonicalFile
+        require(target.parentFile == scenesRoot && target != scenesRoot) { "La ubicación de la escena no es válida." }
+        if (target.exists()) {
+            check(target.isDirectory) { "El contenido de la escena no es una carpeta válida." }
+            check(target.walkBottomUp().all { it.delete() || !it.exists() }) { "No se pudo eliminar todo el contenido de la escena." }
+        }
     }
 
     fun readScene(story: StoredStory, sceneFolderName: String): StoredStoryScene {

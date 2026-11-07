@@ -41,10 +41,14 @@ La rama **main** se actualizó para incorporar íntegramente el estado de **refa
 
 Se ha acordado identificar este punto de partida mediante la etiqueta **v0.4.1-beta-estable**. La etiqueta está pendiente de creación en GitHub; por tanto, todavía no debe considerarse publicada. Cuando se cree, deberá señalar el commit de main que contiene esta documentación actualizada.
 
+## Cuentos interactivos
+
+El editor permite crear recorridos narrativos con conexiones, bifurcaciones y condiciones por objetos. Al eliminar una escena, sus archivos propios se borran definitivamente al guardar el cuento. Las conexiones que apuntaban a ella se conservan como `Lost` y aparecen marcadas como **HUÉRFANA** en el editor narrativo, donde pueden reasignarse o eliminarse. Un cuento con conexiones huérfanas no puede reproducirse hasta reparar su estructura.
+
 ## Versión
 
-- Versión de la aplicación: **0.4.1-beta**
-- Código de versión Android: **40**
+- Versión de la aplicación: **0.4.14-beta**
+- Código de versión Android: **53**
 - Paquete: es.aprenderparajugar
 - Tecnología: Kotlin y Jetpack Compose.
 

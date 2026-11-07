@@ -7,7 +7,8 @@ internal data class StoryStructureDiagnostics(
     val finalScenes: Set<String>,
     val cycleComponents: List<Set<String>>,
     val cyclesWithoutUnconditionalExit: List<Set<String>>,
-    val hasReachableFinal: Boolean
+    val hasReachableFinal: Boolean,
+    val orphanedConnections: List<Pair<String, String>>
 )
 
 internal object StoryStructureAnalysis {
@@ -24,7 +25,7 @@ internal object StoryStructureAnalysis {
         }
         val reachable = reachableFrom(startScene, adjacency)
         val unreachable = sceneSet - reachable
-        val finals = reachable.filterTo(linkedSetOf()) { adjacency[it].orEmpty().isEmpty() }
+        val finals = reachable.filterTo(linkedSetOf()) { adjacency[it].orEmpty().isEmpty() && STORY_LOST_DESTINATION !in connections[it].orEmpty() }
 
         val unconditionalAdjacency = scenes.associateWith { origin ->
             adjacency[origin].orEmpty().filter { destination ->
@@ -47,7 +48,8 @@ internal object StoryStructureAnalysis {
             finalScenes = finals,
             cycleComponents = components,
             cyclesWithoutUnconditionalExit = unsafeCycles,
-            hasReachableFinal = finals.isNotEmpty()
+            hasReachableFinal = finals.isNotEmpty(),
+            orphanedConnections = connections.flatMap { (origin, destinations) -> destinations.filter { it == STORY_LOST_DESTINATION }.map { origin to it } }
         )
     }
 

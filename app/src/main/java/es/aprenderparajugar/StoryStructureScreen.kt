@@ -75,6 +75,9 @@ internal fun StoryStructureScreen(
         )
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Comprobación de la estructura", fontWeight = FontWeight.Bold)
+            if (diagnostics.orphanedConnections.isNotEmpty()) {
+                Text("Hay ${diagnostics.orphanedConnections.size} conexión(es) huérfana(s). Reasigna su destino o elimina esas salidas antes de reproducir el cuento.", color = androidx.compose.ui.graphics.Color(0xFFB3261E))
+            }
             if (diagnostics.finalScenes.isEmpty()) {
                 Text(
                     "No se ha encontrado ninguna escena final alcanzable desde la escena inicial.",
@@ -101,7 +104,7 @@ internal fun StoryStructureScreen(
                 }
             }
             Text(
-                "Estas comprobaciones son orientativas. Las advertencias no impiden guardar ni activar el cuento.",
+                "Las conexiones huérfanas se guardan para que puedas repararlas después, pero impiden reproducir el cuento.",
                 color = androidx.compose.ui.graphics.Color(0xFF667085)
             )
         }

@@ -56,6 +56,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -620,6 +621,7 @@ private fun AprenderApp() {
     var storyEditorSummary by storyEditorState.summary
     var storyEditorScenes by storyEditorState.scenes
     var storyEditorSelectedScene by storyEditorState.selectedScene
+    var storyScenePendingDeletion by remember { mutableStateOf<String?>(null) }
     var storyAmbientDuringNarration by remember { mutableIntStateOf(preferences.getInt("story_ambient_during_narration_percent", 20).coerceIn(0, 30)) }
     var storySceneTest by remember { mutableStateOf<StoredStoryScene?>(null) }
     var storySceneTestAmbientOverride by remember { mutableStateOf(false) }
@@ -2933,12 +2935,32 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         )
                                     }
                                     Spacer(Modifier.width(8.dp))
+                                    OutlinedButton(onClick = { storyScenePendingDeletion = sceneName }) { Text("Eliminar") }
                                     Text("›", fontSize = 24.sp, color = Color(0xFF87451F))
                                 }
                             }
                         }
                         item {
                             OutlinedButton(onClick = { storyEditorScenes = storyEditorScenes + "Escena ${storyEditorScenes.size + 1}" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
+                        }
+                        if (storyScenePendingDeletion != null) {
+                            item {
+                                val sceneToDelete = storyScenePendingDeletion!!
+                                AlertDialog(
+                                    onDismissRequest = { storyScenePendingDeletion = null },
+                                    title = { Text("Eliminar escena") },
+                                    text = { Text("¿Quieres eliminar definitivamente «$sceneToDelete»? Se borrarán su ilustración, sus audios y el resto de archivos propios. Las escenas que apuntaban a ella conservarán una salida HUÉRFANA para que puedas repararla en la estructura narrativa.") },
+                                    confirmButton = {
+                                        Button(onClick = {
+                                            if (storyEditorState.removeScene(sceneToDelete)) {
+                                                storyEditorMessage = "Escena eliminada del borrador. Guarda el cuento para borrar definitivamente sus archivos."
+                                            }
+                                            storyScenePendingDeletion = null
+                                        }) { Text("Eliminar definitivamente") }
+                                    },
+                                    dismissButton = { OutlinedButton(onClick = { storyScenePendingDeletion = null }) { Text("Cancelar") } }
+                                )
+                            }
                         }
                         item {
                             OutlinedButton(
@@ -5645,6 +5667,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         }
         if (selectedStory == null) {
             screen = "stories"
+        } else if (selectedStory.metadata.connections.values.any { STORY_LOST_DESTINATION in it }) {
+            AlertDialog(
+                onDismissRequest = { screen = "stories"; selectedStoryPath = null },
+                title = { Text("Estructura narrativa incompleta") },
+                text = { Text("Este cuento contiene conexiones huérfanas. Entra en su editor, abre «Editar estructura narrativa» y reasigna o elimina las salidas marcadas en rojo antes de reproducirlo.") },
+                confirmButton = { Button(onClick = { screen = "stories"; selectedStoryPath = null }) { Text("Volver") } }
+            )
         } else {
             StoryPlayerScreen(
                 story = selectedStory,
