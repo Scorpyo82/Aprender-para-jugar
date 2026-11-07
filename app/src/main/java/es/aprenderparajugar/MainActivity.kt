@@ -2834,48 +2834,131 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                             item {
                                 val exerciseConflicts = LibraryPackageManager.exerciseConflicts(context, info, transferImportCategories)
-                                val unresolved = exerciseConflicts.filter { transferExerciseConflictDecisions[it.key] !in setOf("reuse", "overwrite") }
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val groupedConflicts = ContentStorage.Modality.entries.mapNotNull { modality ->
+                                    val conflicts = exerciseConflicts.filter { it.modality == modality }
+                                    if (conflicts.isEmpty()) null else modality to conflicts
+                                }
+                                val unresolvedCount = exerciseConflicts.count {
+                                    transferExerciseConflictDecisions[it.key] !in setOf("reuse", "overwrite")
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("Conflictos de ejercicios", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                     Text(
                                         if (exerciseConflicts.isEmpty()) "No hay ejercicios que coincidan con los que ya tienes."
-                                        else "${exerciseConflicts.size - unresolved.size} de ${exerciseConflicts.size} conflictos resueltos. Cada decisión se aplica solo al ejercicio indicado.",
+                                        else "${exerciseConflicts.size - unresolvedCount} de ${exerciseConflicts.size} conflictos resueltos. Puedes decidir por modalidad o individualmente.",
                                         fontSize = 12.sp, color = Color(0xFF667085)
                                     )
-                                    exerciseConflicts.forEach { conflict ->
-                                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (transferExerciseConflictDecisions[conflict.key] == "overwrite") Color(0xFFFFF4E5) else Color.White)) {
-                                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Text(conflict.incoming.metadata.title, fontWeight = FontWeight.Bold)
-                                                Text("${conflict.modality.directoryName} · ${conflict.categoryName}", fontSize = 12.sp, color = Color(0xFF667085))
-                                                Text("Ya existe un ejercicio con el mismo título o una carpeta de destino coincidente.", fontSize = 12.sp, color = Color(0xFF667085))
-                                                Text("En este dispositivo: ${conflict.existing.metadata.title}", fontSize = 12.sp)
-                                                Text("En el ZIP: ${conflict.incoming.metadata.title}", fontSize = 12.sp)
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    androidx.compose.material3.RadioButton(
-                                                        selected = transferExerciseConflictDecisions[conflict.key] == "reuse",
-                                                        onClick = { transferExerciseConflictDecisions = transferExerciseConflictDecisions + (conflict.key to "reuse") }
-                                                    )
-                                                    Text("Conservar el ejercicio del dispositivo", fontSize = 12.sp)
+                                    groupedConflicts.forEach { (modality, conflicts) ->
+                                        val modalityName = when (modality) {
+                                            ContentStorage.Modality.TARJETAS -> "Tarjetas"
+                                            ContentStorage.Modality.SECUENCIAS -> "Secuencias"
+                                            ContentStorage.Modality.PALABRAS -> "Palabras"
+                                        }
+                                        val groupResolved = conflicts.count {
+                                            transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite")
+                                        }
+                                        Card(
+                                            Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F9FC))
+                                        ) {
+                                            Column(
+                                                Modifier.fillMaxWidth().padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Text(
+                                                    "$modalityName · ${conflicts.size} conflictos",
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    "$groupResolved de ${conflicts.size} resueltos",
+                                                    fontSize = 12.sp,
+                                                    color = Color(0xFF667085)
+                                                )
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    OutlinedButton(
+                                                        modifier = Modifier.weight(1f),
+                                                        onClick = {
+                                                            transferExerciseConflictDecisions = transferExerciseConflictDecisions +
+                                                                conflicts.associate { it.key to "overwrite" }
+                                                        }
+                                                    ) {
+                                                        Text("Sustituir todo", fontSize = 12.sp)
+                                                    }
+                                                    OutlinedButton(
+                                                        modifier = Modifier.weight(1f),
+                                                        onClick = {
+                                                            transferExerciseConflictDecisions = transferExerciseConflictDecisions +
+                                                                conflicts.associate { it.key to "reuse" }
+                                                        }
+                                                    ) {
+                                                        Text("No sustituir nada", fontSize = 12.sp)
+                                                    }
                                                 }
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    androidx.compose.material3.RadioButton(
-                                                        selected = transferExerciseConflictDecisions[conflict.key] == "overwrite",
-                                                        onClick = { transferExerciseConflictDecisions = transferExerciseConflictDecisions + (conflict.key to "overwrite") }
-                                                    )
-                                                    Text("Sustituirlo por el del ZIP", fontSize = 12.sp)
-                                                }
-                                                if (transferExerciseConflictDecisions[conflict.key] == "overwrite") {
-                                                    Text(
-                                                        if (transferImportStatistics) "También se importarán las estadísticas incluidas en el ZIP."
-                                                        else "Se conservarán las estadísticas locales existentes.",
-                                                        fontSize = 11.sp, color = Color(0xFF9A6700)
-                                                    )
+                                                conflicts.forEach { conflict ->
+                                                    Card(
+                                                        Modifier.fillMaxWidth(),
+                                                        colors = CardDefaults.cardColors(
+                                                            containerColor = if (transferExerciseConflictDecisions[conflict.key] == "overwrite") Color(0xFFFFF4E5) else Color.White
+                                                        )
+                                                    ) {
+                                                        Column(
+                                                            Modifier.padding(12.dp),
+                                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                                        ) {
+                                                            Text(conflict.incoming.metadata.title, fontWeight = FontWeight.Bold)
+                                                            Text(conflict.categoryName, fontSize = 12.sp, color = Color(0xFF667085))
+                                                            Text(
+                                                                "Ya existe un ejercicio con el mismo título o una carpeta de destino coincidente.",
+                                                                fontSize = 12.sp,
+                                                                color = Color(0xFF667085)
+                                                            )
+                                                            Text("En este dispositivo: ${conflict.existing.metadata.title}", fontSize = 12.sp)
+                                                            Text("En el ZIP: ${conflict.incoming.metadata.title}", fontSize = 12.sp)
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                androidx.compose.material3.RadioButton(
+                                                                    selected = transferExerciseConflictDecisions[conflict.key] == "reuse",
+                                                                    onClick = {
+                                                                        transferExerciseConflictDecisions = transferExerciseConflictDecisions +
+                                                                            (conflict.key to "reuse")
+                                                                    }
+                                                                )
+                                                                Text("Conservar el ejercicio del dispositivo", fontSize = 12.sp)
+                                                            }
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                androidx.compose.material3.RadioButton(
+                                                                    selected = transferExerciseConflictDecisions[conflict.key] == "overwrite",
+                                                                    onClick = {
+                                                                        transferExerciseConflictDecisions = transferExerciseConflictDecisions +
+                                                                            (conflict.key to "overwrite")
+                                                                    }
+                                                                )
+                                                                Text("Sustituirlo por el del ZIP", fontSize = 12.sp)
+                                                            }
+                                                            if (transferExerciseConflictDecisions[conflict.key] == "overwrite") {
+                                                                Text(
+                                                                    if (transferImportStatistics) "También se importarán las estadísticas incluidas en el ZIP."
+                                                                    else "Se conservarán las estadísticas locales existentes.",
+                                                                    fontSize = 11.sp,
+                                                                    color = Color(0xFF9A6700)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                    if (unresolved.isNotEmpty()) {
-                                        Text("Debes resolver todos los conflictos antes de importar.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFB3261E))
+                                    if (unresolvedCount > 0) {
+                                        Text(
+                                            "Debes resolver todos los conflictos antes de importar.",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFFB3261E)
+                                        )
                                     }
                                 }
                             }
