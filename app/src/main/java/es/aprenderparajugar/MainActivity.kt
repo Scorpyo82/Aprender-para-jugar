@@ -1605,7 +1605,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             xiaomiWindowPermissionDone
                                         parentSection = if (deviceSetupComplete) "menu" else "device-setup"
                                     }
-                                }, label = { Text(if (!rewardMode.isStars) "✓  ⏱ Tiempo" else "⏱ Tiempo", fontWeight = if (!rewardMode.isStars) FontWeight.Bold else FontWeight.Medium) }, colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(containerColor = Color(0xFFF7F7FA), labelColor = Color(0xFF475467), selectedContainerColor = Color(0xFF5B3A8A), selectedLabelColor = Color.White))
+                                }, label = { Text(if (!rewardMode.isStars) "✓  ⏱ Tiempo" else "⏱ Tiempo", fontWeight = if (!rewardMode.isStars) FontWeight.Bold else FontWeight.Medium) }, colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(containerColor = Color(0xFFF7F7FA), labelColor = Color(0xFF475467), selectedContainerColor = Color(0xFF2E7D32), selectedLabelColor = Color.White))
                                 FilterChip(selected = rewardMode.isStars, onClick = {
                                     if (!rewardMode.isStars) {
                                         rewardMode = RewardMode.STARS
@@ -1616,7 +1616,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").putInt("balance_seconds", balanceSeconds).putLong("play_deadline_ms", 0L).putBoolean("play_session_authorized", false).putBoolean("play_paused_for_screen_lock", false).apply()
                                         context.stopService(Intent(context, PlayTimeService::class.java))
                                     }
-                                }, label = { Text(if (rewardMode.isStars) "✓  ⭐ Estrellas" else "⭐ Estrellas", fontWeight = if (rewardMode.isStars) FontWeight.Bold else FontWeight.Medium) }, colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(containerColor = Color(0xFFF7F7FA), labelColor = Color(0xFF475467), selectedContainerColor = Color(0xFF5B3A8A), selectedLabelColor = Color.White))
+                                }, label = { Text(if (rewardMode.isStars) "✓  ⭐ Estrellas" else "⭐ Estrellas", fontWeight = if (rewardMode.isStars) FontWeight.Bold else FontWeight.Medium) }, colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(containerColor = Color(0xFFF7F7FA), labelColor = Color(0xFF475467), selectedContainerColor = Color(0xFF2E7D32), selectedLabelColor = Color.White))
                             }
                             
                         }
