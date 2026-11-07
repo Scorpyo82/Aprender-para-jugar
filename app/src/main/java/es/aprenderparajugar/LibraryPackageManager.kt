@@ -339,6 +339,67 @@ internal object LibraryPackageManager {
     }
 
     /**
+     * Devuelve las dependencias de objetos de los cuentos locales seleccionados,
+     * agrupadas por clave de objeto y con los títulos de los cuentos que las requieren.
+     */
+    fun requiredExportObjects(context: Context, selectedStories: Set<String>): Map<String, List<String>> {
+        if (selectedStories.isEmpty()) return emptyMap()
+        val availableObjects = ObjectRepository.list(context)
+        val requiredByObject = linkedMapOf<String, MutableSet<String>>()
+        StoryRepository.list(context)
+            .filter { "${it.collection}/${it.folderName}" in selectedStories }
+            .forEach { story ->
+                val referencedNames = linkedSetOf<String>()
+                story.metadata.connectionConditions.mapNotNullTo(referencedNames) { it.requiredObject }
+                story.metadata.scenes.forEach { sceneName ->
+                    val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                    if (sceneFile.isFile) {
+                        val scene = StoryRepository.readScene(story, sceneName)
+                        (listOfNotNull(scene.metadata.awardedObject, scene.metadata.requiredObject) +
+                            scene.metadata.awardedObjects + scene.metadata.unlockedObjects).forEach { referencedNames.add(it) }
+                    }
+                }
+                referencedNames.forEach { folderName ->
+                    val storedObject = availableObjects.firstOrNull { it.folderName == folderName }
+                    if (storedObject != null) {
+                        requiredByObject.getOrPut("${storedObject.collection}/${storedObject.folderName}") { linkedSetOf() }
+                            .add(story.metadata.title)
+                    }
+                }
+            }
+        return requiredByObject.mapValues { it.value.toList() }
+    }
+
+    /**
+     * Devuelve las dependencias de objetos de los cuentos seleccionados en el ZIP.
+     */
+    fun requiredImportObjects(packageInfo: PackageInfo, selectedStories: Set<String>): Map<String, List<String>> {
+        if (selectedStories.isEmpty()) return emptyMap()
+        val requiredByDirectory = linkedMapOf<String, MutableSet<String>>()
+        packageInfo.stories.filter { it.key in selectedStories }.forEach { info ->
+            val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
+            val referencedNames = linkedSetOf<String>()
+            story.metadata.connectionConditions.mapNotNullTo(referencedNames) { it.requiredObject }
+            story.metadata.scenes.forEach { sceneName ->
+                val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
+                if (sceneFile.isFile) {
+                    val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
+                    (listOfNotNull(scene.awardedObject, scene.requiredObject) +
+                        scene.awardedObjects + scene.unlockedObjects).forEach { referencedNames.add(it) }
+                }
+            }
+            referencedNames.forEach { directory ->
+                if (packageInfo.objects.any { it.directory == directory }) {
+                    requiredByDirectory.getOrPut(directory) { linkedSetOf() }.add(info.title)
+                }
+            }
+        }
+        return packageInfo.objects.mapNotNull { objectInfo ->
+            requiredByDirectory[objectInfo.directory]?.let { objectInfo.key to it.toList() }
+        }.toMap()
+    }
+
+    /**
      * Compara las dependencias de los cuentos seleccionados con los objetos locales.
      * La identidad se determina por el nombre de carpeta; la imagen se compara por bytes.
      */
