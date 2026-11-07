@@ -996,6 +996,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferImportObjects by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferObjectConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var transferStoryConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferExerciseConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var transferConflictIndex by remember { mutableIntStateOf(0) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
     var transferImportStatistics by remember { mutableStateOf(false) }
@@ -1176,6 +1177,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 transferImportObjects = emptySet()
                 transferObjectConflictDecisions = emptyMap()
                 transferStoryConflictDecisions = emptyMap()
+                transferExerciseConflictDecisions = emptyMap()
                 transferConflictIndex = 0
                 transferReplaceDuplicates = false
                 transferImportStatistics = false
@@ -2831,14 +2833,51 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                             }
                             item {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = transferReplaceDuplicates, onCheckedChange = { transferReplaceDuplicates = it })
-                                    Column {
-                                        Text("Sustituir ejercicios existentes con el mismo nombre", fontWeight = FontWeight.SemiBold)
-                                        Text("La coincidencia se busca dentro de la misma modalidad y categoría.", fontSize = 12.sp, color = Color(0xFF667085))
+                                val exerciseConflicts = LibraryPackageManager.exerciseConflicts(context, info, transferImportCategories)
+                                val unresolved = exerciseConflicts.filter { transferExerciseConflictDecisions[it.key] !in setOf("reuse", "overwrite") }
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Conflictos de ejercicios", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        if (exerciseConflicts.isEmpty()) "No hay ejercicios que coincidan con los que ya tienes."
+                                        else "${exerciseConflicts.size - unresolved.size} de ${exerciseConflicts.size} conflictos resueltos. Cada decisión se aplica solo al ejercicio indicado.",
+                                        fontSize = 12.sp, color = Color(0xFF667085)
+                                    )
+                                    exerciseConflicts.forEach { conflict ->
+                                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (transferExerciseConflictDecisions[conflict.key] == "overwrite") Color(0xFFFFF4E5) else Color.White)) {
+                                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Text(conflict.incoming.metadata.title, fontWeight = FontWeight.Bold)
+                                                Text("${conflict.modality.directoryName} · ${conflict.categoryName}", fontSize = 12.sp, color = Color(0xFF667085))
+                                                Text("Ya existe un ejercicio con el mismo título o una carpeta de destino coincidente.", fontSize = 12.sp, color = Color(0xFF667085))
+                                                Text("En este dispositivo: ${conflict.existing.metadata.title}", fontSize = 12.sp)
+                                                Text("En el ZIP: ${conflict.incoming.metadata.title}", fontSize = 12.sp)
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    androidx.compose.material3.RadioButton(
+                                                        selected = transferExerciseConflictDecisions[conflict.key] == "reuse",
+                                                        onClick = { transferExerciseConflictDecisions = transferExerciseConflictDecisions + (conflict.key to "reuse") }
+                                                    )
+                                                    Text("Conservar el ejercicio del dispositivo", fontSize = 12.sp)
+                                                }
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    androidx.compose.material3.RadioButton(
+                                                        selected = transferExerciseConflictDecisions[conflict.key] == "overwrite",
+                                                        onClick = { transferExerciseConflictDecisions = transferExerciseConflictDecisions + (conflict.key to "overwrite") }
+                                                    )
+                                                    Text("Sustituirlo por el del ZIP", fontSize = 12.sp)
+                                                }
+                                                if (transferExerciseConflictDecisions[conflict.key] == "overwrite") {
+                                                    Text(
+                                                        if (transferImportStatistics) "También se importarán las estadísticas incluidas en el ZIP."
+                                                        else "Se conservarán las estadísticas locales existentes.",
+                                                        fontSize = 11.sp, color = Color(0xFF9A6700)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (unresolved.isNotEmpty()) {
+                                        Text("Debes resolver todos los conflictos antes de importar.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFB3261E))
                                     }
                                 }
-                                Text(if (transferImportStatistics) "Al sustituir un ejercicio, se incorporarán también las estadísticas incluidas en el ZIP." else "Si sustituyes un ejercicio sin importar estadísticas, se conservarán las estadísticas que ya tenía en este dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
                             }
                             item {
                                 val finalConflictReview = LibraryPackageManager.objectConflicts(context, info, transferImportStories, transferImportObjects)
@@ -2859,7 +2898,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             item {
                                 Button(onClick = {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions, transferImportObjects)
+                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, false, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions, transferImportObjects, transferExerciseConflictDecisions)
                                         // Mark the exact release as installed only after the import completed
                                         // successfully. This state survives deletion of the downloaded ZIP.
                                         transferRemoteLibraryName?.let { packageName ->
@@ -2930,7 +2969,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         transferMessage = "No se pudo completar la importación: ${e.message ?: "error"}"
                                     }
                                 }, enabled = (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
-                                    LibraryPackageManager.objectConflicts(context, info, transferImportStories).all { it.incoming.folderName in transferObjectConflictDecisions } &&
+                                    LibraryPackageManager.exerciseConflicts(context, info, transferImportCategories).all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
+                                    LibraryPackageManager.objectConflicts(context, info, transferImportStories, transferImportObjects).all { it.incoming.folderName in transferObjectConflictDecisions } &&
                                     info.stories.filter { it.key in transferImportStories }.all { incomingStory ->
                                         val duplicate = StoryRepository.list(context).any {
                                             it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
@@ -6338,6 +6378,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             transferImportObjects = emptySet()
                             transferObjectConflictDecisions = emptyMap()
                             transferStoryConflictDecisions = emptyMap()
+                            transferExerciseConflictDecisions = emptyMap()
                             transferConflictIndex = 0
                             transferReplaceDuplicates = false
                             transferImportStatistics = false
