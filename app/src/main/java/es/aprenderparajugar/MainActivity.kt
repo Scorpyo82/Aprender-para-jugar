@@ -1004,6 +1004,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var remoteLibraryLoading by remember { mutableStateOf(false) }
     var remoteLibraryMessage by remember { mutableStateOf("") }
     val remoteLibraryScope = rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(parentSection) {
+        if (parentSection == "basic-library" && remoteLibraryPackages.isEmpty() && !remoteLibraryLoading) {
+            remoteLibraryLoading = true
+            try {
+                remoteLibraryPackages = withContext(Dispatchers.IO) { RemoteLibraryRepository.listPackages() }
+                if (remoteLibraryPackages.isEmpty()) remoteLibraryMessage = "Todavía no hay paquetes ZIP publicados."
+            } catch (error: Exception) {
+                remoteLibraryMessage = "No se ha podido consultar GitHub: ${error.message ?: "error de conexión"}"
+            } finally {
+                remoteLibraryLoading = false
+            }
+        }
+    }
     var deleteSelectedItems by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteExpandedCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteConfirmArmed by remember { mutableStateOf(false) }
