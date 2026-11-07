@@ -1940,6 +1940,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item {
                             Text("Las descargas se realizan en segundo plano. Puedes seguir consultando el catálogo; solo se permite una descarga simultánea.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
+                    }
                     "library-transfer" -> {
                         item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Elige qué operación quieres realizar. Cada proceso tiene su propia pantalla para mantener separadas la importación y la exportación.", fontSize = 14.sp, color = Color(0xFF667085)) }
