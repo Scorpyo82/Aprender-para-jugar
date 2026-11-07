@@ -121,6 +121,7 @@ internal class StoryPlaybackEngine(
         val metadata = runCatching { StoryRepository.readScene(story, currentSceneFolder).metadata }.getOrNull()
             ?: return null
         if (metadata.awardTiming != "onExit") return null
+        ObjectUnlockRepository.unlock(context, metadata.unlockedObjects)
         val objectFolders = (listOfNotNull(metadata.awardedObject) + metadata.awardedObjects).distinct()
         val collectible = objectFolders.asSequence()
             .mapNotNull { folder -> ObjectRepository.list(context).firstOrNull { it.folderName == folder } }
