@@ -589,6 +589,7 @@ private fun AprenderApp() {
     var storyObjectEditingFolder by storyObjectEditorState.editingFolder
     var storyObjectImageChanged by storyObjectEditorState.imageChanged
     var storyObjectAvailableInStore by storyObjectEditorState.availableInStore
+    var storyObjectRequiresUnlock by storyObjectEditorState.requiresUnlock
     var storyObjectStorePriceMinutes by storyObjectEditorState.storePriceMinutes
     var storyObjectCollectible by storyObjectEditorState.collectible
     var storyObjectMessage by storyObjectEditorState.message
@@ -3448,6 +3449,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                                 Text("Indica si este objeto se ofrece en la tienda del juego.", fontSize = 12.sp, color = Color(0xFF667085))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = storyObjectRequiresUnlock && storyObjectAvailableInStore, enabled = storyObjectAvailableInStore, onCheckedChange = { storyObjectRequiresUnlock = it })
+                                    Text("Requiere desbloqueo", fontWeight = FontWeight.SemiBold, color = if (storyObjectAvailableInStore) Color.Unspecified else Color(0xFF98A2B3))
+                                }
+                                Text("El niño tendrá que desbloquearlo en un cuento antes de que aparezca para comprarlo.", fontSize = 12.sp, color = Color(0xFF667085))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Checkbox(checked = storyObjectCollectible, onCheckedChange = { storyObjectCollectible = it })
                                     Text("Es un coleccionable", fontWeight = FontWeight.SemiBold)
                                 }
@@ -5703,6 +5709,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         StoryObjectInventoryScreen(
             objects = storedStoryObjects,
             ownedFolders = storedInventoryFolders,
+            unlockedFolders = ObjectUnlockRepository.list(context),
             balanceSeconds = balanceSeconds,
             isStarsMode = rewardMode.isStars,
             message = storyInventoryMessage,
