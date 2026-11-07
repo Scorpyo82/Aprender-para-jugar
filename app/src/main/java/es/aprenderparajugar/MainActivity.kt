@@ -3548,34 +3548,42 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         val collectionObjects = storedStoryObjects.filter { it.collection == ObjectRepository.collectionFolderName(name) }
                                         Text("${collectionObjects.size} objetos", color = Color(0xFF667085))
                                         collectionObjects.forEach { stored ->
-                                            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                                AndroidView(
-                                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
-                                                    update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
-                                                    modifier = Modifier.width(64.dp).height(64.dp)
-                                                )
-                                                Column(Modifier.weight(1f)) {
-                                                    Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
-                                                }
-                                                val isInInventory = storedInventoryFolders.contains(stored.folderName)
-                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                Row(
+                                                    Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                ) {
+                                                    AndroidView(
+                                                        factory = { ctx -> ImageView(ctx).apply {
+                                                            scaleType = ImageView.ScaleType.FIT_CENTER
+                                                            adjustViewBounds = false
+                                                        } },
+                                                        update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
+                                                        modifier = Modifier.size(64.dp)
+                                                    )
+                                                    Column(Modifier.weight(1f)) {
+                                                        Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
+                                                    }
                                                     OutlinedButton(onClick = {
                                                         storyObjectEditorState.beginEdit(stored)
                                                         storyObjectInventoryState.refresh(context)
                                                         parentSection = "stories-object-create"
                                                     }) { Text("Editar") }
-                                                    OutlinedButton(
-                                                        onClick = {
-                                                            val error = storyObjectInventoryState.toggle(context, stored.folderName)
-                                                            storyObjectCollectionMessage = error ?: if (isInInventory) {
-                                                                "${stored.metadata.name} retirado del inventario."
-                                                            } else {
-                                                                "${stored.metadata.name} añadido al inventario."
-                                                            }
+                                                }
+                                                val isInInventory = storedInventoryFolders.contains(stored.folderName)
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        val error = storyObjectInventoryState.toggle(context, stored.folderName)
+                                                        storyObjectCollectionMessage = error ?: if (isInInventory) {
+                                                            "${stored.metadata.name} retirado del inventario."
+                                                        } else {
+                                                            "${stored.metadata.name} añadido al inventario."
                                                         }
-                                                    ) {
-                                                        Text(if (isInInventory) "Retirar del inventario" else "Añadir al inventario")
-                                                    }
+                                                    },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text(if (isInInventory) "Retirar del inventario" else "Añadir al inventario")
                                                 }
                                             }
                                         }
@@ -3618,7 +3626,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                                             ) {
                                                 AndroidView(
-                                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                                    factory = { ctx -> ImageView(ctx).apply {
+                                                        scaleType = ImageView.ScaleType.FIT_CENTER
+                                                        adjustViewBounds = false
+                                                    } },
                                                     update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
                                                     modifier = Modifier.size(64.dp)
                                                 )
