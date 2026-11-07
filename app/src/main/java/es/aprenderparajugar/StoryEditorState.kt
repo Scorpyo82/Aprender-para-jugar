@@ -29,6 +29,8 @@ internal class StoryEditorState(private val context: Context) {
     val sceneText: MutableState<String> = mutableStateOf("")
     val objectTiming: MutableState<String> = mutableStateOf("Al salir")
     val awardedObjectByScene: MutableState<Map<String, String?>> = mutableStateOf(emptyMap())
+    val awardedObjectsByScene: MutableState<Map<String, List<String>>> = mutableStateOf(emptyMap())
+    val unlockedObjectsByScene: MutableState<Map<String, List<String>>> = mutableStateOf(emptyMap())
     val objectMenuExpanded: MutableState<Boolean> = mutableStateOf(false)
     val keepAmbientByScene: MutableState<Map<String, Boolean>> = mutableStateOf(emptyMap())
     val collectionMenuExpanded: MutableState<Boolean> = mutableStateOf(false)
@@ -94,6 +96,8 @@ internal class StoryEditorState(private val context: Context) {
         ambientAudio.value = ambientAudio.value - sceneName
         narrationAudio.value = narrationAudio.value - sceneName
         awardedObjectByScene.value = awardedObjectByScene.value - sceneName
+        awardedObjectsByScene.value = awardedObjectsByScene.value - sceneName
+        unlockedObjectsByScene.value = unlockedObjectsByScene.value - sceneName
         keepAmbientByScene.value = keepAmbientByScene.value - sceneName
         if (selectedScene.value == sceneName) {
             selectedScene.value = ""
@@ -159,7 +163,9 @@ internal class StoryEditorState(private val context: Context) {
                         keepPreviousAmbient = keepAmbientByScene.value[selectedScene.value] ?: false,
                         narrationAudio = if (narrationAudio.value.containsKey(selectedScene.value)) narrationAudio.value[selectedScene.value] else existing?.narrationAudio,
                         awardedObject = if (awardedObjectByScene.value.containsKey(selectedScene.value)) awardedObjectByScene.value[selectedScene.value] else existing?.awardedObject,
-                        awardTiming = if (objectTiming.value == "Al entrar") "onEnter" else "onExit"
+                        awardTiming = if (objectTiming.value == "Al entrar") "onEnter" else "onExit",
+                        awardedObjects = awardedObjectsByScene.value[selectedScene.value] ?: existing?.awardedObjects.orEmpty(),
+                        unlockedObjects = unlockedObjectsByScene.value[selectedScene.value] ?: existing?.unlockedObjects.orEmpty()
                     )
                 } else existing ?: StorySceneMetadata(title = scenes.value[index])
                 StoryRepository.saveScene(stored, sceneFolder, sceneMetadata)
