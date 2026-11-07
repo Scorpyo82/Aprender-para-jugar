@@ -80,6 +80,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
@@ -101,6 +102,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     // Start the earned-time countdown at the first lifecycle transition away from the app.
@@ -996,6 +1000,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferImportStatistics by remember { mutableStateOf(false) }
     var transferImportUsageStatistics by remember { mutableStateOf(false) }
     var transferMessage by remember { mutableStateOf("") }
+    var remoteLibraryPackages by remember { mutableStateOf<List<RemoteLibraryPackage>>(emptyList()) }
+    var remoteLibraryLoading by remember { mutableStateOf(false) }
+    var remoteLibraryMessage by remember { mutableStateOf("") }
+    val remoteLibraryScope = rememberCoroutineScope()
     var deleteSelectedItems by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteExpandedCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteConfirmArmed by remember { mutableStateOf(false) }
@@ -1781,29 +1789,106 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "basic-library" -> {
                         item {
-                            Text("Biblioteca básica", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Text("Puedes descargar un paquete inicial con ejercicios de Tarjetas, Secuencias y Palabras. La descarga se realizará desde GitHub en el navegador.", fontSize = 14.sp, color = Color(0xFF667085))
+                            Text("Bibliotecas disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text("Paquetes ZIP publicados en GitHub. Puedes descargarlos e importar solo el contenido que necesites.", fontSize = 14.sp, color = Color(0xFF667085))
                         }
                         item {
-                            Button(
+                            OutlinedButton(
                                 onClick = {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Scorpyo82/Aprender-para-jugar/releases/download/biblioteca-v1.0/APJ-biblioteca.zip")))
+                                    remoteLibraryScope.launch {
+                                        remoteLibraryLoading = true
+                                        remoteLibraryMessage = ""
+                                        try {
+                                            remoteLibraryPackages = withContext(Dispatchers.IO) { RemoteLibraryRepository.listPackages() }
+                                            if (remoteLibraryPackages.isEmpty()) remoteLibraryMessage = "Todavía no hay paquetes ZIP publicados."
+                                        } catch (error: Exception) {
+                                            remoteLibraryMessage = "No se ha podido consultar GitHub: ${error.message ?: "error de conexión"}"
+                                        } finally {
+                                            remoteLibraryLoading = false
+                                        }
+                                    }
                                 },
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("⬇️ Descargar biblioteca básica (7,65 MB)") }
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !remoteLibraryLoading
+                            ) { Text(if (remoteLibraryLoading) "Consultando GitHub…" else "↻ Actualizar lista") }
+                        }
+                        if (remoteLibraryMessage.isNotBlank()) {
+                            item { Text(remoteLibraryMessage, fontSize = 13.sp, color = if (remoteLibraryMessage.startsWith("No se ha podido")) Color(0xFFB3261E) else Color(0xFF667085)) }
+                        }
+                        if (remoteLibraryPackages.isEmpty() && !remoteLibraryLoading && remoteLibraryMessage.isBlank()) {
+                            item { Text("Pulsa «Actualizar lista» para consultar los paquetes disponibles.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                        }
+                        remoteLibraryPackages.forEach { remotePackage ->
+                            val savedSha = RemoteLibraryRepository.downloadedSha(context, remotePackage.name)
+                            val isUpdate = savedSha != null && savedSha != remotePackage.sha
+                            val isDownloaded = savedSha == remotePackage.sha
+                            item {
+                                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(remotePackage.name, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                        Text(RemoteLibraryRepository.formatSize(remotePackage.size), fontSize = 12.sp, color = Color(0xFF667085))
+                                        Text(
+                                            when {
+                                                isUpdate -> "Actualización disponible"
+                                                isDownloaded -> "Ya descargado"
+                                                else -> "Disponible"
+                                            },
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = when {
+                                                isUpdate -> Color(0xFFB26A00)
+                                                isDownloaded -> Color(0xFF24733B)
+                                                else -> Color(0xFF667085)
+                                            }
+                                        )
+                                        Button(
+                                            onClick = {
+                                                remoteLibraryScope.launch {
+                                                    remoteLibraryLoading = true
+                                                    remoteLibraryMessage = ""
+                                                    try {
+                                                        val file = withContext(Dispatchers.IO) {
+                                                            RemoteLibraryRepository.download(context, remotePackage)
+                                                        }
+                                                        val inspected = withContext(Dispatchers.IO) {
+                                                            LibraryPackageManager.inspect(context, Uri.fromFile(file))
+                                                        }
+                                                        transferPackage?.let { LibraryPackageManager.discard(it) }
+                                                        transferPackage = inspected
+                                                        transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
+                                                        transferImportStories = inspected.stories.map { it.key }.toSet()
+                                                        transferImportObjects = emptySet()
+                                                        transferObjectConflictDecisions = emptyMap()
+                                                        transferStoryConflictDecisions = emptyMap()
+                                                        transferConflictIndex = 0
+                                                        transferReplaceDuplicates = false
+                                                        transferImportStatistics = false
+                                                        transferImportUsageStatistics = false
+                                                        RemoteLibraryRepository.saveDownloaded(context, remotePackage.name, remotePackage.sha)
+                                                        transferMessage = "Paquete descargado y validado. Selecciona el contenido que deseas importar."
+                                                        parentSection = "library-import"
+                                                    } catch (error: Exception) {
+                                                        remoteLibraryMessage = "No se ha podido descargar o abrir el paquete: ${error.message ?: "archivo no válido"}"
+                                                    } finally {
+                                                        remoteLibraryLoading = false
+                                                    }
+                                                }
+                                            },
+                                            enabled = !remoteLibraryLoading,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(when {
+                                                isUpdate -> "⬇️ Descargar actualización"
+                                                isDownloaded -> "↻ Volver a importar"
+                                                else -> "⬇️ Descargar e importar"
+                                            })
+                                        }
+                                    }
+                                }
+                            }
                         }
                         item {
-                            Text("Cómo instalarla", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                            Text("1. Pulsa el botón de descarga. Si Android pregunta con qué aplicación abrir el enlace, elige tu navegador.", fontSize = 14.sp)
-                            Text("2. Espera a que termine la descarga. El archivo se llamará APJ-biblioteca.zip y normalmente quedará en la carpeta Descargas.", fontSize = 14.sp)
-                            Text("3. Vuelve a Aprender para jugar y entra en Control parental → Configuración general → Importar y exportar bibliotecas → Importar bibliotecas.", fontSize = 14.sp)
-                            Text("4. Selecciona APJ-biblioteca.zip en Descargas. La aplicación comprobará el archivo y mostrará las modalidades y categorías incluidas.", fontSize = 14.sp)
-                            Text("5. Deja seleccionadas todas las categorías de Tarjetas, Secuencias y Palabras para instalar la biblioteca completa.", fontSize = 14.sp)
-                            Text("6. No actives la importación de estadísticas si aparece. Deja también desmarcada «Sustituir ejercicios existentes con el mismo nombre» para no sobrescribir contenido que ya tengas.", fontSize = 14.sp)
-                            Text("7. Pulsa «Importar selección». Al terminar, volverás a la pantalla de Importar y exportar bibliotecas.", fontSize = 14.sp)
-                        }
-                        item {
-                            Text("La dificultad indicada en los ejercicios es orientativa. Adapta la selección y el acompañamiento al ritmo y las características de cada niño o niña.", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text("Los paquetes se detectan automáticamente. Si sustituyes un ZIP por otro con el mismo nombre en GitHub, aparecerá como actualización cuando cambie su SHA-1.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                     }
                     "library-transfer" -> {
