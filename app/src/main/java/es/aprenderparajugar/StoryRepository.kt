@@ -38,7 +38,9 @@ data class StorySceneMetadata(
     val narrationAudio: String? = null,
     val awardedObject: String? = null,
     val awardTiming: String = "onExit",
-    val requiredObject: String? = null
+    val requiredObject: String? = null,
+    val awardedObjects: List<String> = emptyList(),
+    val unlockedObjects: List<String> = emptyList()
 )
 
 data class StoredStory(
@@ -171,6 +173,8 @@ object StorySceneJsonCodec {
             .put("awardedObject", metadata.awardedObject ?: JSONObject.NULL)
             .put("awardTiming", metadata.awardTiming)
             .put("requiredObject", metadata.requiredObject ?: JSONObject.NULL)
+            .put("awardedObjects", JSONArray(metadata.awardedObjects.distinct()))
+            .put("unlockedObjects", JSONArray(metadata.unlockedObjects.distinct()))
     }
 
     fun decode(json: JSONObject): StorySceneMetadata =
@@ -184,7 +188,9 @@ object StorySceneJsonCodec {
             narrationAudio = json.optString("narrationAudio").takeNullable(),
             awardedObject = json.optString("awardedObject").takeNullable(),
             awardTiming = json.optString("awardTiming", "onExit"),
-            requiredObject = json.optString("requiredObject").takeNullable()
+            requiredObject = json.optString("requiredObject").takeNullable(),
+            awardedObjects = json.optJSONArray("awardedObjects").toStringList(),
+            unlockedObjects = json.optJSONArray("unlockedObjects").toStringList()
         ).also(::validate)
 
     private fun validate(metadata: StorySceneMetadata) {
@@ -194,12 +200,13 @@ object StorySceneJsonCodec {
         require(metadata.awardTiming == "onEnter" || metadata.awardTiming == "onExit") {
             "El momento de obtención del objeto no es válido."
         }
-        listOfNotNull(metadata.awardedObject, metadata.requiredObject).forEach {
+        (listOfNotNull(metadata.awardedObject, metadata.requiredObject) + metadata.awardedObjects + metadata.unlockedObjects).forEach {
             require(StoryJsonCodec.isSafeSegment(it)) { "La referencia a un objeto no es válida." }
         }
     }
 
     private fun String.takeNullable(): String? = takeIf { isNotBlank() && it != "null" }
+    private fun JSONArray?.toStringList(): List<String> = this?.let { array -> (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) } } ?: emptyList()
 }
 
 /**
