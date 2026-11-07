@@ -3601,29 +3601,34 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         if (inventoryObjects.isEmpty()) {
                             item { Text("El inventario está vacío. Añade objetos desde «Editar objeto».", color = Color(0xFF667085)) }
                         } else {
-                            inventoryObjects.forEach { stored ->
-                                item {
-                                    Card(
-                                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                                    ) {
-                                        Row(
-                                            Modifier.fillMaxWidth().padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            item {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    items(inventoryObjects, key = { it.folderName }) { stored ->
+                                        Card(
+                                            Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                            colors = CardDefaults.cardColors(containerColor = Color.White)
                                         ) {
-                                            AndroidView(
-                                                factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
-                                                update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
-                                                modifier = Modifier.width(64.dp).height(64.dp)
-                                            )
-                                            Column(Modifier.weight(1f)) {
-                                                Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
-                                                Text(stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
+                                            Row(
+                                                Modifier.fillMaxWidth().padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                AndroidView(
+                                                    factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
+                                                    update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
+                                                    modifier = Modifier.size(64.dp)
+                                                )
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
+                                                    Text(stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
+                                                }
+                                                OutlinedButton(onClick = {
+                                                    storyObjectInventoryState.remove(context, stored.folderName)?.let { storyObjectMessage = it }
+                                                }) { Text("Retirar") }
                                             }
-                                            OutlinedButton(onClick = {
-                                                storyObjectInventoryState.remove(context, stored.folderName)?.let { storyObjectMessage = it }
-                                            }) { Text("Retirar") }
                                         }
                                     }
                                 }
