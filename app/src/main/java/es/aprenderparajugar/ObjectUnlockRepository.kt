@@ -25,7 +25,7 @@ object ObjectUnlockRepository {
     fun contains(context: Context, folderName: String): Boolean = folderName in list(context)
 
     fun unlock(context: Context, folderNames: Collection<String>): Set<String> {
-        val validFolders = ObjectRepository.list(context).map { it.folderName }.toSet()
+        val validFolders = ObjectRepository.list(context).filter { it.metadata.availableInStore && it.metadata.requiresUnlock }.map { it.folderName }.toSet()
         val updated = list(context) + folderNames.filter { it in validFolders }
         save(context, updated)
         return updated
