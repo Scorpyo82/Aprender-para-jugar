@@ -1908,35 +1908,47 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         item { androidx.compose.material3.HorizontalDivider() }
                         val availableObjectsForExport = ObjectRepository.list(context)
+                        val requiredExportObjects = LibraryPackageManager.requiredExportObjects(context, transferExportStories)
                         item {
                             Text("Objetos y coleccionables", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("Puedes exportarlos por separado, sin incluir cuentos. Se conservarán imágenes, GIF, precios y configuración.", fontSize = 12.sp, color = Color(0xFF667085))
+                            Text("Los objetos requeridos por los cuentos seleccionados se incluirán automáticamente. También puedes seleccionar objetos por separado.", fontSize = 12.sp, color = Color(0xFF667085))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
-                                    checked = availableObjectsForExport.isNotEmpty() && availableObjectsForExport.all { "${it.collection}/${it.folderName}" in transferExportObjects },
-                                    onCheckedChange = { checked -> transferExportObjects = if (checked) availableObjectsForExport.map { "${it.collection}/${it.folderName}" }.toSet() else emptySet() }
+                                    checked = availableObjectsForExport.isNotEmpty() && availableObjectsForExport.all {
+                                        val key = "${it.collection}/${it.folderName}"
+                                        key in requiredExportObjects || key in transferExportObjects
+                                    },
+                                    onCheckedChange = { checked ->
+                                        transferExportObjects = if (checked) availableObjectsForExport
+                                            .filter { "${it.collection}/${it.folderName}" !in requiredExportObjects }
+                                            .map { "${it.collection}/${it.folderName}" }.toSet() else emptySet()
+                                    }
                                 )
                                 Text("Seleccionar todos los objetos")
                             }
                             availableObjectsForExport.groupBy { it.collection }.toSortedMap().forEach { (collection, objects) ->
                                 Text(collection, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                 objects.forEach { stored ->
+                                    val key = "${stored.collection}/${stored.folderName}"
+                                    val requiredBy = requiredExportObjects[key].orEmpty()
+                                    val isRequired = requiredBy.isNotEmpty()
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(
-                                            checked = "${stored.collection}/${stored.folderName}" in transferExportObjects,
+                                            checked = isRequired || key in transferExportObjects,
+                                            enabled = !isRequired,
                                             onCheckedChange = { checked ->
-                                                val key = "${stored.collection}/${stored.folderName}"
                                                 transferExportObjects = transferExportObjects.toMutableSet().also { if (checked) it.add(key) else it.remove(key) }
                                             }
                                         )
                                         Column {
                                             Text(stored.metadata.name)
                                             Text(
-                                                if (stored.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
+                                                if (isRequired) "REQUERIDO" else if (stored.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = if (stored.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
+                                                color = if (isRequired) Color(0xFF16803C) else if (stored.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
                                             )
+                                            if (isRequired) Text("Requerido por: ${requiredBy.joinToString(", ")}", fontSize = 11.sp, color = Color(0xFF667085))
                                         }
                                     }
                                 }
@@ -2488,14 +2500,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 val importObjectsWithData = info.objects.map { objectInfo ->
                                     objectInfo to ObjectRepository.read(File(info.staging, "objetos/${objectInfo.key}"))
                                 }
+                                val requiredImportObjects = LibraryPackageManager.requiredImportObjects(info, transferImportStories)
                                 item {
                                     Text("Objetos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("Se indica si cada elemento es un objeto normal o un coleccionable. Selecciona los que quieres incorporar. Esta operación no modifica el inventario del niño.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    Text("Los objetos requeridos por los cuentos seleccionados se incorporarán automáticamente. También puedes seleccionar objetos por separado. Esta operación no modifica el inventario del niño.", fontSize = 12.sp, color = Color(0xFF667085))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Checkbox(
-                                            checked = info.objects.all { it.key in transferImportObjects },
+                                            checked = info.objects.all { it.key in requiredImportObjects || it.key in transferImportObjects },
                                             onCheckedChange = { checked ->
-                                                transferImportObjects = if (checked) info.objects.map { it.key }.toSet() else emptySet()
+                                                transferImportObjects = if (checked) info.objects.filter { it.key !in requiredImportObjects }.map { it.key }.toSet() else emptySet()
                                                 transferObjectConflictDecisions = emptyMap()
                                             }
                                         )
@@ -2506,7 +2519,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 if (collectibleObjects.isNotEmpty()) {
                                     item { Text("Coleccionables", fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
                                     collectibleObjects.forEach { (objectInfo, incoming) ->
-                                        val selected = objectInfo.key in transferImportObjects
+                                        val requiredBy = requiredImportObjects[objectInfo.key].orEmpty()
+                                        val isRequired = requiredBy.isNotEmpty()
+                                        val selected = isRequired || objectInfo.key in transferImportObjects
                                         val local = ObjectRepository.list(context).firstOrNull {
                                             it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
                                         }
@@ -2514,6 +2529,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Checkbox(
                                                     checked = selected,
+                                                    enabled = !isRequired,
                                                     onCheckedChange = { checked ->
                                                         transferImportObjects = transferImportObjects.toMutableSet().also {
                                                             if (checked) it.add(objectInfo.key) else it.remove(objectInfo.key)
@@ -2523,11 +2539,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 Column {
                                                     Text(objectInfo.name, fontWeight = FontWeight.SemiBold)
                                                     Text(
-                                                        if (incoming.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
+                                                        if (isRequired) "REQUERIDO" else if (incoming.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
                                                         fontSize = 12.sp,
                                                         fontWeight = FontWeight.ExtraBold,
-                                                        color = if (incoming.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
+                                                        color = if (isRequired) Color(0xFF16803C) else if (incoming.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
                                                     )
+                                                    if (isRequired) Text("Requerido por: ${requiredBy.joinToString(", ")}", fontSize = 11.sp, color = Color(0xFF667085))
                                                     if (local != null) {
                                                         Text(
                                                             when (transferObjectConflictDecisions[objectInfo.directory]) {
@@ -2568,7 +2585,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     .forEach { (collection, objects) ->
                                         item { Text(collection, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
                                         objects.forEach { (objectInfo, incoming) ->
-                                            val selected = objectInfo.key in transferImportObjects
+                                            val requiredBy = requiredImportObjects[objectInfo.key].orEmpty()
+                                            val isRequired = requiredBy.isNotEmpty()
+                                            val selected = isRequired || objectInfo.key in transferImportObjects
                                             val local = ObjectRepository.list(context).firstOrNull {
                                                 it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
                                             }
