@@ -487,7 +487,7 @@ private fun StoryImagePreview(file: File?, label: String) {
         Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color(0xFF667085))
         if (bitmap != null) {
             Image(bitmap = bitmap.asImageBitmap(), contentDescription = label,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 240.dp), contentScale = ContentScale.Fit)
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f), contentScale = ContentScale.Fit)
         } else {
             Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
                 Text(
@@ -2829,9 +2829,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorMessage = ""
                                 parentSection = "stories-editor"
                             }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Column(Modifier.fillMaxWidth().padding(14.dp)) {
-                                    Text(stored.metadata.title, fontWeight = FontWeight.Bold)
-                                    Text(storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085))
+                                Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    val coverThumb = remember(stored.directory.absolutePath, stored.metadata.cover) {
+                                        stored.metadata.cover?.let { File(stored.directory, it) }?.takeIf { it.isFile }
+                                            ?.let { runCatching { BitmapFactory.decodeFile(it.absolutePath) }.getOrNull() }
+                                    }
+                                    if (coverThumb != null) {
+                                        Image(bitmap = coverThumb.asImageBitmap(), contentDescription = "Portada del cuento",
+                                            modifier = Modifier.width(104.dp).aspectRatio(16f / 9f), contentScale = ContentScale.Fit)
+                                    } else {
+                                        Box(Modifier.width(104.dp).aspectRatio(16f / 9f).background(Color(0xFFFFF3E8), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                                            Text("📖", fontSize = 28.sp)
+                                        }
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(stored.metadata.title, fontWeight = FontWeight.Bold)
+                                        Text(storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085))
+                                    }
                                 }
                             }
                         }
@@ -3023,6 +3037,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         item {
                             OutlinedTextField(value = storyEditorSceneText, onValueChange = { storyEditorSceneText = it }, label = { Text("Texto de la escena") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
+                            if (storyEditorSceneText.length > 120) {
+                                Text("⚠️ La narración puede superar las 3 líneas recomendadas. No es un límite: el texto podrá desplazarse en la lectura.", color = Color(0xFF9A5B00), fontSize = 12.sp)
+                            }
                         }
                         item {
                             OutlinedButton(onClick = {

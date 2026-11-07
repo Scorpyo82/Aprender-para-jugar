@@ -47,8 +47,8 @@ El editor permite crear recorridos narrativos con conexiones, bifurcaciones y co
 
 ## Versión
 
-- Versión de la aplicación: **0.4.14-beta**
-- Código de versión Android: **53**
+- Versión de la aplicación: **0.4.15-beta**
+- Código de versión Android: **54**
 - Paquete: es.aprenderparajugar
 - Tecnología: Kotlin y Jetpack Compose.
 

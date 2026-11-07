@@ -9,6 +9,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -87,7 +89,7 @@ internal fun StoryCoverScreen(story: StoredStory, fontFamily: FontFamily, onBack
     ) {
         Text(story.metadata.title, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
         if (portraitWarning) Text("Gira el dispositivo para disfrutar del cuento en horizontal.", color = StoryGold, textAlign = TextAlign.Center)
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.weight(0.68f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             val frameModifier = if (maxWidth / maxHeight > 16f / 9f) {
                 Modifier.fillMaxHeight().aspectRatio(16f / 9f)
             } else {
@@ -258,7 +260,7 @@ internal fun StoryPlayerScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         BoxWithConstraints(
-            Modifier.fillMaxWidth().weight(1f),
+            Modifier.fillMaxWidth().weight(0.68f),
             contentAlignment = Alignment.Center
         ) {
             val frameModifier = if (maxWidth / maxHeight > 16f / 9f) {
@@ -347,14 +349,16 @@ internal fun StoryPlayerScreen(
 
         Column(
             Modifier.fillMaxWidth()
+                 .weight(0.32f)
                 .background(StoryPanel, RoundedCornerShape(14.dp))
+                .verticalScroll(rememberScrollState(snapshot.scene.folderName))
                 .padding(horizontal = 18.dp, vertical = 10.dp)
         ) {
             Text(
                 snapshot.scene.metadata.text,
                 color = Color.White,
                 fontSize = 17.sp,
-                lineHeight = 22.sp
+                lineHeight = 25.sp
             )
         }
     }
@@ -568,7 +572,7 @@ internal fun StorySceneTestDialog(
                     ) else Text("📖", color = Color.White, fontSize = 54.sp)
                 }
             }
-            Column(Modifier.fillMaxWidth().background(StoryPanel, RoundedCornerShape(14.dp)).padding(16.dp)) {
+            Column(Modifier.fillMaxWidth().weight(0.27f).background(StoryPanel, RoundedCornerShape(14.dp)).verticalScroll(rememberScrollState(scene.directory.absolutePath)).padding(16.dp)) {
                 Text(scene.metadata.text, color = Color.White, fontSize = 17.sp, lineHeight = 22.sp)
             }
             Text(
