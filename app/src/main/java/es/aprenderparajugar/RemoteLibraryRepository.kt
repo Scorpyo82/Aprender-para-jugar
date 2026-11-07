@@ -122,6 +122,16 @@ internal object RemoteLibraryRepository {
     fun downloadedSha(context: Context, name: String): String? =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getString(name, null)
 
+    // Installed packages are tracked separately from cached ZIP downloads. The ZIP can
+    // be deleted after a successful import without losing the installed state.
+    fun installedSha(context: Context, name: String): String? =
+        context.getSharedPreferences("remote_library_installed", Context.MODE_PRIVATE).getString(name, null)
+
+    fun saveInstalled(context: Context, name: String, sha: String) {
+        context.getSharedPreferences("remote_library_installed", Context.MODE_PRIVATE)
+            .edit().putString(name, sha).apply()
+    }
+
     fun saveDownloaded(context: Context, name: String, sha: String) {
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit().putString(name, sha).apply()
     }
