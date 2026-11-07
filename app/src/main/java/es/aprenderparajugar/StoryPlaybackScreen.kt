@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -351,7 +352,7 @@ internal fun StoryPlayerScreen(
             Modifier.fillMaxWidth()
                  .weight(0.32f)
                 .background(StoryPanel, RoundedCornerShape(14.dp))
-                .verticalScroll(rememberScrollState(snapshot.scene.folderName))
+                .verticalScroll(remember(snapshot.scene.folderName) { ScrollState(0) })
                 .padding(horizontal = 18.dp, vertical = 10.dp)
         ) {
             Text(
@@ -572,7 +573,7 @@ internal fun StorySceneTestDialog(
                     ) else Text("📖", color = Color.White, fontSize = 54.sp)
                 }
             }
-            Column(Modifier.fillMaxWidth().weight(0.27f).background(StoryPanel, RoundedCornerShape(14.dp)).verticalScroll(rememberScrollState(scene.directory.absolutePath)).padding(16.dp)) {
+            Column(Modifier.fillMaxWidth().weight(0.27f).background(StoryPanel, RoundedCornerShape(14.dp)).verticalScroll(remember(scene.directory.absolutePath) { ScrollState(0) }).padding(16.dp)) {
                 Text(scene.metadata.text, color = Color.White, fontSize = 17.sp, lineHeight = 22.sp)
             }
             Text(
