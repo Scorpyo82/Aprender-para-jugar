@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -393,34 +394,56 @@ internal fun StoryPlayerScreen(
             onDismissRequest = { backpackOpen = false },
             title = { Text("Mochila de Zorro", fontFamily = fontFamily) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (snapshot.inventory.isEmpty()) Text("La mochila está vacía.", fontFamily = fontFamily)
-                    snapshot.inventory.forEach { item ->
-                        val objectImage = remember(item.directory.absolutePath, item.metadata.image) {
-                            File(item.directory, item.metadata.image).takeIf { it.isFile }
-                                ?.let { BitmapFactory.decodeFile(it.absolutePath) }
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                snapshot = engine.chooseObject(item.folderName)
-                                backpackOpen = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                if (snapshot.inventory.isEmpty()) {
+                    Text("La mochila está vacía.", fontFamily = fontFamily)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(snapshot.inventory, key = { it.folderName }) { item ->
+                            val objectImage = remember(item.directory.absolutePath, item.metadata.image) {
+                                File(item.directory, item.metadata.image).takeIf { it.isFile }
+                                    ?.let { BitmapFactory.decodeFile(it.absolutePath) }
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    snapshot = engine.chooseObject(item.folderName)
+                                    backpackOpen = false
+                                },
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                    horizontal = 12.dp,
+                                    vertical = 8.dp
+                                )
                             ) {
-                                if (objectImage != null) {
-                                    Image(
-                                        bitmap = objectImage.asImageBitmap(),
-                                        contentDescription = item.metadata.name,
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
                                         modifier = Modifier.size(64.dp),
-                                        contentScale = ContentScale.Fit
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (objectImage != null) {
+                                            Image(
+                                                bitmap = objectImage.asImageBitmap(),
+                                                contentDescription = item.metadata.name,
+                                                modifier = Modifier.size(60.dp),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = item.metadata.name,
+                                        modifier = Modifier.weight(1f),
+                                        fontFamily = fontFamily,
+                                        textAlign = TextAlign.Start,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Text(item.metadata.name, fontFamily = fontFamily)
                             }
                         }
                     }
