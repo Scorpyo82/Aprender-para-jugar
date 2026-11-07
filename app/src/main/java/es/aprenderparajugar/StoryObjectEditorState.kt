@@ -20,6 +20,7 @@ internal class StoryObjectEditorState {
     val availableInStore: MutableState<Boolean> = mutableStateOf(false)
     val storePriceMinutes: MutableState<String> = mutableStateOf("")
     val collectible: MutableState<Boolean> = mutableStateOf(false)
+    val requiresUnlock: MutableState<Boolean> = mutableStateOf(false)
     val message: MutableState<String> = mutableStateOf("")
     val selectedCollection: MutableState<String> = mutableStateOf("")
 
@@ -32,6 +33,7 @@ internal class StoryObjectEditorState {
         availableInStore.value = false
         storePriceMinutes.value = ""
         collectible.value = false
+        requiresUnlock.value = false
         message.value = ""
     }
 
@@ -44,6 +46,7 @@ internal class StoryObjectEditorState {
         availableInStore.value = stored.metadata.availableInStore
         storePriceMinutes.value = stored.metadata.storePriceMinutes.takeIf { it > 0 }?.toString().orEmpty()
         collectible.value = stored.metadata.collectible
+        requiresUnlock.value = stored.metadata.requiresUnlock
         message.value = ""
     }
 
@@ -90,7 +93,7 @@ internal class StoryObjectEditorState {
             val folderName = existing?.folderName ?: cleanName.lowercase()
                 .replace(Regex("[^\\p{L}\\p{N}_-]+"), "_")
                 .trim('_')
-            ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName, availableInStore.value, if (availableInStore.value) storePriceMinutes.value.toInt() else 0, collectible.value), imageBytes)
+            ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName, availableInStore.value, if (availableInStore.value) storePriceMinutes.value.toInt() else 0, collectible.value, requiresUnlock.value && availableInStore.value), imageBytes)
             reset()
             message.value = "Objeto guardado correctamente."
             ObjectRepository.list(context)
