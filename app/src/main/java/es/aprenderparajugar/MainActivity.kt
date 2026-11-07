@@ -5785,7 +5785,6 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 if (rewardMode.isStars) {
                                     Text(formatRewardBalance(balanceSeconds, rewardMode), fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
-                                    Text("⭐", fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFFE5A900))
                                 } else {
                                 Text("$balanceMinutes", fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF59357D))
                                 Text("min", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF59357D), modifier = Modifier.padding(bottom = 5.dp))
