@@ -632,6 +632,10 @@ private fun AprenderApp() {
     var storyEditorSceneText by storyEditorState.sceneText
     var storyEditorObjectTiming by storyEditorState.objectTiming
     var storyEditorAwardedObjectByScene by storyEditorState.awardedObjectByScene
+    var storyEditorAwardedObjectsByScene by storyEditorState.awardedObjectsByScene
+    var storyEditorUnlockedObjectsByScene by storyEditorState.unlockedObjectsByScene
+    var showAwardedObjectsDialog by remember { mutableStateOf(false) }
+    var showUnlockedObjectsDialog by remember { mutableStateOf(false) }
     var storyEditorObjectMenuExpanded by storyEditorState.objectMenuExpanded
     var storyEditorKeepAmbientByScene by storyEditorState.keepAmbientByScene
     var storyEditorCollectionMenuExpanded by storyEditorState.collectionMenuExpanded
@@ -2821,6 +2825,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorAmbientAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.ambientAudio }.getOrNull() }
                                 storyEditorNarrationAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.narrationAudio }.getOrNull() }
                                 storyEditorAwardedObjectByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObject }.getOrNull() }
+                                storyEditorAwardedObjectsByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObjects }.getOrDefault(emptyList()) }
+                                storyEditorUnlockedObjectsByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.unlockedObjects }.getOrDefault(emptyList()) }
                                 storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
                                 storyEditorScenes = stored.metadata.scenes.map { it.replace('_', ' ') }
@@ -2859,6 +2865,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorAmbientAudio = emptyMap()
                                 storyEditorNarrationAudio = emptyMap()
                                 storyEditorAwardedObjectByScene = emptyMap()
+                                storyEditorAwardedObjectsByScene = emptyMap()
+                                storyEditorUnlockedObjectsByScene = emptyMap()
                                 storedStoryObjects = ObjectRepository.list(context)
                                 storyEditorCollection = ""
                                 storyEditorSummary = ""
@@ -3118,6 +3126,68 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 ) { Text("Eliminar audio de narración") }
                             }
                         }
+
+                        item {
+                            val awardedFolders = storyEditorAwardedObjectsByScene[storyEditorSelectedScene].orEmpty()
+                            val unlockedFolders = storyEditorUnlockedObjectsByScene[storyEditorSelectedScene].orEmpty()
+                            val namesByFolder = storedStoryObjects.associateBy { it.folderName }
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Objetos que recibe el niño", fontWeight = FontWeight.SemiBold)
+                                Text(if (awardedFolders.isEmpty()) "Ningún objeto adicional seleccionado." else awardedFolders.mapNotNull { namesByFolder[it]?.metadata?.name }.joinToString(", "), fontSize = 12.sp, color = Color(0xFF667085))
+                                OutlinedButton(onClick = { storedStoryObjects = ObjectRepository.list(context); showAwardedObjectsDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objetos para añadir al inventario (${awardedFolders.size})") }
+                                Text("Objetos que se desbloquean", fontWeight = FontWeight.SemiBold)
+                                Text(if (unlockedFolders.isEmpty()) "Ningún objeto seleccionado." else unlockedFolders.mapNotNull { namesByFolder[it]?.metadata?.name }.joinToString(", "), fontSize = 12.sp, color = Color(0xFF667085))
+                                OutlinedButton(onClick = { storedStoryObjects = ObjectRepository.list(context); showUnlockedObjectsDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("Desbloquear objetos (${unlockedFolders.size})") }
+                            }
+                            if (showAwardedObjectsDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showAwardedObjectsDialog = false },
+                                    title = { Text("Objetos que recibe el niño") },
+                                    text = {
+                                        Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                                            storedStoryObjects.forEach { obj ->
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Checkbox(checked = obj.folderName in awardedFolders, onCheckedChange = { checked ->
+                                                        storyEditorAwardedObjectsByScene = storyEditorAwardedObjectsByScene.toMutableMap().apply {
+                                                            put(storyEditorSelectedScene, if (checked) (awardedFolders + obj.folderName).distinct() else awardedFolders - obj.folderName)
+                                                        }
+                                                    })
+                                                    Text(obj.metadata.name + " · " + obj.collection)
+                                                }
+                                            }
+                                        }
+                                    },
+                                    confirmButton = { TextButton(onClick = { showAwardedObjectsDialog = false }) { Text("Aceptar") } },
+                                    dismissButton = { TextButton(onClick = { showAwardedObjectsDialog = false }) { Text("Cerrar") } }
+                                )
+                            }
+                            if (showUnlockedObjectsDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showUnlockedObjectsDialog = false },
+                                    title = { Text("Desbloquear objetos") },
+                                    text = {
+                                        Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                                            storedStoryObjects.forEach { obj ->
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Checkbox(checked = obj.folderName in unlockedFolders, onCheckedChange = { checked ->
+                                                        storyEditorUnlockedObjectsByScene = storyEditorUnlockedObjectsByScene.toMutableMap().apply {
+                                                            put(storyEditorSelectedScene, if (checked) (unlockedFolders + obj.folderName).distinct() else unlockedFolders - obj.folderName)
+                                                        }
+                                                    })
+                                                    Column {
+                                                        Text(obj.metadata.name)
+                                                        Text(if (obj.metadata.availableInStore) "A la venta" else "No está a la venta · El desbloqueo no permitirá comprarlo", fontSize = 11.sp, color = Color(0xFF667085))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    confirmButton = { TextButton(onClick = { showUnlockedObjectsDialog = false }) { Text("Aceptar") } },
+                                    dismissButton = { TextButton(onClick = { showUnlockedObjectsDialog = false }) { Text("Cerrar") } }
+                                )
+                            }
+                        }
+
                         item { Spacer(Modifier.height(8.dp)); Text("Objeto conseguido (opcional)", fontWeight = FontWeight.SemiBold) }
                         item {
                             val selectedObjectFolder = storyEditorAwardedObjectByScene[storyEditorSelectedScene]
