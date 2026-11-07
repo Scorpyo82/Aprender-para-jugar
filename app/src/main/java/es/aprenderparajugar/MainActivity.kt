@@ -2595,6 +2595,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Checkbox(
                                                         checked = selected,
+                                                        enabled = !isRequired,
                                                         onCheckedChange = { checked ->
                                                             transferImportObjects = transferImportObjects.toMutableSet().also {
                                                                 if (checked) it.add(objectInfo.key) else it.remove(objectInfo.key)
@@ -2604,11 +2605,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                     Column {
                                                         Text(objectInfo.name, fontWeight = FontWeight.SemiBold)
                                                         Text(
-                                                            if (incoming.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
+                                                            if (isRequired) "REQUERIDO" else if (incoming.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
                                                             fontSize = 12.sp,
                                                             fontWeight = FontWeight.ExtraBold,
-                                                            color = if (incoming.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
+                                                            color = if (isRequired) Color(0xFF16803C) else if (incoming.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
                                                         )
+                                                        if (isRequired) Text("Requerido por: ${requiredBy.joinToString(", ")}", fontSize = 11.sp, color = Color(0xFF667085))
                                                         if (local != null) {
                                                             Text(
                                                                 when (transferObjectConflictDecisions[objectInfo.directory]) {
