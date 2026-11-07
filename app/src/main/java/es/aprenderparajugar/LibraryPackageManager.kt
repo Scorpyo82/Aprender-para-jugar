@@ -126,7 +126,7 @@ internal object LibraryPackageManager {
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) {
                         val scene = StoryRepository.readScene(story, sceneName)
-                        listOfNotNull(scene.metadata.awardedObject, scene.metadata.requiredObject)
+                        (listOfNotNull(scene.metadata.awardedObject, scene.metadata.requiredObject) + scene.metadata.awardedObjects + scene.metadata.unlockedObjects)
                             .forEach { referencedObjects.add(it) }
                     }
                 }
@@ -167,7 +167,8 @@ internal object LibraryPackageManager {
                     .put("image", storedObject.metadata.image)
                     .put("availableInStore", storedObject.metadata.availableInStore)
                     .put("storePriceMinutes", storedObject.metadata.storePriceMinutes)
-                    .put("collectible", storedObject.metadata.collectible))
+                    .put("collectible", storedObject.metadata.collectible)
+                    .put("requiresUnlock", storedObject.metadata.requiresUnlock))
             }
             manifest.put("stories", storiesJson)
             manifest.put("objectDependencies", objectsJson)
@@ -428,7 +429,7 @@ internal object LibraryPackageManager {
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) {
                         val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
-                        listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { selectedObjectNames.add(it) }
+                        (listOfNotNull(scene.awardedObject, scene.requiredObject) + scene.awardedObjects + scene.unlockedObjects).forEach { selectedObjectNames.add(it) }
                     }
                 }
             }
