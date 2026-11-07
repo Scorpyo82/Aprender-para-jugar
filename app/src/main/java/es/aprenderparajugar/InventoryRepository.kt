@@ -70,6 +70,7 @@ object InventoryRepository {
         val stored = ObjectRepository.list(context).firstOrNull { it.folderName == folderName }
             ?: return failure("Este objeto ya no está disponible.")
         if (!stored.metadata.availableInStore) return failure("Este objeto no está disponible en la tienda.")
+        if (stored.metadata.requiresUnlock && !ObjectUnlockRepository.contains(context, folderName)) return failure("Primero tienes que desbloquear este objeto.")
 
         val currentInventory = list(context)
         if (folderName in currentInventory) return failure("Ya has conseguido este objeto.")
