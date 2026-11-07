@@ -3174,14 +3174,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
                                             storedStoryObjects.forEach { obj ->
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Checkbox(checked = obj.folderName in unlockedFolders, onCheckedChange = { checked ->
+                                                    Checkbox(checked = obj.metadata.availableInStore && obj.folderName in unlockedFolders, enabled = obj.metadata.availableInStore, onCheckedChange = { checked ->
                                                         storyEditorUnlockedObjectsByScene = storyEditorUnlockedObjectsByScene.toMutableMap().apply {
-                                                            put(storyEditorSelectedScene, if (checked) (unlockedFolders + obj.folderName).distinct() else unlockedFolders - obj.folderName)
+                                                            put(storyEditorSelectedScene, if (checked && obj.metadata.availableInStore) (unlockedFolders + obj.folderName).distinct() else unlockedFolders - obj.folderName)
                                                         }
                                                     })
                                                     Column {
                                                         Text(obj.metadata.name)
-                                                        Text(if (obj.metadata.availableInStore) "A la venta" else "No está a la venta · El desbloqueo no permitirá comprarlo", fontSize = 11.sp, color = Color(0xFF667085))
+                                                        Text(if (obj.metadata.availableInStore) "A la venta" else "No está a la venta · No se puede seleccionar", fontSize = 11.sp, color = Color(0xFF667085))
                                                     }
                                                 }
                                             }
@@ -3469,7 +3469,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = storyObjectAvailableInStore, onCheckedChange = { storyObjectAvailableInStore = it })
+                                    Checkbox(checked = storyObjectAvailableInStore, onCheckedChange = { enabled ->
+                                        storyObjectAvailableInStore = enabled
+                                        if (!enabled) storyObjectRequiresUnlock = false
+                                    })
                                     Text("Aparece en la tienda", fontWeight = FontWeight.SemiBold)
                                 }
                                 Text("Indica si este objeto se ofrece en la tienda del juego.", fontSize = 12.sp, color = Color(0xFF667085))
