@@ -1,7 +1,7 @@
 package es.aprenderparajugar
 
 import android.content.Context
-import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -14,7 +14,7 @@ internal data class RemoteLibraryPackage(
 )
 
 internal object RemoteLibraryRepository {
-    private const val API_URL = "https://api.github.com/repos/Scorpyo82/Aprender-para-jugar/contents/bibliotecas?ref=main"
+    private const val API_URL = "https://api.github.com/repos/Scorpyo82/Aprender-para-jugar/releases/latest"
     private const val PREFERENCES = "remote_library_downloads"
 
     fun listPackages(): List<RemoteLibraryPackage> {
@@ -29,16 +29,20 @@ internal object RemoteLibraryRepository {
         try {
             val code = connection.responseCode
             if (code !in 200..299) throw IllegalStateException("GitHub respondió HTTP $code")
-            val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            val entries = JSONArray(body)
-            return (0 until entries.length()).mapNotNull { index ->
-                val item = entries.optJSONObject(index) ?: return@mapNotNull null
-                val name = item.optString("name")
-                if (item.optString("type") != "file" || !name.endsWith(".zip", true)) return@mapNotNull null
-                val sha = item.optString("sha")
-                val downloadUrl = item.optString("download_url")
-                if (sha.isBlank() || downloadUrl.isBlank()) return@mapNotNull null
-                RemoteLibraryPackage(name, sha, item.optLong("size"), downloadUrl)
+            val release = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+            val assets = release.optJSONArray("assets") ?: return emptyList()
+            return (0 until assets.length()).mapNotNull { index ->
+                val asset = assets.optJSONObject(index) ?: return@mapNotNull null
+                val name = asset.optString("name")
+                if (!name.endsWith(".zip", true)) return@mapNotNull null
+                val downloadUrl = asset.optString("browser_download_url")
+                if (downloadUrl.isBlank()) return@mapNotNull null
+
+                // GitHub Releases exposes the asset's SHA-256 digest. Keep a fallback
+                // fingerprint for older assets for which the digest is not available.
+                val digest = asset.optString("digest").takeIf { it.startsWith("sha256:") }
+                    ?: "asset:${asset.optLong("id")}:${asset.optString("updated_at")}:${asset.optLong("size")}"
+                RemoteLibraryPackage(name, digest, asset.optLong("size"), downloadUrl)
             }.sortedBy { it.name.lowercase() }
         } finally {
             connection.disconnect()
@@ -52,7 +56,8 @@ internal object RemoteLibraryRepository {
         val destination = File(directory, safeName)
         val connection = (URL(item.downloadUrl).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15000
-            readTimeout = 30000
+            readTimeout = 60000
+            instanceFollowRedirects = true
             setRequestProperty("User-Agent", "Aprender-para-jugar-Android")
         }
         try {
