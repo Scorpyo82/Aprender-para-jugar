@@ -1202,10 +1202,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         when (tourReturnTarget) {
             "parent-setup" -> {
                 setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
-                val deviceSetupComplete = restrictedSettingsDone &&
-                    setupAccessibilityEnabled &&
-                    batterySettingsDone &&
-                    xiaomiWindowPermissionDone
+                // The accessibility service is the permission Android exposes reliably
+                // and the essential prerequisite for Time mode. The other setup steps are
+                // OEM-specific/manual recommendations and must not block mode selection.
+                val deviceSetupComplete = setupAccessibilityEnabled
                 screen = "parent"
                 parentSection = if (rewardMode.isStars || deviceSetupComplete) "menu" else "device-setup"
             }
@@ -1632,10 +1632,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         rewardMode = RewardMode.TIME
                                         preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
                                         setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
-                                        val deviceSetupComplete = restrictedSettingsDone &&
-                                            setupAccessibilityEnabled &&
-                                            batterySettingsDone &&
-                                            xiaomiWindowPermissionDone
+                                        // Only require the actual enabled accessibility service.
+                                        // Battery and Xiaomi background-window steps are manual OEM
+                                        // recommendations and cannot be verified reliably by Android.
+                                        val deviceSetupComplete = setupAccessibilityEnabled
                                         parentSection = if (deviceSetupComplete) "menu" else "device-setup"
                                     }
                                 }, label = { Text(if (!rewardMode.isStars) "✓  ⏱ Tiempo" else "⏱ Tiempo", fontWeight = if (!rewardMode.isStars) FontWeight.Bold else FontWeight.Medium) }, colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(containerColor = Color(0xFFF7F7FA), labelColor = Color(0xFF475467), selectedContainerColor = Color(0xFF2E7D32), selectedLabelColor = Color.White))
