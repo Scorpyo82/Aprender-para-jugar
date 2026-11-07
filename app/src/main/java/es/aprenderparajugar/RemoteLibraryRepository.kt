@@ -49,11 +49,16 @@ internal object RemoteLibraryRepository {
         }
     }
 
-    fun download(context: Context, item: RemoteLibraryPackage): File {
+    fun download(
+        context: Context,
+        item: RemoteLibraryPackage,
+        onProgress: (downloaded: Long, total: Long) -> Unit
+    ): File {
         val safeName = item.name.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val directory = File(context.cacheDir, "remote_libraries").apply { check(mkdirs() || isDirectory) }
         val temporary = File(directory, "$safeName.download")
         val destination = File(directory, safeName)
+        val previous = File(directory, "$safeName.previous")
         val connection = (URL(item.downloadUrl).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15000
             readTimeout = 60000
@@ -63,18 +68,55 @@ internal object RemoteLibraryRepository {
         try {
             val code = connection.responseCode
             if (code !in 200..299) throw IllegalStateException("GitHub respondió HTTP $code")
+            val total = item.size.takeIf { it > 0L } ?: connection.contentLengthLong.coerceAtLeast(0L)
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            var downloaded = 0L
             connection.inputStream.buffered().use { input ->
-                temporary.outputStream().buffered().use { output -> input.copyTo(output) }
+                temporary.outputStream().buffered().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                        digest.update(buffer, 0, count)
+                        downloaded += count
+                        onProgress(downloaded, total)
+                    }
+                }
             }
             if (!temporary.isFile || temporary.length() <= 0L) throw IllegalStateException("El ZIP descargado está vacío.")
             if (item.size > 0L && temporary.length() != item.size) throw IllegalStateException("La descarga está incompleta.")
-            if (destination.exists()) destination.delete()
-            check(temporary.renameTo(destination)) { "No se pudo guardar el ZIP descargado." }
+            if (item.sha.startsWith("sha256:")) {
+                val actual = digest.digest().joinToString("") { "%02x".format(it) }
+                require(actual.equals(item.sha.removePrefix("sha256:"), ignoreCase = true)) {
+                    "La comprobación SHA-256 del ZIP no coincide."
+                }
+            }
+            previous.delete()
+            if (destination.exists()) check(destination.renameTo(previous)) { "No se pudo conservar la descarga anterior." }
+            if (!temporary.renameTo(destination)) {
+                if (previous.exists()) previous.renameTo(destination)
+                throw IllegalStateException("No se pudo guardar el ZIP descargado.")
+            }
+            previous.delete()
             return destination
+        } catch (error: Exception) {
+            if (!destination.exists() && previous.exists()) previous.renameTo(destination)
+            throw error
         } finally {
             connection.disconnect()
             temporary.delete()
         }
+    }
+
+    fun cachedFile(context: Context, name: String): File {
+        val safeName = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        return File(File(context.cacheDir, "remote_libraries"), safeName)
+    }
+
+    fun deleteCached(context: Context, name: String) {
+        cachedFile(context, name).delete()
+        context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit().remove(name).apply()
     }
 
     fun downloadedSha(context: Context, name: String): String? =
