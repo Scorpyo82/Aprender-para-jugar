@@ -1845,9 +1845,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         remoteLibraryPackages.forEach { remotePackage ->
                             val savedSha = RemoteLibraryRepository.downloadedSha(context, remotePackage.name)
+                            val installedSha = RemoteLibraryRepository.installedSha(context, remotePackage.name)
                             val cachedFile = RemoteLibraryRepository.cachedFile(context, remotePackage.name)
-                            val isUpdate = savedSha != null && savedSha != remotePackage.sha
-                            val isDownloaded = savedSha == remotePackage.sha && cachedFile.isFile && cachedFile.length() > 0L
+                            val isInstalled = installedSha == remotePackage.sha
+                            val isUpdate = (installedSha != null && installedSha != remotePackage.sha) ||
+                                (savedSha != null && savedSha != remotePackage.sha)
+                            val isDownloaded = !isInstalled && savedSha == remotePackage.sha && cachedFile.isFile && cachedFile.length() > 0L
                             val isDownloading = remoteLibraryDownloadingName == remotePackage.name
                             item {
                                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -1857,6 +1860,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Text(
                                             when {
                                                 isDownloading -> "Descargando biblioteca…"
+                                                isInstalled -> "Instalada"
                                                 isUpdate -> "Actualización disponible"
                                                 isDownloaded -> "Descargado, pendiente de importar"
                                                 else -> "Disponible"
@@ -1865,6 +1869,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             fontWeight = FontWeight.SemiBold,
                                             color = when {
                                                 isDownloading -> Color(0xFF3567A8)
+                                                isInstalled -> Color(0xFF24733B)
                                                 isUpdate -> Color(0xFFB26A00)
                                                 isDownloaded -> Color(0xFF24733B)
                                                 else -> Color(0xFF667085)
@@ -1890,7 +1895,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         }
                                         Button(
                                             onClick = {
-                                                if (isDownloaded) {
+                                                if (isInstalled) {
+                                                    // The current release is already installed; no ZIP is needed.
+                                                } else if (isDownloaded) {
                                                     remoteLibraryPendingImport = remotePackage
                                                 } else {
                                                     remoteLibraryScope.launch {
@@ -1923,11 +1930,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                     }
                                                 }
                                             },
-                                            enabled = remoteLibraryDownloadingName == null && !remoteLibraryLoading,
+                                            enabled = remoteLibraryDownloadingName == null && !remoteLibraryLoading && !isInstalled,
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Text(when {
                                                 isDownloading -> "Descargando…"
+                                                isInstalled -> "Instalada"
                                                 isDownloaded -> "Importar ahora"
                                                 isUpdate -> "⬇️ Descargar actualización"
                                                 else -> "⬇️ Descargar"
@@ -2852,6 +2860,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 Button(onClick = {
                                     try {
                                         val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions, transferImportObjects)
+                                        // Mark the exact release as installed only after the import completed
+                                        // successfully. This state survives deletion of the downloaded ZIP.
+                                        transferRemoteLibraryName?.let { packageName ->
+                                            remoteLibraryPackages.firstOrNull { it.name == packageName }?.let { remotePackage ->
+                                                RemoteLibraryRepository.saveInstalled(context, packageName, remotePackage.sha)
+                                            }
+                                        }
                                         transferPackage = null
                                         LibraryPackageManager.discard(info)
                                         transferRemoteLibraryName?.let { RemoteLibraryRepository.deleteCached(context, it) }
