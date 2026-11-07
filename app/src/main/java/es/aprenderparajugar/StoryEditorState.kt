@@ -164,9 +164,7 @@ internal class StoryEditorState(private val context: Context) {
                 } else existing ?: StorySceneMetadata(title = scenes.value[index])
                 StoryRepository.saveScene(stored, sceneFolder, sceneMetadata)
             }
-            originalStory?.metadata?.scenes.orEmpty().filterNot { it in sceneFolders }.forEach { removedScene ->
-                StoryRepository.deleteSceneDirectory(stored, removedScene)
-            }
+            StoryRepository.deleteSceneDirectoriesExcept(stored, sceneFolders.toSet())
             editingFolder.value = storyFolder
             editingCollectionFolder.value = collectionFolder
             stored = StoryRepository.read(File(File(StoryRepository.rootDirectory(context), collectionFolder), storyFolder))

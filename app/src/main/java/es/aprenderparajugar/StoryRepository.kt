@@ -316,6 +316,20 @@ object StoryRepository {
         }
     }
 
+    /** Limpia cualquier carpeta de escena que ya no figure en el manifiesto. */
+    fun deleteSceneDirectoriesExcept(story: StoredStory, activeSceneFolders: Set<String>) {
+        val storyRoot = story.directory.canonicalFile
+        val scenesRoot = File(storyRoot, SCENES_DIRECTORY).canonicalFile
+        require(scenesRoot.parentFile == storyRoot) { "La ubicación de las escenas no es válida." }
+        scenesRoot.listFiles()?.filter { it.isDirectory && it.name !in activeSceneFolders }?.forEach { directory ->
+            val target = directory.canonicalFile
+            require(target.parentFile == scenesRoot) { "La ubicación de una escena no es válida." }
+            check(target.walkBottomUp().all { it.delete() || !it.exists() }) {
+                "No se pudo eliminar todo el contenido de la escena ${directory.name}."
+            }
+        }
+    }
+
     fun readScene(story: StoredStory, sceneFolderName: String): StoredStoryScene {
         val safeScene = safeSegment(sceneFolderName, "La escena")
         require(safeScene in story.metadata.scenes) { "La escena no pertenece a este cuento." }
