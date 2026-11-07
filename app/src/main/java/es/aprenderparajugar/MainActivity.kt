@@ -1920,7 +1920,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     },
                                     onCheckedChange = { checked ->
                                         transferExportObjects = if (checked) availableObjectsForExport
-                                            .filter { "${it.collection}/${it.folderName}" !in requiredExportObjects }
                                             .map { "${it.collection}/${it.folderName}" }.toSet() else emptySet()
                                     }
                                 )
@@ -2508,7 +2507,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Checkbox(
                                             checked = info.objects.all { it.key in requiredImportObjects || it.key in transferImportObjects },
                                             onCheckedChange = { checked ->
-                                                transferImportObjects = if (checked) info.objects.filter { it.key !in requiredImportObjects }.map { it.key }.toSet() else emptySet()
+                                                transferImportObjects = if (checked) info.objects.map { it.key }.toSet() else emptySet()
                                                 transferObjectConflictDecisions = emptyMap()
                                             }
                                         )
