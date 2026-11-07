@@ -34,6 +34,13 @@ internal object LibraryPackageManager {
         val differences: List<String>,
         val referencingStories: List<String>
     )
+    data class ExerciseConflictInfo(
+        val key: String,
+        val modality: ContentStorage.Modality,
+        val categoryName: String,
+        val incoming: StoredExercise,
+        val existing: StoredExercise
+    )
     data class PackageInfo(
         val modalities: List<ModalityInfo>,
         val stories: List<StoryInfo>,
@@ -461,6 +468,38 @@ internal object LibraryPackageManager {
         }
     }
 
+    fun exerciseConflicts(
+        context: Context,
+        packageInfo: PackageInfo,
+        selectedCategories: Map<ContentStorage.Modality, Set<String>>
+    ): List<ExerciseConflictInfo> {
+        val conflicts = mutableListOf<ExerciseConflictInfo>()
+        packageInfo.modalities.forEach { modalityInfo ->
+            val modality = modalityInfo.modality
+            val localExercises = ExerciseRepository.list(context, modality)
+            modalityInfo.categories.filter { it.directory in selectedCategories[modality].orEmpty() }.forEach { category ->
+                val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
+                val targetCategory = File(ContentStorage.modalityDirectory(context, modality), category.directory)
+                sourceCategory.listFiles()?.filter { it.isDirectory }?.forEach { incomingDirectory ->
+                    val incoming = ExerciseRepository.read(incomingDirectory)
+                    val matching = localExercises.firstOrNull {
+                        it.metadata.category.equals(incoming.metadata.category, true) &&
+                            it.metadata.title.equals(incoming.metadata.title, true)
+                    }
+                    val pathCollision = localExercises.firstOrNull {
+                        runCatching { it.directory.canonicalFile == File(targetCategory, incomingDirectory.name).canonicalFile }.getOrDefault(false)
+                    }
+                    val existing = matching ?: pathCollision
+                    if (existing != null) {
+                        val key = "${modality.directoryName}/${category.directory}/${incomingDirectory.name}"
+                        conflicts.add(ExerciseConflictInfo(key, modality, category.name, incoming, existing))
+                    }
+                }
+            }
+        }
+        return conflicts
+    }
+
     fun import(
         context: Context,
         packageInfo: PackageInfo,
@@ -471,12 +510,18 @@ internal object LibraryPackageManager {
         selectedStories: Set<String> = emptySet(),
         objectConflictDecisions: Map<String, String> = emptyMap(),
         storyConflictDecisions: Map<String, String> = emptyMap(),
-        selectedObjects: Set<String> = emptySet()
+        selectedObjects: Set<String> = emptySet(),
+        exerciseConflictDecisions: Map<String, String> = emptyMap()
     ): Int {
         var imported = 0
         val rollbackTargets = mutableListOf<Pair<File, File?>>()
         try {
             val selectedStoryInfos = packageInfo.stories.filter { it.key in selectedStories }
+            val unresolvedExerciseConflicts = exerciseConflicts(context, packageInfo, selectedCategories)
+                .filter { exerciseConflictDecisions[it.key] !in setOf("reuse", "overwrite") }
+            require(unresolvedExerciseConflicts.isEmpty()) {
+                "Debes resolver los conflictos de ejercicios antes de importar."
+            }
             require(selectedStories.all { key -> packageInfo.stories.any { it.key == key } }) {
                 "Uno de los cuentos seleccionados no está disponible en el paquete."
             }
@@ -628,8 +673,14 @@ internal object LibraryPackageManager {
                             it.metadata.category.equals(category.name, true) &&
                                 it.metadata.title.equals(incomingStored.metadata.title, true)
                         }
-                        if (existing != null && !replaceSameName) return@forEach
-                        val target = if (existing != null) existing.directory else File(targetCategory, incoming.name)
+                        val conflictKey = "${modality.directoryName}/${category.directory}/${incoming.name}"
+                        val pathExisting = ExerciseRepository.list(context, modality).firstOrNull {
+                            runCatching { it.directory.canonicalFile == File(targetCategory, incoming.name).canonicalFile }.getOrDefault(false)
+                        }
+                        val conflictExisting = existing ?: pathExisting
+                        val decision = exerciseConflictDecisions[conflictKey]
+                        if (conflictExisting != null && decision == "reuse") return@forEach
+                        val target = conflictExisting?.directory ?: File(targetCategory, incoming.name)
                         val stagingExercise = File(targetCategory, ".import-${System.nanoTime()}")
                         copyDirectory(incoming, stagingExercise)
                         val incomingStatistics = File(stagingExercise, STATISTICS_FILE)
@@ -637,8 +688,8 @@ internal object LibraryPackageManager {
                             // El ZIP no debe sobrescribir las estadísticas locales si el usuario
                             // ha decidido importar únicamente los ejercicios.
                             incomingStatistics.delete()
-                            if (existing != null) {
-                                val existingStatistics = File(existing.directory, STATISTICS_FILE)
+                            if (conflictExisting != null) {
+                                val existingStatistics = File(conflictExisting.directory, STATISTICS_FILE)
                                 if (existingStatistics.isFile) {
                                     existingStatistics.copyTo(incomingStatistics, overwrite = true)
                                 }
