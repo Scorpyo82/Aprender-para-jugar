@@ -1900,8 +1900,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                         remoteLibraryMessage = ""
                                                         try {
                                                             val file = withContext(Dispatchers.IO) {
+                                                                var lastProgressReported = 0L
                                                                 RemoteLibraryRepository.download(context, remotePackage) { downloaded, total ->
-                                                                    if (downloaded - remoteLibraryDownloadedBytes >= 512L * 1024L || downloaded == total) {
+                                                                    if (downloaded - lastProgressReported >= 512L * 1024L || (total > 0L && downloaded == total)) {
+                                                                        lastProgressReported = downloaded
                                                                         remoteLibraryScope.launch {
                                                                             remoteLibraryDownloadedBytes = downloaded
                                                                             if (total > 0L) remoteLibraryTotalBytes = total
