@@ -121,19 +121,23 @@ internal class StoryPlaybackEngine(
         val metadata = runCatching { StoryRepository.readScene(story, currentSceneFolder).metadata }.getOrNull()
             ?: return null
         if (metadata.awardTiming != "onExit") return null
-        val objectFolder = metadata.awardedObject ?: return null
-        val stored = ObjectRepository.list(context).firstOrNull { it.folderName == objectFolder } ?: return null
-        if (!stored.metadata.collectible || InventoryRepository.contains(context, objectFolder)) return null
-        return runCatching {
-            InventoryRepository.add(context, objectFolder)
-            stored
-        }.getOrNull()
+        val objectFolders = (listOfNotNull(metadata.awardedObject) + metadata.awardedObjects).distinct()
+        val collectible = objectFolders.asSequence()
+            .mapNotNull { folder -> ObjectRepository.list(context).firstOrNull { it.folderName == folder } }
+            .firstOrNull { it.metadata.collectible && !InventoryRepository.contains(context, it.folderName) }
+        if (collectible != null) {
+            runCatching { InventoryRepository.add(context, collectible.folderName) }
+            return collectible
+        }
+        return null
     }
 
     private fun award(sceneFolder: String, timing: String) {
         val metadata = runCatching { StoryRepository.readScene(story, sceneFolder).metadata }.getOrNull() ?: return
         if (metadata.awardTiming != timing) return
-        val objectFolder = metadata.awardedObject ?: return
-        runCatching { InventoryRepository.add(context, objectFolder) }
+        ObjectUnlockRepository.unlock(context, metadata.unlockedObjects)
+        (listOfNotNull(metadata.awardedObject) + metadata.awardedObjects).distinct().forEach { objectFolder ->
+            runCatching { InventoryRepository.add(context, objectFolder) }
+        }
     }
 }
