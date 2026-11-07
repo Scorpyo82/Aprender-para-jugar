@@ -66,6 +66,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -1003,6 +1004,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var remoteLibraryPackages by remember { mutableStateOf<List<RemoteLibraryPackage>>(emptyList()) }
     var remoteLibraryLoading by remember { mutableStateOf(false) }
     var remoteLibraryMessage by remember { mutableStateOf("") }
+    var remoteLibraryDownloadingName by remember { mutableStateOf<String?>(null) }
+    var remoteLibraryDownloadedBytes by remember { mutableStateOf(0L) }
+    var remoteLibraryTotalBytes by remember { mutableStateOf(0L) }
+    var remoteLibraryPendingImport by remember { mutableStateOf<RemoteLibraryPackage?>(null) }
+    var transferRemoteLibraryName by remember { mutableStateOf<String?>(null) }
     val remoteLibraryScope = rememberCoroutineScope()
     androidx.compose.runtime.LaunchedEffect(parentSection) {
         if (parentSection == "basic-library" && remoteLibraryPackages.isEmpty() && !remoteLibraryLoading) {
@@ -1227,7 +1233,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 "stories-object-create", "stories-object-collection", "stories-object-inventory" -> parentSection = "stories-objects"
                 "active-games", "sound-settings", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
                 "music", "stories-audio" -> parentSection = "sound-settings"
-                "library-export", "library-import", "library-delete" -> { transferPackage?.let { LibraryPackageManager.discard(it) }; transferPackage = null; deleteConfirmArmed = false; parentSection = "library-transfer" }
+                "library-export", "library-import", "library-delete" -> {
+                    transferPackage?.let { LibraryPackageManager.discard(it) }
+                    transferPackage = null
+                    deleteConfirmArmed = false
+                    parentSection = if (parentSection == "library-import" && transferRemoteLibraryName != null) "basic-library" else "library-transfer"
+                    transferRemoteLibraryName = null
+                }
                 "learning-stats", "usage-stats" -> parentSection = "statistics-menu"
                 "game-modes" -> parentSection = "menu"
                 "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
@@ -1757,7 +1769,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio" -> "sound-settings"; "library-export", "library-import", "library-delete" -> "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "music" || parentSection == "stories-audio") "← Volver a Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection == "stories-settings") "← Volver a los modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Volver a Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Volver a Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Volver a Objetos" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "music" || parentSection == "stories-audio") "← Volver a Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection == "stories-settings") "← Volver a los modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Volver a Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Volver a Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Volver a Objetos" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Volver al catálogo" else "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "sound-settings" -> {
                         item { Text("Ajustes de sonido", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -1833,8 +1845,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         remoteLibraryPackages.forEach { remotePackage ->
                             val savedSha = RemoteLibraryRepository.downloadedSha(context, remotePackage.name)
+                            val cachedFile = RemoteLibraryRepository.cachedFile(context, remotePackage.name)
                             val isUpdate = savedSha != null && savedSha != remotePackage.sha
-                            val isDownloaded = savedSha == remotePackage.sha
+                            val isDownloaded = savedSha == remotePackage.sha && cachedFile.isFile && cachedFile.length() > 0L
+                            val isDownloading = remoteLibraryDownloadingName == remotePackage.name
                             item {
                                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1842,58 +1856,79 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Text(RemoteLibraryRepository.formatSize(remotePackage.size), fontSize = 12.sp, color = Color(0xFF667085))
                                         Text(
                                             when {
+                                                isDownloading -> "Descargando biblioteca…"
                                                 isUpdate -> "Actualización disponible"
-                                                isDownloaded -> "Ya descargado"
+                                                isDownloaded -> "Descargado, pendiente de importar"
                                                 else -> "Disponible"
                                             },
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = when {
+                                                isDownloading -> Color(0xFF3567A8)
                                                 isUpdate -> Color(0xFFB26A00)
                                                 isDownloaded -> Color(0xFF24733B)
                                                 else -> Color(0xFF667085)
                                             }
                                         )
+                                        if (isDownloading) {
+                                            val total = remoteLibraryTotalBytes
+                                            val downloaded = remoteLibraryDownloadedBytes
+                                            if (total > 0L) {
+                                                LinearProgressIndicator(
+                                                    progress = { (downloaded.toFloat() / total.toFloat()).coerceIn(0f, 1f) },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            } else {
+                                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                            }
+                                            val percentage = if (total > 0L) (downloaded * 100L / total).coerceIn(0L, 100L) else null
+                                            Text(
+                                                "${percentage?.let { "$it%" } ?: "Calculando…"} · ${RemoteLibraryRepository.formatSize(downloaded)} / ${RemoteLibraryRepository.formatSize(if (total > 0L) total else remotePackage.size)}",
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF667085)
+                                            )
+                                        }
                                         Button(
                                             onClick = {
-                                                remoteLibraryScope.launch {
-                                                    remoteLibraryLoading = true
-                                                    remoteLibraryMessage = ""
-                                                    try {
-                                                        val file = withContext(Dispatchers.IO) {
-                                                            RemoteLibraryRepository.download(context, remotePackage)
+                                                if (isDownloaded) {
+                                                    remoteLibraryPendingImport = remotePackage
+                                                } else {
+                                                    remoteLibraryScope.launch {
+                                                        remoteLibraryDownloadingName = remotePackage.name
+                                                        remoteLibraryDownloadedBytes = 0L
+                                                        remoteLibraryTotalBytes = remotePackage.size
+                                                        remoteLibraryMessage = ""
+                                                        try {
+                                                            val file = withContext(Dispatchers.IO) {
+                                                                RemoteLibraryRepository.download(context, remotePackage) { downloaded, total ->
+                                                                    if (downloaded - remoteLibraryDownloadedBytes >= 512L * 1024L || downloaded == total) {
+                                                                        remoteLibraryScope.launch {
+                                                                            remoteLibraryDownloadedBytes = downloaded
+                                                                            if (total > 0L) remoteLibraryTotalBytes = total
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            RemoteLibraryRepository.saveDownloaded(context, remotePackage.name, remotePackage.sha)
+                                                            remoteLibraryDownloadedBytes = file.length()
+                                                            remoteLibraryTotalBytes = remotePackage.size
+                                                            remoteLibraryPendingImport = remotePackage
+                                                        } catch (error: Exception) {
+                                                            remoteLibraryMessage = "No se ha podido descargar el paquete: ${error.message ?: "error de conexión"}"
+                                                        } finally {
+                                                            remoteLibraryDownloadingName = null
                                                         }
-                                                        val inspected = withContext(Dispatchers.IO) {
-                                                            LibraryPackageManager.inspect(context, Uri.fromFile(file))
-                                                        }
-                                                        transferPackage?.let { LibraryPackageManager.discard(it) }
-                                                        transferPackage = inspected
-                                                        transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
-                                                        transferImportStories = inspected.stories.map { it.key }.toSet()
-                                                        transferImportObjects = emptySet()
-                                                        transferObjectConflictDecisions = emptyMap()
-                                                        transferStoryConflictDecisions = emptyMap()
-                                                        transferConflictIndex = 0
-                                                        transferReplaceDuplicates = false
-                                                        transferImportStatistics = false
-                                                        transferImportUsageStatistics = false
-                                                        RemoteLibraryRepository.saveDownloaded(context, remotePackage.name, remotePackage.sha)
-                                                        transferMessage = "Paquete descargado y validado. Selecciona el contenido que deseas importar."
-                                                        parentSection = "library-import"
-                                                    } catch (error: Exception) {
-                                                        remoteLibraryMessage = "No se ha podido descargar o abrir el paquete: ${error.message ?: "archivo no válido"}"
-                                                    } finally {
-                                                        remoteLibraryLoading = false
                                                     }
                                                 }
                                             },
-                                            enabled = !remoteLibraryLoading,
+                                            enabled = remoteLibraryDownloadingName == null && !remoteLibraryLoading,
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Text(when {
+                                                isDownloading -> "Descargando…"
+                                                isDownloaded -> "Importar ahora"
                                                 isUpdate -> "⬇️ Descargar actualización"
-                                                isDownloaded -> "↻ Volver a importar"
-                                                else -> "⬇️ Descargar e importar"
+                                                else -> "⬇️ Descargar"
                                             })
                                         }
                                     }
@@ -1901,9 +1936,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
-                            Text("Los paquetes se detectan automáticamente. Si sustituyes un ZIP por otro con el mismo nombre en GitHub, aparecerá como actualización cuando cambie su SHA-1.", fontSize = 12.sp, color = Color(0xFF667085))
+                            Text("Las descargas se realizan en segundo plano. Puedes seguir consultando el catálogo; solo se permite una descarga simultánea.", fontSize = 12.sp, color = Color(0xFF667085))
                         }
-                    }
                     "library-transfer" -> {
                         item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Elige qué operación quieres realizar. Cada proceso tiene su propia pantalla para mantener separadas la importación y la exportación.", fontSize = 14.sp, color = Color(0xFF667085)) }
@@ -2817,6 +2851,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         val count = LibraryPackageManager.import(context, info, transferImportCategories, transferReplaceDuplicates, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions, transferImportObjects)
                                         transferPackage = null
                                         LibraryPackageManager.discard(info)
+                                        transferRemoteLibraryName?.let { RemoteLibraryRepository.deleteCached(context, it) }
+                                        transferRemoteLibraryName = null
                                         // La biblioteca de cuentos mantiene una lista en estado Compose.
                                         // Tras importar, hay que recargarla explícitamente para que los
                                         // cuentos recién copiados aparezcan sin reiniciar la aplicación.
@@ -2884,7 +2920,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         !duplicate || transferStoryConflictDecisions[incomingStory.key] == "overwrite"
                                     }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
-                            item { OutlinedButton(onClick = { LibraryPackageManager.discard(info); transferPackage = null; parentSection = "library-transfer" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
+                            item { OutlinedButton(onClick = {
+                                LibraryPackageManager.discard(info)
+                                transferPackage = null
+                                parentSection = if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"
+                                transferRemoteLibraryName = null
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
                         }
                         if (transferMessage.isNotBlank()) item { Text(transferMessage, fontSize = 14.sp, color = if (transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)) }
                     }
@@ -6256,6 +6297,48 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 Text("Configuración parental pendiente: PIN, categorías y biblioteca de palabras se añadirán en una siguiente fase.")
             }
         }
+    }
+    if (remoteLibraryPendingImport != null) {
+        val pendingPackage = remoteLibraryPendingImport!!
+        AlertDialog(
+            onDismissRequest = { remoteLibraryPendingImport = null },
+            title = { Text("Biblioteca descargada") },
+            text = { Text("«${pendingPackage.name}» se ha descargado correctamente y está lista para instalar. Puedes importarla ahora o dejarla para más tarde.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    remoteLibraryScope.launch {
+                        try {
+                            val file = RemoteLibraryRepository.cachedFile(context, pendingPackage.name)
+                            check(file.isFile && file.length() > 0L) { "El archivo descargado ya no está disponible. Descárgalo de nuevo." }
+                            val inspected = withContext(Dispatchers.IO) {
+                                LibraryPackageManager.inspect(context, Uri.fromFile(file))
+                            }
+                            transferPackage?.let { LibraryPackageManager.discard(it) }
+                            transferPackage = inspected
+                            transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
+                            transferImportStories = inspected.stories.map { it.key }.toSet()
+                            transferImportObjects = emptySet()
+                            transferObjectConflictDecisions = emptyMap()
+                            transferStoryConflictDecisions = emptyMap()
+                            transferConflictIndex = 0
+                            transferReplaceDuplicates = false
+                            transferImportStatistics = false
+                            transferImportUsageStatistics = false
+                            transferRemoteLibraryName = pendingPackage.name
+                            transferMessage = "Paquete descargado y validado. Selecciona el contenido que deseas importar."
+                            remoteLibraryPendingImport = null
+                            parentSection = "library-import"
+                        } catch (error: Exception) {
+                            remoteLibraryMessage = "No se ha podido validar el paquete: ${error.message ?: "archivo no válido"}"
+                            remoteLibraryPendingImport = null
+                        }
+                    }
+                }) { Text("Importar ahora") }
+            },
+            dismissButton = {
+                TextButton(onClick = { remoteLibraryPendingImport = null }) { Text("Más tarde") }
+            }
+        )
     }
 }
 
