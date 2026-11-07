@@ -53,6 +53,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 internal fun StoryObjectInventoryScreen(
     objects: List<StoredObject>,
     ownedFolders: Set<String>,
+    unlockedFolders: Set<String> = emptySet(),
     balanceSeconds: Int,
     isStarsMode: Boolean = false,
     message: String,
@@ -63,7 +64,7 @@ internal fun StoryObjectInventoryScreen(
     var selectedCollectible by remember { mutableStateOf<StoredObject?>(null) }
     var pendingPurchase by remember { mutableStateOf<StoredObject?>(null) }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
-    val visibleObjects = objects.filter { it.folderName in ownedFolders || it.metadata.availableInStore }.sortedBy { it.metadata.name.lowercase() }
+    val visibleObjects = objects.filter { it.folderName in ownedFolders || (it.metadata.availableInStore && (!it.metadata.requiresUnlock || it.folderName in unlockedFolders)) }.sortedBy { it.metadata.name.lowercase() }
     val ordinaryObjects = visibleObjects.filterNot { it.metadata.collectible }
     val collectibles = visibleObjects.filter { it.metadata.collectible }
     val ownedCount = visibleObjects.count { it.folderName in ownedFolders }
