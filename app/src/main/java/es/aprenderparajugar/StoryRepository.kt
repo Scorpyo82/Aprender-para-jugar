@@ -5,8 +5,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-/** Destino reservado para una salida cuyo destino fue eliminado. */
+/** Identificadores reservados para conservar referencias a escenas eliminadas. */
 internal const val STORY_LOST_DESTINATION = "Lost"
+internal const val STORY_LOST_ORIGIN = "LostOrigin"
 
 /** Datos generales y grafo narrativo de un cuento. */
 data class StoryMetadata(
@@ -201,12 +202,22 @@ object StoryJsonCodec {
             "Una conexión no puede tener condiciones duplicadas."
         }
         metadata.connectionConditions.forEach { condition ->
-            require(condition.toScene != STORY_LOST_DESTINATION && (condition.fromScene to condition.toScene) in edges) { "Hay una condición asociada a una conexión inexistente." }
+            require(
+                condition.fromScene == STORY_LOST_ORIGIN || condition.toScene == STORY_LOST_DESTINATION ||
+                    (condition.fromScene to condition.toScene) in edges
+            ) { "Hay una condición asociada a una conexión inexistente." }
+            require(condition.fromScene == STORY_LOST_ORIGIN || condition.fromScene in metadata.scenes) { "La escena de origen de una condición no existe." }
+            require(condition.toScene == STORY_LOST_DESTINATION || condition.toScene in metadata.scenes) { "La escena de destino de una condición no existe." }
             require(condition.requiredObject == null || isSafeSegment(condition.requiredObject)) { "La referencia al objeto requerido no es válida." }
             require(condition.requiredObject != null || !condition.consumeRequiredObject) { "No se puede consumir un objeto si no se ha seleccionado ninguno." }
         }
         metadata.connectionAlternatives.forEach { alternative ->
-            require(alternative.toScene != STORY_LOST_DESTINATION && (alternative.fromScene to alternative.toScene) in edges) { "Hay una alternativa asociada a una conexión inexistente." }
+            require(
+                alternative.fromScene == STORY_LOST_ORIGIN || alternative.toScene == STORY_LOST_DESTINATION ||
+                    (alternative.fromScene to alternative.toScene) in edges
+            ) { "Hay una alternativa asociada a una conexión inexistente." }
+            require(alternative.fromScene == STORY_LOST_ORIGIN || alternative.fromScene in metadata.scenes) { "La escena de origen de una alternativa no existe." }
+            require(alternative.toScene == STORY_LOST_DESTINATION || alternative.toScene in metadata.scenes) { "La escena de destino de una alternativa no existe." }
             require(alternative.kind in setOf("free", "object", "decision")) { "El tipo de alternativa narrativa no es válido." }
             require(alternative.requiredObject == null || isSafeSegment(alternative.requiredObject)) { "La referencia al objeto requerido no es válida." }
             require((alternative.kind == "object") == (alternative.requiredObject != null)) { "La alternativa por objeto debe indicar exactamente un objeto." }
