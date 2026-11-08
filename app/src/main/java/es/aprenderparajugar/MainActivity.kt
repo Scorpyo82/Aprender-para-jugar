@@ -4949,35 +4949,15 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             }
         )
     } else if (screen == "word-category-select") {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = { screen = "word-options"; wordStartMessage = "" }) { Text("← Volver a Palabras") }
-            Text("Elegir categoría", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-            Text("Dificultad seleccionada: $wordSelectedDifficulty", fontSize = 16.sp, color = Color(0xFF667085))
-            val availableWordCategories = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
-                .map { it.category }.distinct().sorted()
-            if (availableWordCategories.isEmpty()) {
-                Text("No hay categorías con ejercicios activos de dificultad $wordSelectedDifficulty. Vuelve atrás y prueba otra dificultad o crea/activa ejercicios.", color = Color(0xFFB3261E), fontSize = 16.sp)
-            } else {
-                availableWordCategories.forEach { category ->
-                    val count = wordExercises.count { it.active && it.category == category && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
-                    Card(
-                        Modifier.fillMaxWidth().clickable { startWordExercise(category) },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD8DDE5))
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column(Modifier.weight(1f)) {
-                                Text(category, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                                Text("$count ejercicios disponibles", color = Color(0xFF667085), fontSize = 14.sp)
-                            }
-                            Text("›", fontSize = 26.sp, color = Color(0xFF3973AC))
-                        }
-                    }
-                }
-            }
-            if (wordStartMessage.isNotBlank()) Text(wordStartMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
-        }
+        WordCategorySelectionScreen(
+            difficulty = wordSelectedDifficulty,
+            availableCounts = wordExercises
+                .filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
+                .groupingBy { it.category }.eachCount().toSortedMap(),
+            message = wordStartMessage,
+            onBack = { screen = "word-options"; wordStartMessage = "" },
+            onSelectCategory = { category -> startWordExercise(category) }
+        )
     } else if (screen == "word-exercise") {
         val target = wordExerciseTarget
         if (target == null) {
