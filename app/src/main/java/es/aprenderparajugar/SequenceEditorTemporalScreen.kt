@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
@@ -42,6 +42,7 @@ fun LazyListScope.SequenceEditorTemporalScreen(
     categories: List<String>,
     categoryMenuExpanded: Boolean,
     onCategoryMenuExpandedChange: (Boolean) -> Unit,
+    onCategorySelected: (String) -> Unit,
     cards: List<String>,
     onCardChange: (Int, String) -> Unit,
     pictures: List<String>,
@@ -103,7 +104,7 @@ fun LazyListScope.SequenceEditorTemporalScreen(
             DropdownMenu(
                 expanded = categoryMenuExpanded,
                 onDismissRequest = { onCategoryMenuExpandedChange(false) },
-                modifier = Modifier.height(360.dp)
+                modifier = Modifier.heightIn(max = 360.dp)
             ) {
                 categories.distinct().sorted().forEach { name ->
                     DropdownMenuItem(
