@@ -3704,137 +3704,63 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "sequence-editor-temporal" -> {
-                        item { Text(if (sequenceEditingIndex < 0) "Nuevo ejercicio" else "Editar ejercicio", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { OutlinedTextField(value = sequenceTitleDraft, onValueChange = { sequenceTitleDraft = if (sequenceEditingIndex < 0) NameRules.filterInput(it) else it }, label = { Text("Nombre del ejercicio") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                        item {
-                            Text("Tipo de secuencia", fontWeight = FontWeight.Bold)
-                            listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
-                                OutlinedButton(onClick = {
-                                    sequenceTypeDraft = type
-                                    if (sequenceCardsDraft.size < 2) {
-                                        sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty(), "", "")
-                                        sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty(), "", "")
-                                    }
-                                }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceTypeDraft == type) "✓ $type" else type) }
-                            }
-                        }
-                        item {
-                            Text("Dificultad", fontWeight = FontWeight.Bold)
-                            listOf("Fácil", "Normal", "Difícil").forEach { level ->
-                                OutlinedButton(onClick = { sequenceDifficultyDraft = level }, modifier = Modifier.fillMaxWidth()) { Text(if (sequenceDifficultyDraft == level) "✓ $level" else level) }
-                            }
-                            Text("Cada niño aprende a su ritmo. La dificultad indica la complejidad de la actividad y es orientativa. Elige el nivel que mejor se adapte a sus necesidades y experiencia.", fontSize = 13.sp, color = Color(0xFF667085))
-                        }
-                        item {
-                            Text("Categoría temática", fontWeight = FontWeight.Bold)
-                            androidx.compose.foundation.layout.Box {
-                                OutlinedButton(onClick = { sequenceCategoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("🗂️ $sequenceCategoryDraft  ▾", maxLines = 1)
+                        SequenceEditorTemporalScreen(
+                            editing = sequenceEditingIndex >= 0,
+                            title = sequenceTitleDraft,
+                            onTitleChange = { sequenceTitleDraft = if (sequenceEditingIndex < 0) NameRules.filterInput(it) else it },
+                            sequenceType = sequenceTypeDraft,
+                            onSequenceTypeChange = { type ->
+                                sequenceTypeDraft = type
+                                if (sequenceCardsDraft.size < 2) {
+                                    sequenceCardsDraft = listOf(sequenceCardsDraft.firstOrNull().orEmpty(), "", "")
+                                    sequenceCardPicturesDraft = listOf(sequenceCardPicturesDraft.firstOrNull().orEmpty(), "", "")
                                 }
-                                DropdownMenu(expanded = sequenceCategoryMenuExpanded, onDismissRequest = { sequenceCategoryMenuExpanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
-                                    (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted().forEach { category ->
-                                        DropdownMenuItem(text = { Text(category) }, onClick = { sequenceCategoryDraft = category; sequenceCategoryMenuExpanded = false })
-                                    }
+                            },
+                            difficulty = sequenceDifficultyDraft,
+                            onDifficultyChange = { sequenceDifficultyDraft = it },
+                            category = sequenceCategoryDraft,
+                            categories = sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() },
+                            categoryMenuExpanded = sequenceCategoryMenuExpanded,
+                            onCategoryMenuExpandedChange = { sequenceCategoryMenuExpanded = it },
+                            onCategorySelected = { sequenceCategoryDraft = it },
+                            cards = sequenceCardsDraft,
+                            onCardChange = { index, value ->
+                                sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = value }
+                            },
+                            pictures = sequenceCardPicturesDraft,
+                            onRemoveCard = { index ->
+                                if (sequenceCardsDraft.size > 2) {
+                                    sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) }
+                                    sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also { if (index < it.size) it.removeAt(index) }
                                 }
-                            }
-                            Text("Las categorías se crean y gestionan desde el menú Categorías de la biblioteca.", fontSize = 12.sp, color = Color(0xFF667085))
-                        }
-                        item {
-                            Text("Tarjetas en el orden correcto", fontWeight = FontWeight.Bold)
-                            Text("Edita los pasos en su orden correcto. Máximo 6 tarjetas.", fontSize = 13.sp, color = Color(0xFF667085))
-                        }
-                        sequenceCardsDraft.forEachIndexed { index, card ->
-                            item {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text("${index + 1}.", fontWeight = FontWeight.Bold)
-                                        OutlinedTextField(value = card, onValueChange = { updated -> sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it[index] = updated } }, label = { Text("Paso ${index + 1}") }, modifier = Modifier.weight(1f), singleLine = true)
-                                        OutlinedButton(onClick = {
-                                            if (sequenceCardsDraft.size > 2) {
-                                                sequenceCardsDraft = sequenceCardsDraft.toMutableList().also { it.removeAt(index) }
-                                                sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also { if (index < it.size) it.removeAt(index) }
-                                            }
-                                        }, enabled = sequenceCardsDraft.size > 2) { Text("−") }
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        val picture = sequenceCardPicturesDraft.getOrNull(index).orEmpty()
-                                        if (picture.startsWith("content://") || picture.startsWith("file://")) {
-                                            AndroidView(
-                                                factory = { ctx -> ImageView(ctx).apply {
-                                                    scaleType = ImageView.ScaleType.CENTER_CROP
-                                                    layoutParams = ViewGroup.LayoutParams(120, 120)
-                                                } },
-                                                update = { view ->
-                                                    try { view.setImageURI(Uri.parse(picture)) }
-                                                    catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) }
-                                                },
-                                                modifier = Modifier.width(88.dp).height(88.dp).clipToBounds()
-                                            )
-                                        } else {
-                                            androidx.compose.foundation.layout.Box(
-                                                Modifier.width(88.dp).height(88.dp)
-                                                    .background(Color(0xFFF2F4F7), RoundedCornerShape(12.dp)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                if (picture.isBlank()) {
-                                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                        Text("▧", fontSize = 30.sp, color = Color(0xFF98A2B3))
-                                                        Text("Sin imagen", fontSize = 10.sp, color = Color(0xFF667085))
-                                                    }
-                                                } else {
-                                                    Text("Imagen no válida", fontSize = 10.sp, color = Color(0xFF667085))
-                                                }
-                                            }
-                                        }
-                                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            Text("Imagen de la tarjeta ${index + 1}", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                                            OutlinedButton(onClick = {
-                                                pendingSequencePictureIndex = index
-                                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                                sequenceImagePicker.launch(arrayOf("image/*"))
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
-                                            OutlinedButton(onClick = {
-                                                pendingCameraTarget = "sequence"
-                                                pendingCameraSequenceIndex = index
-                                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                                cameraLauncher.launch(null)
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto con la cámara") }
-                                            if (picture.isNotBlank()) {
-                                                OutlinedButton(onClick = {
-                                                    sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
-                                                        while (it.size <= index) it.add("")
-                                                        it[index] = ""
-                                                    }
-                                                }, modifier = Modifier.fillMaxWidth()) { Text("Quitar imagen") }
-                                            }
-                                        }
-                                    }
+                            },
+                            onPickGallery = { index ->
+                                pendingSequencePictureIndex = index
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                sequenceImagePicker.launch(arrayOf("image/*"))
+                            },
+                            onTakePhoto = { index ->
+                                pendingCameraTarget = "sequence"
+                                pendingCameraSequenceIndex = index
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                cameraLauncher.launch(null)
+                            },
+                            onRemovePicture = { index ->
+                                sequenceCardPicturesDraft = sequenceCardPicturesDraft.toMutableList().also {
+                                    while (it.size <= index) it.add("")
+                                    it[index] = ""
                                 }
-                            }
-                        }
-                        item {
-                            OutlinedButton(onClick = {
+                            },
+                            onAddCard = {
                                 if (sequenceCardsDraft.size < 6) {
                                     sequenceCardsDraft = sequenceCardsDraft + ""
                                     sequenceCardPicturesDraft = sequenceCardPicturesDraft + ""
                                 }
-                            }, enabled = sequenceCardsDraft.size < 6 && true, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta (${sequenceCardsDraft.size}/6)") }
-                        }
-                        item {
-                            Text("Soluciones alternativas (opcional)", fontWeight = FontWeight.Bold)
-                            Text("Una alternativa por línea. Escribe los números de las tarjetas en el orden correcto, separados por comas.", fontSize = 13.sp, color = Color(0xFF667085))
-                            OutlinedTextField(value = sequenceAlternativeDraft, onValueChange = { sequenceAlternativeDraft = it }, label = { Text("Ej.: 1,3,4,2") }, placeholder = { Text("1,3,4,2\n1,2,3,4") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-                        }
-                        item {
-                            if (sequenceEditorMessage.isNotBlank()) Text(sequenceEditorMessage, color = Color(0xFFB3261E), fontSize = 13.sp)
-                            Button(onClick = {
+                            },
+                            alternativeDraft = sequenceAlternativeDraft,
+                            onAlternativeDraftChange = { sequenceAlternativeDraft = it },
+                            message = sequenceEditorMessage,
+                            onSave = {
                                 val cleanCards = sequenceCardsDraft.map { it.trim() }
                                 val alternativeLines = sequenceAlternativeDraft.lines().map { it.trim() }.filter { it.isNotBlank() }
                                 val parsedAlternatives = alternativeLines.map { line -> line.split(",").map { it.trim().toIntOrNull() } }
@@ -3849,7 +3775,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     sequenceCategoryDraft.isBlank() -> sequenceEditorMessage = "Crea o selecciona una categoría antes de guardar el ejercicio."
                                     cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
                                     cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
-                                     sequenceCardPicturesDraft.indices.take(cleanCards.size).any { sequenceCardPicturesDraft.getOrNull(it).isNullOrBlank() } || sequenceCardPicturesDraft.size < cleanCards.size -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta. No puede quedar ninguna imagen vacía."
+                                    sequenceCardPicturesDraft.indices.take(cleanCards.size).any { sequenceCardPicturesDraft.getOrNull(it).isNullOrBlank() } || sequenceCardPicturesDraft.size < cleanCards.size -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta. No puede quedar ninguna imagen vacía."
                                     alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
                                     else -> {
                                         val alternatives = alternativeLines
@@ -3864,9 +3790,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         parentSection = "sequence-library"
                                     }
                                 }
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar ejercicio") }
-                        }
-                        item { OutlinedButton(onClick = { parentSection = "sequence-library-temporal" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
+                            },
+                            onCancel = { parentSection = "sequence-library-temporal" }
+                        )
                     }
                     "sequence-categories-temporal" -> {
                         item { Text("Categorías · Orden temporal", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
