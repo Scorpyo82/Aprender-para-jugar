@@ -119,13 +119,29 @@ internal class StoryEditorState(private val context: Context) {
             if (origin == sceneName) emptyList()
             else currentConnections[origin].orEmpty().map { if (it == sceneName) STORY_LOST_DESTINATION else it }.distinct()
         }
+        val outgoingDestinations = currentConnections[sceneName].orEmpty().filter { it != STORY_LOST_DESTINATION }
+        val alternativesBeforeRemoval = connectionAlternatives.value.toMutableList()
+        outgoingDestinations.forEach { destination ->
+            if (alternativesBeforeRemoval.none { it.fromScene == sceneName && it.toScene == destination }) {
+                val legacyCondition = connectionConditions.value.firstOrNull {
+                    it.fromScene == sceneName && it.toScene == destination
+                }
+                alternativesBeforeRemoval += StoryConnectionAlternative(
+                    fromScene = sceneName,
+                    toScene = destination,
+                    kind = if (legacyCondition?.requiredObject != null) "object" else "free",
+                    requiredObject = legacyCondition?.requiredObject,
+                    consumeRequiredObject = legacyCondition?.consumeRequiredObject == true
+                )
+            }
+        }
         connectionConditions.value = connectionConditions.value.map { condition ->
             condition.copy(
                 fromScene = if (condition.fromScene == sceneName) STORY_LOST_ORIGIN else condition.fromScene,
                 toScene = if (condition.toScene == sceneName) STORY_LOST_DESTINATION else condition.toScene
             )
         }
-        connectionAlternatives.value = connectionAlternatives.value.map { alternative ->
+        connectionAlternatives.value = alternativesBeforeRemoval.map { alternative ->
             alternative.copy(
                 fromScene = if (alternative.fromScene == sceneName) STORY_LOST_ORIGIN else alternative.fromScene,
                 toScene = if (alternative.toScene == sceneName) STORY_LOST_DESTINATION else alternative.toScene
