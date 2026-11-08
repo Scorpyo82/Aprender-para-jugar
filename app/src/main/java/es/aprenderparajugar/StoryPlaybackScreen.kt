@@ -405,8 +405,8 @@ internal fun StoryPlayerScreen(
                         Column(
                             modifier = Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.94f)
                                 .background(Color(0xEAF9FAFC), RoundedCornerShape(20.dp))
-                                .padding(horizontal = 18.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(7.dp),
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -414,7 +414,7 @@ internal fun StoryPlayerScreen(
                                     snapshot.decisionPrompt.ifBlank { "Elige una opción" },
                                     modifier = Modifier.weight(1f),
                                     color = Color(0xFF253047),
-                                    fontSize = 20.sp,
+                                    fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center
                                 )
@@ -429,7 +429,7 @@ internal fun StoryPlayerScreen(
                                 LazyColumn(
                                     state = decisionOptionsListState,
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
                                 items(snapshot.decisionOptions, key = { it.key }) { option ->
                                     Button(
@@ -445,24 +445,34 @@ internal fun StoryPlayerScreen(
                                             }
                                         },
                                         enabled = !decisionSelectionInProgress,
-                                        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                         shape = RoundedCornerShape(13.dp)
                                     ) {
-                                        Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 17.sp, textAlign = TextAlign.Center)
+                                        Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 16.sp, textAlign = TextAlign.Center)
                                     }
                                 }
                                 }
                                 if (decisionOptionsListState.canScrollBackward || decisionOptionsListState.canScrollForward) {
                                     Column(
-                                        modifier = Modifier.fillMaxHeight().padding(start = 8.dp, top = 12.dp, bottom = 12.dp),
+                                        modifier = Modifier.fillMaxHeight().padding(start = 4.dp, top = 4.dp, bottom = 4.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         if (decisionOptionsListState.canScrollBackward) {
-                                            Text("▲", color = Color(0xFF34445F), fontSize = 30.sp, fontWeight = FontWeight.Black)
+                                            Box(
+                                                modifier = Modifier.size(34.dp).background(Color(0x2634455F), RoundedCornerShape(17.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text("↑", color = Color(0xFF26364F), fontSize = 22.sp, fontWeight = FontWeight.Black)
+                                            }
                                         }
                                         if (decisionOptionsListState.canScrollForward) {
-                                            Text("▼", color = Color(0xFF34445F), fontSize = 30.sp, fontWeight = FontWeight.Black)
+                                            Box(
+                                                modifier = Modifier.size(34.dp).background(Color(0x2634455F), RoundedCornerShape(17.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text("↓", color = Color(0xFF26364F), fontSize = 22.sp, fontWeight = FontWeight.Black)
+                                            }
                                         }
                                     }
                                 }
