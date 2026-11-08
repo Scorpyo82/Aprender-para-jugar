@@ -5851,6 +5851,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     minutes = balanceMinutes,
                     remainderSeconds = balanceRemainderSeconds
                 )
+            }
             item {
                 HomeFoxHeader()
             }
