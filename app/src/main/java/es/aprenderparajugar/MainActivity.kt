@@ -3064,23 +3064,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "stories-settings" -> {
-                        item { Text("Configurar Cuentos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "stories-content-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("📚", fontSize = 30.sp)
-                                    Column { Text("Gestión de cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Biblioteca de cuentos y colecciones", color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "stories-objects" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🎒", fontSize = 30.sp)
-                                    Column { Text("Gestión de objetos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Crear y administrar objetos reutilizables", color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
+                        StorySettingsScreen(
+                            onOpenStoryManagement = { parentSection = "stories-content-settings" },
+                            onOpenObjectManagement = { parentSection = "stories-objects" }
+                        )
                     }
                     "stories-content-settings" -> {
                         item { Text("Gestión de cuentos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
