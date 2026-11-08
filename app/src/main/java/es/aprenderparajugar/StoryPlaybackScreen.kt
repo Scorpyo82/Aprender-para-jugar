@@ -26,6 +26,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Button
@@ -300,11 +307,38 @@ internal fun StoryPlayerScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val hasUsableObject = snapshot.inventory.any { item ->
+                        !item.metadata.collectible && engine.canUseObject(item.folderName)
+                    }
+                    val backpackAttention = hasUsableObject && narrationFinished && !backpackOpen
+                    val backpackPulse = rememberInfiniteTransition(label = "story-backpack-pulse")
+                        .animateFloat(
+                            initialValue = 1f,
+                            targetValue = if (backpackAttention) 1.12f else 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 650),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "story-backpack-scale"
+                        ).value
                     OutlinedButton(
                         onClick = { backpackOpen = true },
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = backpackPulse
+                            scaleY = backpackPulse
+                        },
                         shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(2.dp, Color.White)
-                    ) { Text("🎒 ${snapshot.inventory.size}", color = Color.White) }
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color(0xEE17243A),
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(
+                            if (backpackAttention) 3.dp else 2.dp,
+                            if (backpackAttention) StoryGold else Color.White
+                        )
+                    ) {
+                        Text("🎒 ${snapshot.inventory.size}", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    }
 
                     if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
                         OutlinedButton(
@@ -354,6 +388,59 @@ internal fun StoryPlayerScreen(
                         }
                     }
                 }
+
+                if (decisionDialogOpen && snapshot.decisionOptions.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.42f))
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(0.78f)
+                                .heightIn(max = 420.dp)
+                                .background(Color(0xEAF9FAFC), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 18.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(9.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text("¿Qué debería hacer?", modifier = Modifier.weight(1f), color = Color(0xFF253047), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                TextButton(onClick = { if (!decisionSelectionInProgress) decisionDialogOpen = false }, enabled = !decisionSelectionInProgress) {
+                                    Text("✕", fontSize = 20.sp, color = Color(0xFF475467))
+                                }
+                            }
+                            if (snapshot.decisionPrompt.isNotBlank()) {
+                                Text(snapshot.decisionPrompt, modifier = Modifier.fillMaxWidth(), color = Color(0xFF475467), fontSize = 16.sp, textAlign = TextAlign.Center)
+                            }
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(snapshot.decisionOptions, key = { it.key }) { option ->
+                                    Button(
+                                        onClick = {
+                                            if (!decisionSelectionInProgress) {
+                                                decisionSelectionInProgress = true
+                                                val next = runCatching { engine.chooseDecisionOption(option.key) }.getOrNull()
+                                                if (next != null) {
+                                                    snapshot = next
+                                                    decisionDialogOpen = false
+                                                }
+                                                decisionSelectionInProgress = false
+                                            }
+                                        },
+                                        enabled = !decisionSelectionInProgress,
+                                        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                                        shape = RoundedCornerShape(13.dp)
+                                    ) {
+                                        Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 17.sp, textAlign = TextAlign.Center)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -377,55 +464,6 @@ internal fun StoryPlayerScreen(
         CollectibleCelebrationDialog(awarded, fontFamily) { celebrationObject = null }
     }
 
-    if (decisionDialogOpen && snapshot.decisionOptions.isNotEmpty()) {
-        Dialog(
-            onDismissRequest = { if (!decisionSelectionInProgress) decisionDialogOpen = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(0.88f)
-                    .background(Color(0xFFF9FAFC), RoundedCornerShape(22.dp))
-                    .padding(horizontal = 22.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("¿Qué debería hacer?", modifier = Modifier.weight(1f), color = Color(0xFF253047), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    TextButton(onClick = { if (!decisionSelectionInProgress) decisionDialogOpen = false }, enabled = !decisionSelectionInProgress) {
-                        Text("✕", fontSize = 22.sp, color = Color(0xFF475467))
-                    }
-                }
-                if (snapshot.decisionPrompt.isNotBlank()) {
-                    Text(snapshot.decisionPrompt, modifier = Modifier.fillMaxWidth(), color = Color(0xFF475467), fontSize = 17.sp, textAlign = TextAlign.Center)
-                }
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(snapshot.decisionOptions, key = { it.key }) { option ->
-                        Button(
-                            onClick = {
-                                if (!decisionSelectionInProgress) {
-                                    decisionSelectionInProgress = true
-                                    val next = runCatching { engine.chooseDecisionOption(option.key) }.getOrNull()
-                                    if (next != null) {
-                                        snapshot = next
-                                        decisionDialogOpen = false
-                                    }
-                                    decisionSelectionInProgress = false
-                                }
-                            },
-                            enabled = !decisionSelectionInProgress,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 18.sp, textAlign = TextAlign.Center)
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     if (exitConfirmation) {
         AlertDialog(
