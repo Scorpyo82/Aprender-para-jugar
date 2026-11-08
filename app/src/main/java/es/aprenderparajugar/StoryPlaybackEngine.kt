@@ -39,6 +39,22 @@ internal class StoryPlaybackEngine(
             "Este cuento tiene conexiones huérfanas. Repara su estructura narrativa antes de reproducirlo."
         }
         val sceneMetadata = story.metadata.scenes.associateWith { folder -> StoryRepository.readScene(story, folder).metadata }
+        val availableObjectFolders = ObjectRepository.list(context).map { it.folderName }.toSet()
+        val configuredOrigins = story.metadata.connectionAlternatives.map { it.fromScene }.toSet()
+        val missingAlternativeObject = story.metadata.connectionAlternatives.firstOrNull { alternative ->
+            alternative.kind == "object" && alternative.requiredObject !in availableObjectFolders
+        }
+        require(missingAlternativeObject == null) {
+            "Hay una alternativa que requiere un objeto eliminado o inexistente. Repara la referencia en la estructura narrativa antes de reproducir el cuento."
+        }
+        val missingLegacyObject = story.metadata.connectionConditions.firstOrNull { condition ->
+            condition.fromScene !in configuredOrigins &&
+                condition.requiredObject != null &&
+                condition.requiredObject !in availableObjectFolders
+        }
+        require(missingLegacyObject == null) {
+            "Hay una conexión heredada que requiere un objeto eliminado o inexistente. Repara la referencia en la estructura narrativa antes de reproducir el cuento."
+        }
         val orphanedDecision = story.metadata.connectionAlternatives.firstOrNull { alternative ->
             alternative.kind == "decision" && sceneMetadata[alternative.fromScene]?.decisionOptions.orEmpty().none { it.key == alternative.decisionOptionKey }
         }
