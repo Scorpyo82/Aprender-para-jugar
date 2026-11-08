@@ -79,8 +79,7 @@ internal fun StoryEditorScreen(
                         }
             Column { Spacer(Modifier.height(8.dp)); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
             Column { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
-                        items(scenes.size) { index ->
-                            val sceneName = scenes[index]
+                        scenes.forEachIndexed { index, sceneName ->
                             val sceneFolder = runCatching { StoryRepository.sceneFolderName(sceneName) }.getOrNull()
                             val currentStoredStory = storedStories.firstOrNull {
                                 it.folderName == editingFolder && it.collection == editingCollectionFolder
@@ -99,7 +98,7 @@ internal fun StoryEditorScreen(
                                 val savedScene = if (folder != null && stored != null) runCatching { StoryRepository.readScene(stored, folder).metadata }.getOrNull() else null
                                 summary = savedScene?.illustrationSummary.orEmpty()
                                 sceneText = savedScene?.text.orEmpty()
-                                storyEditorState.loadDecisionForScene(sceneName, savedScene)
+                                state.loadDecisionForScene(sceneName, savedScene)
                                 illustrations = illustrations.toMutableMap().apply { put(sceneName, savedScene?.illustration) }
                                 ambientAudio = ambientAudio.toMutableMap().apply { put(sceneName, savedScene?.ambientAudio) }
                                 narrationAudio = narrationAudio.toMutableMap().apply { put(sceneName, savedScene?.narrationAudio) }
@@ -134,7 +133,7 @@ internal fun StoryEditorScreen(
                             OutlinedButton(onClick = { scenes = scenes + "Escena ${scenes.size + 1}" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
                         }
                         if (storyScenePendingDeletion != null) {
-                            item {
+                            Column {
                                 val sceneToDelete = storyScenePendingDeletion!!
                                 AlertDialog(
                                     onDismissRequest = { storyScenePendingDeletion = null },
@@ -142,7 +141,7 @@ internal fun StoryEditorScreen(
                                     text = { Text("¿Quieres eliminar definitivamente «$sceneToDelete»? Se borrarán su ilustración, sus audios y el resto de archivos propios. Las escenas que apuntaban a ella conservarán una salida HUÉRFANA para que puedas repararla en la estructura narrativa.") },
                                     confirmButton = {
                                         Button(onClick = {
-                                            if (storyEditorState.removeScene(sceneToDelete)) {
+                                            if (state.removeScene(sceneToDelete)) {
                                                 message = "Escena eliminada del borrador. Guarda el cuento para borrar definitivamente sus archivos."
                                             }
                                             storyScenePendingDeletion = null
@@ -164,7 +163,7 @@ internal fun StoryEditorScreen(
                                 if (state.persist() != null) onBackToLibrary()
                             }, modifier = Modifier.fillMaxWidth()) { Text("Guardar cuento") }
                         }
-                        if (message.isNotBlank()) item {
+                        if (message.isNotBlank()) Column {
                             Text(message, color = if (message == "Cuento guardado.") Color(0xFF24733B) else Color(0xFFB3261E))
                         }
             Column {
