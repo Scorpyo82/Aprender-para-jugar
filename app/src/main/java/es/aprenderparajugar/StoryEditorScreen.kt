@@ -103,6 +103,15 @@ internal fun StoryEditorScreen(
                                 narrationAudio = narrationAudio.toMutableMap().apply { put(sceneName, savedScene?.narrationAudio) }
                                 objectTiming = if (savedScene?.awardTiming == "onEnter") "Al entrar" else "Al salir"
                                 awardedObjectByScene = awardedObjectByScene.toMutableMap().apply { put(sceneName, savedScene?.awardedObject) }
+                                state.awardedObjectsByScene.value = state.awardedObjectsByScene.value.toMutableMap().apply {
+                                    put(
+                                        sceneName,
+                                        (listOfNotNull(savedScene?.awardedObject) + savedScene?.awardedObjects.orEmpty()).distinct()
+                                    )
+                                }
+                                state.unlockedObjectsByScene.value = state.unlockedObjectsByScene.value.toMutableMap().apply {
+                                    put(sceneName, savedScene?.unlockedObjects.orEmpty())
+                                }
                                 keepAmbientByScene = keepAmbientByScene.toMutableMap().apply {
                                     put(sceneName, savedScene?.keepPreviousAmbient ?: false)
                                 }
