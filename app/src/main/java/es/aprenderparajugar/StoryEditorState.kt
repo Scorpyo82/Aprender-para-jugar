@@ -42,6 +42,40 @@ internal class StoryEditorState(private val context: Context) {
     val connectionAlternatives: MutableState<List<StoryConnectionAlternative>> = mutableStateOf(emptyList())
     val startScene: MutableState<String> = mutableStateOf("Escena 1")
 
+    /** Carga los datos de decisión de todas las escenas de un cuento. */
+    fun loadDecisions(stored: StoredStory) {
+        val scenes = stored.metadata.scenes
+        decisionPromptByScene.value = scenes.associate { scene ->
+            scene to runCatching { StoryRepository.readScene(stored, scene).metadata.decisionPrompt }.getOrDefault("")
+        }
+        decisionOptionsByScene.value = scenes.associate { scene ->
+            scene to runCatching { StoryRepository.readScene(stored, scene).metadata.decisionOptions }.getOrDefault(emptyList())
+        }
+        nextDecisionOptionNumberByScene.value = scenes.associate { scene ->
+            scene to runCatching { StoryRepository.readScene(stored, scene).metadata.nextDecisionOptionNumber }.getOrDefault(1)
+        }
+    }
+
+    /** Limpia los datos de decisión al iniciar un cuento nuevo. */
+    fun resetDecisions() {
+        decisionPromptByScene.value = emptyMap()
+        decisionOptionsByScene.value = emptyMap()
+        nextDecisionOptionNumberByScene.value = emptyMap()
+    }
+
+    /** Carga o inicializa los datos de decisión de la escena seleccionada. */
+    fun loadDecisionForScene(sceneName: String, metadata: StorySceneMetadata?) {
+        decisionPromptByScene.value = decisionPromptByScene.value.toMutableMap().apply {
+            put(sceneName, metadata?.decisionPrompt.orEmpty())
+        }
+        decisionOptionsByScene.value = decisionOptionsByScene.value.toMutableMap().apply {
+            put(sceneName, metadata?.decisionOptions.orEmpty())
+        }
+        nextDecisionOptionNumberByScene.value = nextDecisionOptionNumberByScene.value.toMutableMap().apply {
+            put(sceneName, metadata?.nextDecisionOptionNumber ?: 1)
+        }
+    }
+
     /** Carga el grafo persistido usando los nombres visibles de las escenas en el editor. */
     fun loadStructure(metadata: StoryMetadata) {
         val visibleByFolder = metadata.scenes.associate { it to it.replace('_', ' ') }
