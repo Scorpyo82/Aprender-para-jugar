@@ -5767,29 +5767,17 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
     } else if (screen == "help") {
         HelpScreen(isStarsMode = rewardMode.isStars, onBack = { screen = "home" })
     } else if (screen == "category-select") {
-        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                OutlinedButton(onClick = { screen = "cards-options"; cardsStartMessage = "" }) { Text("← Volver a las opciones") }
-                Text("Elegir categoría", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text("Toca una categoría para empezar la partida.", fontSize = 16.sp, color = Color(0xFF667085))
-            }
-            categories.forEach { name ->
-                item {
-                    val count = pairs.count { it.active && it.difficulty == difficulty && it.category.equals(name, ignoreCase = true) }
-                    Card(Modifier.fillMaxWidth().clickable(enabled = count >= questionCount && !manualCategoryLimitReached) { startCardsGame("Elegir", name) },
-                        shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (count >= questionCount) Color.White else Color(0xFFF0F0F0)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8E0D2))) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("📚", fontSize = 30.sp)
-                            Column(Modifier.weight(1f)) { Text(name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344)); Text("$count tarjetas disponibles", fontSize = 13.sp, color = Color(0xFF667085)) }
-                            Text(if (count >= questionCount) "›" else "—", fontSize = 28.sp, color = Color(0xFF3567A8))
-                        }
-                    }
-                }
-            }
-            if (manualCategoryLimitReached) item { Text("Has alcanzado el límite diario de elecciones manuales.", color = Color(0xFF8A4B08), fontWeight = FontWeight.SemiBold) }
-            if (cardsStartMessage.isNotBlank()) item { Text(cardsStartMessage, color = Color(0xFF9A4E00), fontWeight = FontWeight.SemiBold) }
-        }
+        CardsCategorySelectionScreen(
+            categories = categories,
+            availableCounts = categories.associateWith { name ->
+                pairs.count { it.active && it.difficulty == difficulty && it.category.equals(name, ignoreCase = true) }
+            },
+            questionCount = questionCount,
+            manualCategoryLimitReached = manualCategoryLimitReached,
+            message = cardsStartMessage,
+            onBack = { screen = "cards-options"; cardsStartMessage = "" },
+            onSelectCategory = { name -> startCardsGame("Elegir", name) }
+        )
     } else {
         val homeWidth = LocalConfiguration.current.screenWidthDp
         val modeImageSize = if (homeWidth >= 700) 210.dp else if (homeWidth >= 500) 165.dp else 118.dp
