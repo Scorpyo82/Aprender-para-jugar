@@ -3262,12 +3262,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             StoryEditorScreen(
                                 state = storyEditorState,
                                 collections = storyCollections,
-                                storedStoryObjects = storedStoryObjects,
                                 onPickCover = {
                                     preferences.edit().putBoolean("content_picker_active", true).apply()
                                     storyCoverPicker.launch(arrayOf("image/*"))
                                 },
-                                onOpenScene = { scene -> parentSection = "stories-scene-editor" },
+                                onOpenScene = { scene ->
+                                    storedStoryObjects = ObjectRepository.list(context)
+                                    parentSection = "stories-scene-editor"
+                                },
                                 onOpenStructure = { parentSection = "stories-structure" },
                                 onBackToLibrary = { parentSection = "stories-library" }
                             )
