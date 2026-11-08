@@ -74,9 +74,11 @@ internal fun StoryStructureScreen(
             sceneSummaries = sceneSummaries,
             connections = connections,
             conditions = conditions,
+            alternatives = alternatives,
             availableObjects = availableObjects,
             onConnectionsChange = { connections = it },
-            onConditionsChange = { conditions = it }
+            onConditionsChange = { conditions = it },
+            onAlternativesChange = { alternatives = it }
         )
         OrphanedNarrativeReferences(
             scenes = scenes,
