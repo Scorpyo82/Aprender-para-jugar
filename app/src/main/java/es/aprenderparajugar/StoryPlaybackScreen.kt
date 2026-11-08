@@ -401,7 +401,7 @@ internal fun StoryPlayerScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth(0.86f).fillMaxHeight(0.94f)
+                            modifier = Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.94f)
                                 .background(Color(0xEAF9FAFC), RoundedCornerShape(20.dp))
                                 .padding(horizontal = 18.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(7.dp),
@@ -451,12 +451,12 @@ internal fun StoryPlayerScreen(
                                 }
                                 if (snapshot.decisionOptions.size > 3) {
                                     Column(
-                                        modifier = Modifier.padding(start = 6.dp),
+                                        modifier = Modifier.fillMaxHeight().padding(start = 8.dp, top = 12.dp, bottom = 12.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("⌃", color = Color(0xFF59677D), fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                                        Text("⌄", color = Color(0xFF59677D), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                                        Text("▲", color = Color(0xFF34445F), fontSize = 27.sp, fontWeight = FontWeight.Black)
+                                        Text("▼", color = Color(0xFF34445F), fontSize = 27.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
