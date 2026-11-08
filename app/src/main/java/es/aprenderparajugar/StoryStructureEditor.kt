@@ -43,9 +43,13 @@ internal fun StoryStructureEditor(
 ) {
     fun updateAlternatives(next: List<StoryConnectionAlternative>) {
         onAlternativesChange(next)
-        onConditionsChange(next.filter { it.kind == "object" && it.requiredObject != null }.map {
-            StoryConnectionCondition(it.fromScene, it.toScene, it.requiredObject, it.consumeRequiredObject)
-        })
+
+        // Las alternativas nuevas admiten varias condiciones OR por conexión.
+        // No deben duplicarse en el formato heredado, que solo admite una
+        // condición por pareja origen/destino. Conservamos las condiciones
+        // antiguas de las escenas que todavía no usan el modelo nuevo.
+        val migratedOrigins = (alternatives.map { it.fromScene } + next.map { it.fromScene }).toSet()
+        onConditionsChange(conditions.filterNot { it.fromScene in migratedOrigins })
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
