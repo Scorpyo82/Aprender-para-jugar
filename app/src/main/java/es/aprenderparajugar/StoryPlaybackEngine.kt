@@ -42,7 +42,7 @@ internal class StoryPlaybackEngine(
         val availableObjectFolders = ObjectRepository.list(context).map { it.folderName }.toSet()
         val configuredOrigins = story.metadata.connectionAlternatives.map { it.fromScene }.toSet()
         val missingAlternativeObject = story.metadata.connectionAlternatives.firstOrNull { alternative ->
-            alternative.kind == "object" && alternative.requiredObject !in availableObjectFolders
+            alternative.kind == "object" && (alternative.requiredObject == null || alternative.requiredObject !in availableObjectFolders)
         }
         require(missingAlternativeObject == null) {
             "Hay una alternativa que requiere un objeto eliminado o inexistente. Repara la referencia en la estructura narrativa antes de reproducir el cuento."
