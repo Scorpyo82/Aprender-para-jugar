@@ -40,7 +40,7 @@ internal object NotificationQueueRepository {
         if (folderNames.isEmpty()) return
         val eligible = ObjectRepository.list(context)
             .filter { it.folderName in folderNames && it.metadata.availableInStore &&
-                it.metadata.requiresUnlock && !it.metadata.collectible }
+                it.metadata.requiresUnlock }
             .map { it.folderName }
         val additions = eligible.filter { it !in pending }
         if (additions.isEmpty()) return
