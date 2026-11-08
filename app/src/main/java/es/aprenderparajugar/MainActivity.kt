@@ -1661,7 +1661,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         parentSection = "game-modes"
                     }
                 }
-                item { Text("CONFIGURACIÓN GENERAL", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF667085)) }
+                item { ParentMenuSectionLabel("CONFIGURACIÓN GENERAL") }
                 item {
                     ParentMenuNavigationCard(
                         "🔤",
@@ -1711,7 +1711,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         parentSection = "security"
                     }
                 }
-                item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
+                item { ParentMenuSectionDivider() }
                 item {
                     ParentMenuNavigationCard(
                         "⚙️",
