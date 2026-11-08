@@ -3298,42 +3298,24 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "stories-objects" -> {
-                        item { Text("Objetos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            Card(Modifier.fillMaxWidth().clickable { storyObjectEditorState.reset(); parentSection = "stories-object-create" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("＋", fontSize = 30.sp, color = Color(0xFF87451F))
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Creación de objetos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        Text("Crear y editar objetos reutilizables en los cuentos", fontSize = 14.sp, color = Color(0xFF667085))
-                                    }
-                                    Text("›", fontSize = 24.sp, color = Color(0xFF87451F))
+                            StoryObjectsMenuScreen(
+                                onCreateObjects = {
+                                    storyObjectEditorState.reset()
+                                    parentSection = "stories-object-create"
+                                },
+                                onOpenCollection = {
+                                    storedStoryObjects = ObjectRepository.list(context)
+                                    storyObjectInventoryState.refresh(context)
+                                    storyObjectCollectionMessage = ""
+                                    parentSection = "stories-object-collection"
+                                },
+                                onOpenInventory = {
+                                    storedStoryObjects = ObjectRepository.list(context)
+                                    storyObjectInventoryState.refresh(context)
+                                    parentSection = "stories-object-inventory"
                                 }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storyObjectInventoryState.refresh(context); storyObjectCollectionMessage = ""; parentSection = "stories-object-collection" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("📚", fontSize = 30.sp)
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Colección de objetos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        Text("Consultar y administrar la biblioteca común de objetos", fontSize = 14.sp, color = Color(0xFF667085))
-                                    }
-                                    Text("›", fontSize = 24.sp, color = Color(0xFF87451F))
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { storedStoryObjects = ObjectRepository.list(context); storyObjectInventoryState.refresh(context); parentSection = "stories-object-inventory" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🎒", fontSize = 30.sp)
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Inventario actual", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        Text("Consultar y gestionar los objetos que posee el niño", fontSize = 14.sp, color = Color(0xFF667085))
-                                    }
-                                    Text("›", fontSize = 24.sp, color = Color(0xFF87451F))
-                                }
-                            }
+                            )
                         }
                     }
                     "stories-object-create" -> {
