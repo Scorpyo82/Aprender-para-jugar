@@ -480,7 +480,7 @@ private fun currentDayKey(): String {
 }
 
 @Composable
-private fun StoryImagePreview(file: File?, label: String) {
+internal fun StoryImagePreview(file: File?, label: String) {
     val bitmap = remember(file?.absolutePath, file?.lastModified()) {
         file?.takeIf { it.isFile && it.length() > 0L }?.let { runCatching { BitmapFactory.decodeFile(it.absolutePath) }.getOrNull() }
     }
@@ -509,7 +509,7 @@ private fun StoryImagePreview(file: File?, label: String) {
 }
 
 @Composable
-private fun StoryAudioPreview(file: File?, label: String) {
+internal fun StoryAudioPreview(file: File?, label: String) {
     val context = LocalContext.current
     val player = remember(file?.absolutePath, file?.lastModified()) {
         file?.takeIf { it.isFile && it.length() > 0L }?.let { runCatching { MediaPlayer.create(context, Uri.fromFile(it)) }.getOrNull() }
@@ -3422,232 +3422,24 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "stories-scene-editor" -> {
-                        item { Text(storyEditorSelectedScene.ifBlank { "Editar escena" }, fontSize = 23.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            OutlinedTextField(value = storyEditorSummary, onValueChange = { storyEditorSummary = it }, label = { Text("Resumen de ilustración") }, supportingText = { Text("Descripción breve que aparecerá en la tarjeta y en el mapa conceptual.") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-                        }
-                        item {
-                            OutlinedTextField(value = storyEditorSceneText, onValueChange = { storyEditorSceneText = it }, label = { Text("Texto de la escena") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
-                            if (storyEditorSceneText.length > 120) {
-                                Text("⚠️ La narración puede superar las 3 líneas recomendadas. No es un límite: el texto podrá desplazarse en la lectura.", color = Color(0xFF9A5B00), fontSize = 12.sp)
-                            }
-                        }
-                        item { StoryDecisionEditor(storyEditorState, storyEditorSelectedScene) }
-                        item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).apply()
-                                storyIllustrationPicker.launch(arrayOf("image/*"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorIllustrations[storyEditorSelectedScene] == null) "＋ Añadir ilustración" else "Cambiar ilustración") }
-                            val illustrationFile = if (storyEditorIllustrations[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
-                                File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorIllustrations[storyEditorSelectedScene]!!) }
-                            else null
-                            StoryImagePreview(illustrationFile, "Vista previa de ilustración")
-                        }
-                        item {
-                            val keepPreviousAmbient = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false
-                            val ambientFile = if (!keepPreviousAmbient && storyEditorAmbientAudio[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
-                                File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorAmbientAudio[storyEditorSelectedScene]!!) }
-                            else null
-                            OutlinedButton(
-                                onClick = {
+                            StorySceneEditorContent(
+                                state = storyEditorState,
+                                storyAmbientDuringNarration = storyAmbientDuringNarration,
+                                onPickIllustration = {
+                                    preferences.edit().putBoolean("content_picker_active", true).apply()
+                                    storyIllustrationPicker.launch(arrayOf("image/*"))
+                                },
+                                onPickAmbient = {
                                     preferences.edit().putBoolean("content_picker_active", true).apply()
                                     storyAmbientPicker.launch(arrayOf("audio/*"))
                                 },
-                                enabled = !keepPreviousAmbient,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text(if (keepPreviousAmbient) "Audio ambiental deshabilitado" else if (ambientFile == null) "♫ Elegir audio ambiental" else "Cambiar audio ambiental") }
-                            if (!keepPreviousAmbient) {
-                                StoryAudioPreview(ambientFile, "Audio ambiental")
-                                if (ambientFile != null) {
-                                    OutlinedButton(
-                                        onClick = {
-                                            storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(storyEditorSelectedScene, null) }
-                                            ambientFile.delete()
-                                            persistStoryDraft()
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { Text("Eliminar audio ambiental") }
-                                }
-                            } else {
-                                Text("Se conservará el sonido de la escena anterior. El audio asignado a esta escena se ignorará.", fontSize = 12.sp, color = Color(0xFF667085))
-                            }
-                        }
-                        item {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("Mantener sonido ambiental de escena anterior", fontWeight = FontWeight.Medium)
-                                    Text("Tiene prioridad sobre cualquier audio ambiental asignado a esta escena.", fontSize = 12.sp, color = Color(0xFF667085))
-                                }
-                                Switch(
-                                    checked = storyEditorKeepAmbientByScene[storyEditorSelectedScene] ?: false,
-                                    onCheckedChange = { enabled ->
-                                        storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
-                                            put(storyEditorSelectedScene, enabled)
-                                        }
-                                        persistStoryDraft()
-                                    }
-                                )
-                            }
-                        }
-                        item {
-                            val narrationFile = if (storyEditorNarrationAudio[storyEditorSelectedScene] != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
-                                File(File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), "escenas"), StoryRepository.sceneFolderName(storyEditorSelectedScene)).let { File(it, storyEditorNarrationAudio[storyEditorSelectedScene]!!) }
-                            else null
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).apply()
-                                storyNarrationPicker.launch(arrayOf("audio/*"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text(if (narrationFile == null) "♫ Elegir audio de narración" else "Cambiar audio de narración") }
-                            StoryAudioPreview(narrationFile, "Audio de narración")
-                            if (narrationFile != null) {
-                                OutlinedButton(
-                                    onClick = {
-                                        storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(storyEditorSelectedScene, null) }
-                                        narrationFile.delete()
-                                        persistStoryDraft()
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) { Text("Eliminar audio de narración") }
-                            }
-                        }
-
-                        item {
-                            val awardedFolders = storyEditorAwardedObjectsByScene[storyEditorSelectedScene].orEmpty()
-                            val unlockedFolders = storyEditorUnlockedObjectsByScene[storyEditorSelectedScene].orEmpty()
-                            val namesByFolder = storedStoryObjects.associateBy { it.folderName }
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Objetos que recibe el niño", fontWeight = FontWeight.SemiBold)
-                                Text(if (awardedFolders.isEmpty()) "Ningún objeto adicional seleccionado." else awardedFolders.mapNotNull { namesByFolder[it]?.metadata?.name }.joinToString(", "), fontSize = 12.sp, color = Color(0xFF667085))
-                                OutlinedButton(onClick = { storedStoryObjects = ObjectRepository.list(context); showAwardedObjectsDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("Seleccionar objetos para añadir al inventario (${awardedFolders.size})") }
-                                Text("Objetos que se desbloquean", fontWeight = FontWeight.SemiBold)
-                                Text(if (unlockedFolders.isEmpty()) "Ningún objeto seleccionado." else unlockedFolders.mapNotNull { namesByFolder[it]?.metadata?.name }.joinToString(", "), fontSize = 12.sp, color = Color(0xFF667085))
-                                OutlinedButton(onClick = { storedStoryObjects = ObjectRepository.list(context); showUnlockedObjectsDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("Desbloquear objetos (${unlockedFolders.size})") }
-                            }
-                            if (showAwardedObjectsDialog) {
-                                AlertDialog(
-                                    onDismissRequest = { showAwardedObjectsDialog = false },
-                                    title = { Text("Objetos que recibe el niño") },
-                                    text = {
-                                        Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                                            storedStoryObjects.forEach { obj ->
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Checkbox(checked = obj.folderName in awardedFolders, onCheckedChange = { checked ->
-                                                        storyEditorAwardedObjectsByScene = storyEditorAwardedObjectsByScene.toMutableMap().apply {
-                                                            put(storyEditorSelectedScene, if (checked) (awardedFolders + obj.folderName).distinct() else awardedFolders - obj.folderName)
-                                                        }
-                                                    })
-                                                    Text(obj.metadata.name + " · " + obj.collection)
-                                                }
-                                            }
-                                        }
-                                    },
-                                    confirmButton = { TextButton(onClick = { showAwardedObjectsDialog = false }) { Text("Aceptar") } },
-                                    dismissButton = { TextButton(onClick = { showAwardedObjectsDialog = false }) { Text("Cerrar") } }
-                                )
-                            }
-                            if (showUnlockedObjectsDialog) {
-                                AlertDialog(
-                                    onDismissRequest = { showUnlockedObjectsDialog = false },
-                                    title = { Text("Desbloquear objetos") },
-                                    text = {
-                                        Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                                            storedStoryObjects.forEach { obj ->
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Checkbox(checked = obj.metadata.availableInStore && obj.folderName in unlockedFolders, enabled = obj.metadata.availableInStore, onCheckedChange = { checked ->
-                                                        storyEditorUnlockedObjectsByScene = storyEditorUnlockedObjectsByScene.toMutableMap().apply {
-                                                            put(storyEditorSelectedScene, if (checked && obj.metadata.availableInStore) (unlockedFolders + obj.folderName).distinct() else unlockedFolders - obj.folderName)
-                                                        }
-                                                    })
-                                                    Column {
-                                                        Text(obj.metadata.name)
-                                                        Text(if (obj.metadata.availableInStore) "A la venta" else "No está a la venta · No se puede seleccionar", fontSize = 11.sp, color = Color(0xFF667085))
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    confirmButton = { TextButton(onClick = { showUnlockedObjectsDialog = false }) { Text("Aceptar") } },
-                                    dismissButton = { TextButton(onClick = { showUnlockedObjectsDialog = false }) { Text("Cerrar") } }
-                                )
-                            }
-                        }
-
-                        item {
-                            OutlinedButton(
-                                onClick = {
-                                    runCatching {
-                                        val stored = persistStoryDraft() ?: error(storyEditorMessage.ifBlank { "Guarda primero el cuento." })
-                                        val folder = StoryRepository.sceneFolderName(storyEditorSelectedScene)
-                                        val targetScene = StoryRepository.readScene(stored, folder)
-                                        if (targetScene.metadata.keepPreviousAmbient) {
-                                            val candidates = StoryRepository.findAmbientSourceCandidates(stored, folder)
-                                            when {
-                                                candidates.size > 1 -> {
-                                                    storyScenePendingTest = targetScene
-                                                    storyAmbientSourceCandidates = candidates
-                                                }
-                                                candidates.size == 1 -> {
-                                                    val source = candidates.single()
-                                                    storySceneTestAmbientFile = source.metadata.ambientAudio
-                                                        ?.let { File(source.directory, it) }?.takeIf { it.isFile }
-                                                    storySceneTestAmbientOverride = true
-                                                    storySceneTest = targetScene
-                                                }
-                                                else -> {
-                                                    storySceneTestAmbientFile = null
-                                                    storySceneTestAmbientOverride = true
-                                                    storySceneTest = targetScene
-                                                }
-                                            }
-                                        } else {
-                                            storySceneTestAmbientFile = null
-                                            storySceneTestAmbientOverride = false
-                                            storySceneTest = targetScene
-                                        }
-                                    }.onFailure { storyEditorMessage = it.message ?: "No se pudo iniciar la prueba." }
+                                onPickNarration = {
+                                    preferences.edit().putBoolean("content_picker_active", true).apply()
+                                    storyNarrationPicker.launch(arrayOf("audio/*"))
                                 },
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("▶ Probar escena") }
-                            Text("Reproduce la escena sin permitir interacciones.", fontSize = 12.sp, color = Color(0xFF667085))
-                        }
-                        item {
-                            if (storySceneTest != null) StorySceneTestDialog(
-                                scene = storySceneTest!!,
-                                ambientDuringNarrationPercent = storyAmbientDuringNarration,
-                                ambientAudioOverride = storySceneTestAmbientFile,
-                                useAmbientAudioOverride = storySceneTestAmbientOverride,
-                                onExit = {
-                                    storySceneTest = null
-                                    storySceneTestAmbientFile = null
-                                    storySceneTestAmbientOverride = false
-                                }
+                                onBackToMap = { parentSection = "stories-editor" }
                             )
-                            if (storyScenePendingTest != null) StoryAmbientSourceDialog(
-                                candidates = storyAmbientSourceCandidates,
-                                onSelect = { source ->
-                                    storySceneTestAmbientFile = source.metadata.ambientAudio
-                                        ?.let { File(source.directory, it) }?.takeIf { it.isFile }
-                                    storySceneTestAmbientOverride = true
-                                    storySceneTest = storyScenePendingTest
-                                    storyScenePendingTest = null
-                                    storyAmbientSourceCandidates = emptyList()
-                                },
-                                onDismiss = {
-                                    storyScenePendingTest = null
-                                    storyAmbientSourceCandidates = emptyList()
-                                }
-                            )
-                        }
-                        item {
-                            Text("Momento de obtención", fontWeight = FontWeight.SemiBold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilterChip(selected = storyEditorObjectTiming == "Al entrar", onClick = { storyEditorObjectTiming = "Al entrar" }, label = { Text("Al entrar") })
-                                FilterChip(selected = storyEditorObjectTiming == "Al salir", onClick = { storyEditorObjectTiming = "Al salir" }, label = { Text("Al salir") })
-                            }
-                        }
-                        item {
-                            Button(onClick = {
-                                if (persistStoryDraft() != null) parentSection = "stories-editor"
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar escena y volver al mapa") }
                         }
                     }
                     "stories-collections" -> {
