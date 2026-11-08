@@ -4017,43 +4017,20 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "cards-settings" -> {
-                        item { Text("Configurar Tarjetas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "words" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🖼️", fontSize = 28.sp)
-                                    Column { Text("Biblioteca de tarjetas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Palabras, imágenes, dificultad y estado de cada tarjeta", color = Color(0xFF667085)) }
-                                }
+                        CardsSettingsScreen(
+                            questionCount = questionCount,
+                            dailyManualLimit = dailyManualLimit,
+                            onOpenLibrary = { parentSection = "words" },
+                            onOpenCategories = { parentSection = "categories" },
+                            onQuestionCountChange = { delta ->
+                                questionCount = (questionCount + delta).coerceIn(1, 10)
+                                preferences.edit().putInt("question_count", questionCount).apply()
+                            },
+                            onDailyManualLimitChange = { delta ->
+                                dailyManualLimit = (dailyManualLimit + delta).coerceIn(0, 10)
+                                preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply()
                             }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "categories" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🗂️", fontSize = 28.sp)
-                                    Column { Text("Categorías", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Organiza el vocabulario por temas", color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
-                            Text("Parejas por partida", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                            Text("Número de parejas de palabras e imágenes que tendrá cada ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedButton(onClick = { questionCount = (questionCount - 1).coerceAtLeast(1); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount > 1) { Text("−") }
-                                Text("$questionCount", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                                OutlinedButton(onClick = { questionCount = (questionCount + 1).coerceAtMost(10); preferences.edit().putInt("question_count", questionCount).apply() }, enabled = questionCount < 10) { Text("+") }
-                            }
-                        }
-                        item {
-                            androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Límite diario para elegir categoría", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("Número máximo de veces al día que el menor puede elegir la categoría. Al alcanzar el límite, podrá seguir practicando con las demás opciones.", fontSize = 14.sp, color = Color(0xFF667085))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedButton(onClick = { if (dailyManualLimit > 0) { dailyManualLimit--; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("−") }
-                                Text("$dailyManualLimit", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                                OutlinedButton(onClick = { if (dailyManualLimit < 10) { dailyManualLimit++; preferences.edit().putInt("daily_manual_limit", dailyManualLimit).apply() } }) { Text("+") }
-                            }
-                        }
-                        item { Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085)) }
+                        )
                     }
                     "words" -> item {
                         if (libraryPage == "list") {
