@@ -5,8 +5,6 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
-import android.media.AudioManager
-import android.media.ToneGenerator
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
@@ -51,7 +49,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -141,8 +138,6 @@ internal fun StoryPlayerScreen(
     var decisionSelectionInProgress by remember { mutableStateOf(false) }
     val decisionOptionsListState = remember(snapshot.scene.folderName) { LazyListState() }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
-    val pendingStoreUnlocks = remember(engine) { mutableStateListOf<StoredObject>().apply { addAll(engine.consumeNewlyUnlockedObjects()) } }
-    val collectStoreUnlocks = { pendingStoreUnlocks.addAll(engine.consumeNewlyUnlockedObjects()) }
     var narrationFinished by remember { mutableStateOf(false) }
     var narrationIsPlaying by remember { mutableStateOf(false) }
     var ambientVolume by remember { mutableStateOf(1f) }
@@ -247,16 +242,6 @@ internal fun StoryPlayerScreen(
     }
 
     val audioPreferences = remember(context) { context.getSharedPreferences("aprender_para_jugar", android.content.Context.MODE_PRIVATE) }
-    LaunchedEffect(pendingStoreUnlocks.firstOrNull(), celebrationObject, decisionDialogOpen, backpackOpen) {
-        if (pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen) {
-            val tone = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 65) }.getOrNull()
-            tone?.startTone(ToneGenerator.TONE_PROP_ACK, 260)
-            kotlinx.coroutines.delay(3200)
-            tone?.release()
-            if (pendingStoreUnlocks.isNotEmpty()) pendingStoreUnlocks.removeAt(0)
-        }
-    }
-
     val ambientDuringNarration = remember(audioPreferences) {
         audioPreferences.getInt("story_ambient_during_narration_percent", 20).coerceIn(0, 30) / 100f
     }
@@ -323,20 +308,6 @@ internal fun StoryPlayerScreen(
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("📖", color = Color.White, fontSize = 54.sp)
-                    }
-                }
-
-                val showStoreUnlock = pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen
-                val storeUnlockAlpha by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = if (showStoreUnlock) 1f else 0f,
-                    animationSpec = tween(durationMillis = if (showStoreUnlock) 220 else 350),
-                    label = "store-unlock-fade"
-                )
-                if (showStoreUnlock) {
-                    Box(
-                        Modifier.align(Alignment.TopEnd).padding(12.dp).graphicsLayer { alpha = storeUnlockAlpha }
-                    ) {
-                        pendingStoreUnlocks.firstOrNull()?.let { StoreUnlockNotification(it, fontFamily) }
                     }
                 }
 
@@ -411,10 +382,10 @@ internal fun StoryPlayerScreen(
                         Button(
                             onClick = {
                                 val collectible = engine.claimCurrentSceneExitCollectible()
-                                collectStoreUnlocks()
+
                                 if (collectible != null) {
                                     celebrationObject = collectible
-                                } else if (pendingStoreUnlocks.isEmpty()) {
+                                } else {
                                     engine.finish()
                                     safelyStopAndRelease(ambientPlayer); ambientPlayer = null
                                     safelyStopAndRelease(narrationPlayer); narrationPlayer = null
@@ -427,12 +398,12 @@ internal fun StoryPlayerScreen(
                         Button(
                             onClick = {
                                 val collectible = engine.claimCurrentSceneExitCollectible()
-                                collectStoreUnlocks()
+
                                 if (collectible != null) celebrationObject = collectible
                                 else if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
                                 else engine.advance()?.let {
                                     snapshot = it
-                                    collectStoreUnlocks()
+
                                 }
                             },
                             shape = RoundedCornerShape(24.dp)
@@ -489,7 +460,7 @@ internal fun StoryPlayerScreen(
                                                 val next = runCatching { engine.chooseDecisionOption(option.key) }.getOrNull()
                                                 if (next != null) {
                                                     snapshot = next
-                                                    collectStoreUnlocks()
+
                                                     decisionDialogOpen = false
                                                 }
                                                 decisionSelectionInProgress = false
