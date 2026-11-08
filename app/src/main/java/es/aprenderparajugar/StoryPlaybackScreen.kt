@@ -448,6 +448,7 @@ internal fun StoryPlayerScreen(
                                         Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 17.sp, textAlign = TextAlign.Center)
                                     }
                                 }
+                                }
                                 if (snapshot.decisionOptions.size > 3) {
                                     Column(
                                         modifier = Modifier.padding(start = 6.dp),
