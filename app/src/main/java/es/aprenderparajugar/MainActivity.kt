@@ -637,9 +637,6 @@ private fun AprenderApp() {
     var storyScenePendingTest by remember { mutableStateOf<StoredStoryScene?>(null) }
     var storyAmbientSourceCandidates by remember { mutableStateOf<List<StoredStoryScene>>(emptyList()) }
     var storyEditorSceneText by storyEditorState.sceneText
-    val storyDecisionPromptByScene = storyEditorState.decisionPromptByScene.value
-    val storyDecisionOptionsByScene = storyEditorState.decisionOptionsByScene.value
-    val storyNextDecisionOptionNumberByScene = storyEditorState.nextDecisionOptionNumberByScene.value
     var storyEditorObjectTiming by storyEditorState.objectTiming
     var storyEditorAwardedObjectByScene by storyEditorState.awardedObjectByScene
     var storyEditorAwardedObjectsByScene by storyEditorState.awardedObjectsByScene
@@ -3197,9 +3194,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
                                 storyEditorAmbientAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.ambientAudio }.getOrNull() }
                                 storyEditorNarrationAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.narrationAudio }.getOrNull() }
-                                storyEditorState.decisionPromptByScene.value = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.decisionPrompt }.getOrDefault("") }
-                                storyEditorState.decisionOptionsByScene.value = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.decisionOptions }.getOrDefault(emptyList()) }
-                                storyEditorState.nextDecisionOptionNumberByScene.value = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.nextDecisionOptionNumber }.getOrDefault(1) }
+                                storyEditorState.loadDecisions(stored)
                                 storyEditorAwardedObjectByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObject }.getOrNull() }
                                 storyEditorAwardedObjectsByScene = stored.metadata.scenes.associate { scene ->
                                     scene to runCatching {
@@ -3245,9 +3240,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorIllustrations = emptyMap()
                                 storyEditorAmbientAudio = emptyMap()
                                 storyEditorNarrationAudio = emptyMap()
-                                storyEditorState.decisionPromptByScene.value = emptyMap()
-                                storyEditorState.decisionOptionsByScene.value = emptyMap()
-                                storyEditorState.nextDecisionOptionNumberByScene.value = emptyMap()
+                                storyEditorState.resetDecisions()
                                 storyEditorAwardedObjectByScene = emptyMap()
                                 storyEditorAwardedObjectsByScene = emptyMap()
                                 storyEditorUnlockedObjectsByScene = emptyMap()
@@ -3317,9 +3310,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 val savedScene = if (folder != null && stored != null) runCatching { StoryRepository.readScene(stored, folder).metadata }.getOrNull() else null
                                 storyEditorSummary = savedScene?.illustrationSummary.orEmpty()
                                 storyEditorSceneText = savedScene?.text.orEmpty()
-                                storyEditorState.decisionPromptByScene.value = storyDecisionPromptByScene.toMutableMap().apply { put(sceneName, savedScene?.decisionPrompt.orEmpty()) }
-                                storyEditorState.decisionOptionsByScene.value = storyDecisionOptionsByScene.toMutableMap().apply { put(sceneName, savedScene?.decisionOptions.orEmpty()) }
-                                storyEditorState.nextDecisionOptionNumberByScene.value = storyNextDecisionOptionNumberByScene.toMutableMap().apply { put(sceneName, savedScene?.nextDecisionOptionNumber ?: 1) }
+                                storyEditorState.loadDecisionForScene(sceneName, savedScene)
                                 storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(sceneName, savedScene?.illustration) }
                                 storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(sceneName, savedScene?.ambientAudio) }
                                 storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(sceneName, savedScene?.narrationAudio) }
@@ -3411,8 +3402,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 initialConnections = storyEditorState.connections.value,
                                 initialConditions = storyEditorState.connectionConditions.value,
                                 initialAlternatives = storyEditorState.connectionAlternatives.value,
-                                decisionOptionsByScene = storyDecisionOptionsByScene,
-                                decisionPromptsByScene = storyDecisionPromptByScene,
+                                decisionOptionsByScene = storyEditorState.decisionOptionsByScene.value,
+                                decisionPromptsByScene = storyEditorState.decisionPromptByScene.value,
                                 initialStartScene = storyEditorState.startScene.value,
                                 availableObjects = storedStoryObjects,
                                 message = storyEditorMessage,
@@ -3441,93 +3432,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 Text("⚠️ La narración puede superar las 3 líneas recomendadas. No es un límite: el texto podrá desplazarse en la lectura.", color = Color(0xFF9A5B00), fontSize = 12.sp)
                             }
                         }
-                        item {
-                            val prompt = storyDecisionPromptByScene[storyEditorSelectedScene].orEmpty()
-                            val options = storyDecisionOptionsByScene[storyEditorSelectedScene].orEmpty()
-                            val nextNumber = storyNextDecisionOptionNumberByScene[storyEditorSelectedScene] ?: 1
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Decisión de la escena", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text("Opcional. Si esta escena plantea una elección, escribe la pregunta y añade las respuestas que podrá seleccionar el niño.", fontSize = 13.sp, color = Color(0xFF667085))
-                                OutlinedTextField(
-                                    value = prompt,
-                                    onValueChange = { value ->
-                                        storyEditorState.decisionPromptByScene.value = storyDecisionPromptByScene.toMutableMap().apply { put(storyEditorSelectedScene, value) }
-                                    },
-                                    label = { Text("Pregunta o planteamiento") },
-                                    placeholder = { Text("¿Qué debería hacer?") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    minLines = 2
-                                )
-                                options.forEachIndexed { index, option ->
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F7FA))
-                                    ) {
-                                        Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            OutlinedTextField(
-                                                value = option.text,
-                                                onValueChange = { value ->
-                                                    storyEditorState.decisionOptionsByScene.value = storyDecisionOptionsByScene.toMutableMap().apply {
-                                                        put(storyEditorSelectedScene, options.map { if (it.key == option.key) it.copy(text = value) else it })
-                                                    }
-                                                },
-                                                label = { Text("Opción ${index + 1}") },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                singleLine = true
-                                            )
-                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                OutlinedButton(
-                                                    onClick = {
-                                                        if (index > 0) {
-                                                            val reordered = options.toMutableList()
-                                                            val item = reordered.removeAt(index)
-                                                            reordered.add(index - 1, item)
-                                                            storyEditorState.decisionOptionsByScene.value = storyDecisionOptionsByScene.toMutableMap().apply { put(storyEditorSelectedScene, reordered) }
-                                                        }
-                                                    },
-                                                    enabled = index > 0,
-                                                    modifier = Modifier.weight(1f)
-                                                ) { Text("↑ Subir") }
-                                                OutlinedButton(
-                                                    onClick = {
-                                                        if (index < options.lastIndex) {
-                                                            val reordered = options.toMutableList()
-                                                            val item = reordered.removeAt(index)
-                                                            reordered.add(index + 1, item)
-                                                            storyEditorState.decisionOptionsByScene.value = storyDecisionOptionsByScene.toMutableMap().apply { put(storyEditorSelectedScene, reordered) }
-                                                        }
-                                                    },
-                                                    enabled = index < options.lastIndex,
-                                                    modifier = Modifier.weight(1f)
-                                                ) { Text("↓ Bajar") }
-                                                OutlinedButton(
-                                                    onClick = {
-                                                        storyEditorState.decisionOptionsByScene.value = storyDecisionOptionsByScene.toMutableMap().apply {
-                                                            put(storyEditorSelectedScene, options.filterNot { it.key == option.key })
-                                                        }
-                                                    },
-                                                    modifier = Modifier.weight(1f)
-                                                ) { Text("Eliminar") }
-                                            }
-                                        }
-                                    }
-                                }
-                                OutlinedButton(
-                                    onClick = {
-                                        storyEditorState.decisionOptionsByScene.value = storyDecisionOptionsByScene.toMutableMap().apply {
-                                            put(storyEditorSelectedScene, options + StoryDecisionOption("option_$nextNumber", ""))
-                                        }
-                                        storyEditorState.nextDecisionOptionNumberByScene.value = storyNextDecisionOptionNumberByScene.toMutableMap().apply {
-                                            put(storyEditorSelectedScene, nextNumber + 1)
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) { Text("＋ Añadir opción") }
-                                if (options.isNotEmpty()) {
-                                    Text("Las opciones conservan su identificador interno aunque cambies el texto o el orden.", fontSize = 12.sp, color = Color(0xFF667085))
-                                }
-                            }
-                        }
+                        item { StoryDecisionEditor(storyEditorState, storyEditorSelectedScene) }
                         item {
                             OutlinedButton(onClick = {
                                 preferences.edit().putBoolean("content_picker_active", true).apply()
