@@ -9,7 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Modifier
+import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,6 +43,7 @@ internal fun SequenceGameScreen(
     contentFormat: String,
     message: String,
     exerciseFontFamily: FontFamily,
+    rewardMessage: String,
     onBack: () -> Unit,
     onSelectCard: (Int) -> Unit
 ) {
@@ -126,7 +127,7 @@ internal fun SequenceGameScreen(
         }
         if (finished) {
             item { Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Elegir otro ejercicio") } }
-            item { Text("Has ganado una recompensa por completar el ejercicio.", fontSize = 14.sp, color = Color(0xFF667085)) }
+            item { Text(rewardMessage, fontSize = 14.sp, color = Color(0xFF667085)) }
         }
     }
 }
