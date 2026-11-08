@@ -1624,38 +1624,29 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
             if (parentSection == "menu") {
                 item {
-                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF2FF))) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Modo de funcionamiento", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("Elige cómo se presentará el mismo saldo de recompensas.", fontSize = 13.sp, color = Color(0xFF667085))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilterChip(selected = !rewardMode.isStars, onClick = {
-                                    if (rewardMode.isStars) {
-                                        rewardMode = RewardMode.TIME
-                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
-                                        setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
-                                        // Only require the actual enabled accessibility service.
-                                        // Battery and Xiaomi background-window steps are manual OEM
-                                        // recommendations and cannot be verified reliably by Android.
-                                        val deviceSetupComplete = setupAccessibilityEnabled
-                                        parentSection = if (deviceSetupComplete) "menu" else "device-setup"
-                                    }
-                                }, label = { Text(if (!rewardMode.isStars) "✓  ⏱ Tiempo" else "⏱ Tiempo", fontWeight = if (!rewardMode.isStars) FontWeight.Bold else FontWeight.Medium) }, colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(containerColor = Color(0xFFF7F7FA), labelColor = Color(0xFF475467), selectedContainerColor = Color(0xFF2E7D32), selectedLabelColor = Color.White))
-                                FilterChip(selected = rewardMode.isStars, onClick = {
-                                    if (!rewardMode.isStars) {
-                                        rewardMode = RewardMode.STARS
-                                        val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
-                                        if (activeDeadline > 0L) {
-                                            balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
-                                        }
-                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").putInt("balance_seconds", balanceSeconds).putLong("play_deadline_ms", 0L).putBoolean("play_session_authorized", false).putBoolean("play_paused_for_screen_lock", false).apply()
-                                        context.stopService(Intent(context, PlayTimeService::class.java))
-                                    }
-                                }, label = { Text(if (rewardMode.isStars) "✓  ⭐ Estrellas" else "⭐ Estrellas", fontWeight = if (rewardMode.isStars) FontWeight.Bold else FontWeight.Medium) }, colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(containerColor = Color(0xFFF7F7FA), labelColor = Color(0xFF475467), selectedContainerColor = Color(0xFF2E7D32), selectedLabelColor = Color.White))
+                    RewardModeSelectorCard(
+                        rewardMode = rewardMode,
+                        onSelectTime = {
+                            rewardMode = RewardMode.TIME
+                            preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
+                            setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
+                            parentSection = if (setupAccessibilityEnabled) "menu" else "device-setup"
+                        },
+                        onSelectStars = {
+                            rewardMode = RewardMode.STARS
+                            val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
+                            if (activeDeadline > 0L) {
+                                balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
                             }
-                            
+                            preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars")
+                                .putInt("balance_seconds", balanceSeconds)
+                                .putLong("play_deadline_ms", 0L)
+                                .putBoolean("play_session_authorized", false)
+                                .putBoolean("play_paused_for_screen_lock", false)
+                                .apply()
+                            context.stopService(Intent(context, PlayTimeService::class.java))
                         }
-                    }
+                    )
                 }
                 item {
                     Card(Modifier.fillMaxWidth().clickable {
