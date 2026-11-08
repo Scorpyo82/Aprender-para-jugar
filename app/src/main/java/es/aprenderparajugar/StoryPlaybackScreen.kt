@@ -126,6 +126,8 @@ internal fun StoryPlayerScreen(
     val engine = remember(story.directory.absolutePath) { StoryPlaybackEngine(context, story) }
     var snapshot by remember(story.directory.absolutePath) { mutableStateOf(engine.start()) }
     var backpackOpen by remember { mutableStateOf(false) }
+    var decisionDialogOpen by remember { mutableStateOf(false) }
+    var decisionSelectionInProgress by remember { mutableStateOf(false) }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
     var narrationFinished by remember { mutableStateOf(false) }
     var narrationIsPlaying by remember { mutableStateOf(false) }
@@ -335,15 +337,21 @@ internal fun StoryPlayerScreen(
                             },
                             shape = RoundedCornerShape(24.dp)
                         ) { Text("Fin") }
-                    } else if (snapshot.canAdvance) {
+                    } else if (snapshot.canAdvance || snapshot.decisionOptions.isNotEmpty()) {
                         Button(
                             onClick = {
                                 val collectible = engine.claimCurrentSceneExitCollectible()
                                 if (collectible != null) celebrationObject = collectible
+                                else if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
                                 else engine.advance()?.let { snapshot = it }
                             },
                             shape = RoundedCornerShape(24.dp)
-                        ) { Text("»") }
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("»")
+                                if (snapshot.decisionOptions.isNotEmpty()) Text("☷", fontSize = 14.sp)
+                            }
+                        }
                     }
                 }
             }
@@ -367,6 +375,56 @@ internal fun StoryPlayerScreen(
 
     celebrationObject?.let { awarded ->
         CollectibleCelebrationDialog(awarded, fontFamily) { celebrationObject = null }
+    }
+
+    if (decisionDialogOpen && snapshot.decisionOptions.isNotEmpty()) {
+        Dialog(
+            onDismissRequest = { if (!decisionSelectionInProgress) decisionDialogOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(0.88f)
+                    .background(Color(0xFFF9FAFC), RoundedCornerShape(22.dp))
+                    .padding(horizontal = 22.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("¿Qué debería hacer?", modifier = Modifier.weight(1f), color = Color(0xFF253047), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    TextButton(onClick = { if (!decisionSelectionInProgress) decisionDialogOpen = false }, enabled = !decisionSelectionInProgress) {
+                        Text("✕", fontSize = 22.sp, color = Color(0xFF475467))
+                    }
+                }
+                if (snapshot.decisionPrompt.isNotBlank()) {
+                    Text(snapshot.decisionPrompt, modifier = Modifier.fillMaxWidth(), color = Color(0xFF475467), fontSize = 17.sp, textAlign = TextAlign.Center)
+                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(snapshot.decisionOptions, key = { it.key }) { option ->
+                        Button(
+                            onClick = {
+                                if (!decisionSelectionInProgress) {
+                                    decisionSelectionInProgress = true
+                                    val next = runCatching { engine.chooseDecisionOption(option.key) }.getOrNull()
+                                    if (next != null) {
+                                        snapshot = next
+                                        decisionDialogOpen = false
+                                    }
+                                    decisionSelectionInProgress = false
+                                }
+                            },
+                            enabled = !decisionSelectionInProgress,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 18.sp, textAlign = TextAlign.Center)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (exitConfirmation) {
