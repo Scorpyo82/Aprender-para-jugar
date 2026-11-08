@@ -265,6 +265,22 @@ internal fun StoryPlayerScreen(
             ?.takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
     }
 
+    val requiredObjectFolders = remember(story.directory.absolutePath, story.metadata.connectionAlternatives, story.metadata.connectionConditions) {
+        val configuredOrigins = story.metadata.connectionAlternatives.map { it.fromScene }.toSet()
+        (
+            story.metadata.connectionAlternatives
+                .filter { it.kind == "object" }
+                .mapNotNull { it.requiredObject } +
+                story.metadata.connectionConditions
+                    .filterNot { it.fromScene in configuredOrigins }
+                    .mapNotNull { it.requiredObject }
+        ).toSet()
+    }
+    val contextualInventory = snapshot.inventory.filter {
+        !it.metadata.collectible && it.folderName in requiredObjectFolders
+    }
+
+
     BackHandler(enabled = true) { /* La salida se realiza desde el control explícito. */ }
 
     CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = fontFamily)) {
@@ -343,7 +359,7 @@ internal fun StoryPlayerScreen(
                             if (backpackAttention) StoryGold else Color.White
                         )
                     ) {
-                        Text("🎒 ${snapshot.inventory.size}", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text("🎒 ${contextualInventory.size}", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                     }
 
                     if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
@@ -525,18 +541,6 @@ internal fun StoryPlayerScreen(
     }
 
     if (backpackOpen) {
-        val configuredOrigins = story.metadata.connectionAlternatives.map { it.fromScene }.toSet()
-        val requiredObjectFolders = (
-            story.metadata.connectionAlternatives
-                .filter { it.kind == "object" }
-                .mapNotNull { it.requiredObject } +
-                story.metadata.connectionConditions
-                    .filterNot { it.fromScene in configuredOrigins }
-                    .mapNotNull { it.requiredObject }
-            ).toSet()
-        val contextualInventory = snapshot.inventory.filter {
-            !it.metadata.collectible && it.folderName in requiredObjectFolders
-        }
         StoryBackpackDialog(
             objects = contextualInventory,
             fontFamily = fontFamily,
