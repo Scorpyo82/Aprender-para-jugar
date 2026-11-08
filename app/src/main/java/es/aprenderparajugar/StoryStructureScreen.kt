@@ -43,8 +43,23 @@ internal fun StoryStructureScreen(
     var conditions by remember(scenes, initialConditions) {
         mutableStateOf(initialConditions.toList())
     }
-    var alternatives by remember(scenes, initialAlternatives) {
-        mutableStateOf(initialAlternatives.toList())
+    var alternatives by remember(scenes, initialAlternatives, initialConnections, initialConditions) {
+        mutableStateOf(
+            initialAlternatives.ifEmpty {
+                initialConnections.flatMap { (origin, destinations) ->
+                    destinations.filter { it != STORY_LOST_DESTINATION }.map { destination ->
+                        val condition = initialConditions.firstOrNull { it.fromScene == origin && it.toScene == destination }
+                        StoryConnectionAlternative(
+                            fromScene = origin,
+                            toScene = destination,
+                            kind = if (condition?.requiredObject != null) "object" else "free",
+                            requiredObject = condition?.requiredObject,
+                            consumeRequiredObject = condition?.consumeRequiredObject == true
+                        )
+                    }
+                }
+            }
+        )
     }
     var startScene by remember(scenes, initialStartScene) { mutableStateOf(initialStartScene) }
     var startMenuExpanded by remember { mutableStateOf(false) }
