@@ -1,5 +1,6 @@
 package es.aprenderparajugar
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,7 +64,9 @@ internal fun StoryStructureEditor(
             val destinations = connections[origin].orEmpty()
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4EA))
+                border = BorderStroke(1.5.dp, Color(0xFFC9A98F)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E4D5))
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -86,6 +89,8 @@ internal fun StoryStructureEditor(
                         var replacementMenuExpanded by remember(origin, destination, scenes) { mutableStateOf(false) }
                         Card(
                             modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, Color(0xFFD6C5B7)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))
                         ) {
                             Column(
