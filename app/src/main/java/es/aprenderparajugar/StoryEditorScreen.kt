@@ -19,7 +19,7 @@ import java.io.File
 internal fun StoryEditorScreen(
     state: StoryEditorState,
     collections: List<String>,
-    storedStoryObjects: List<StoredStoryObject>,
+    storedStoryObjects: List<StoredObject>,
     onPickCover: () -> Unit,
     onOpenScene: (String) -> Unit,
     onOpenStructure: () -> Unit,
