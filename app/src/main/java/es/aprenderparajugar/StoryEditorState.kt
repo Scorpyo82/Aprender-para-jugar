@@ -65,6 +65,7 @@ internal class StoryEditorState(private val context: Context) {
             scene to listOfNotNull(sceneNames.getOrNull(index + 1))
         }.toMap()
         connectionConditions.value = emptyList()
+        connectionAlternatives.value = emptyList()
     }
 
     /** Añade nodos nuevos sin reconstruir ni destruir las bifurcaciones ya configuradas. */
@@ -85,6 +86,9 @@ internal class StoryEditorState(private val context: Context) {
         connectionConditions.value = connectionConditions.value.filter {
             it.toScene != STORY_LOST_DESTINATION && (it.fromScene to it.toScene) in edges
         }
+        connectionAlternatives.value = connectionAlternatives.value.filter {
+            it.toScene != STORY_LOST_DESTINATION && (it.fromScene to it.toScene) in edges
+        }
     }
 
     fun removeScene(sceneName: String): Boolean {
@@ -98,6 +102,7 @@ internal class StoryEditorState(private val context: Context) {
             else currentConnections[origin].orEmpty().map { if (it == sceneName) STORY_LOST_DESTINATION else it }.distinct()
         }
         connectionConditions.value = connectionConditions.value.filter { it.fromScene != sceneName && it.toScene != sceneName }
+        connectionAlternatives.value = connectionAlternatives.value.filter { it.fromScene != sceneName && it.toScene != sceneName }
         illustrations.value = illustrations.value - sceneName
         ambientAudio.value = ambientAudio.value - sceneName
         narrationAudio.value = narrationAudio.value - sceneName
@@ -158,7 +163,8 @@ internal class StoryEditorState(private val context: Context) {
                 startScene = folderByVisible[startScene.value] ?: sceneFolders.first(),
                 scenes = sceneFolders,
                 connections = persistedConnections,
-                connectionConditions = persistedConditions
+                connectionConditions = persistedConditions,
+                connectionAlternatives = persistedAlternatives
             )
             var stored = StoryRepository.save(context = context, collection = collectionFolder, folderName = storyFolder, metadata = metadata)
             sceneFolders.forEachIndexed { index, sceneFolder ->
