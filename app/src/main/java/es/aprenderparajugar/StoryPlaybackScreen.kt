@@ -28,11 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -331,11 +326,15 @@ internal fun StoryPlayerScreen(
                     }
                 }
 
-                Box(Modifier.align(Alignment.TopEnd).padding(12.dp)) {
-                    AnimatedVisibility(
-                        visible = pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen,
-                        enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { -it / 3 },
-                        exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { -it / 4 }
+                val showStoreUnlock = pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen
+                val storeUnlockAlpha by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (showStoreUnlock) 1f else 0f,
+                    animationSpec = tween(durationMillis = if (showStoreUnlock) 220 else 350),
+                    label = "store-unlock-fade"
+                )
+                if (showStoreUnlock) {
+                    Box(
+                        Modifier.align(Alignment.TopEnd).padding(12.dp).graphicsLayer { alpha = storeUnlockAlpha }
                     ) {
                         pendingStoreUnlocks.firstOrNull()?.let { StoreUnlockNotification(it, fontFamily) }
                     }
