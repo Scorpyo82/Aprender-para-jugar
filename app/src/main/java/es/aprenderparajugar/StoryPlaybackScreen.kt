@@ -420,20 +420,14 @@ internal fun StoryPlayerScreen(
                                     Text("✕", fontSize = 20.sp, color = Color(0xFF475467))
                                 }
                             }
-                            if (snapshot.decisionOptions.size > 3) {
-                                Text(
-                                    "↕  Desliza para ver más opciones",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color = Color(0xFF59677D),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            LazyColumn(
+                            Row(
                                 modifier = Modifier.fillMaxWidth().weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(7.dp)
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                LazyColumn(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                                ) {
                                 items(snapshot.decisionOptions, key = { it.key }) { option ->
                                     Button(
                                         onClick = {
@@ -452,6 +446,16 @@ internal fun StoryPlayerScreen(
                                         shape = RoundedCornerShape(13.dp)
                                     ) {
                                         Text(option.text, modifier = Modifier.fillMaxWidth(), fontSize = 17.sp, textAlign = TextAlign.Center)
+                                    }
+                                }
+                                if (snapshot.decisionOptions.size > 3) {
+                                    Column(
+                                        modifier = Modifier.padding(start = 6.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("⌃", color = Color(0xFF59677D), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                                        Text("⌄", color = Color(0xFF59677D), fontSize = 24.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
