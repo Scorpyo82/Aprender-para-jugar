@@ -3500,130 +3500,44 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "stories-object-collection" -> {
-                        item { Text("Colecciones", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Organiza los objetos de la biblioteca común en colecciones.", fontSize = 14.sp, color = Color(0xFF667085)) }
                         item {
-                            OutlinedTextField(value = storyObjectCollectionDraft, onValueChange = { storyObjectCollectionDraft = NameRules.filterInput(it) }, label = { Text("Nueva colección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        }
-                        item {
-                            Button(onClick = { storyObjectCollectionsState.addCollection() }, modifier = Modifier.fillMaxWidth()) { Text("Añadir colección") }
-                        }
-                        if (storyObjectCollectionMessage.isNotBlank()) {
-                            item {
-                                Text(
-                                    storyObjectCollectionMessage,
-                                    color = if (storyObjectCollectionMessage.contains("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)
-                                )
-                            }
-                        }
-                        if (storyObjectCollections.isEmpty()) {
-                            item { Text("Todavía no hay colecciones.", color = Color(0xFF667085)) }
-                        }
-                        storyObjectCollections.forEach { name ->
-                            item {
-                                Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                    Column(Modifier.padding(12.dp)) {
-                                        Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                        val collectionObjects = storedStoryObjects.filter { it.collection == ObjectRepository.collectionFolderName(name) }
-                                        Text("${collectionObjects.size} objetos", color = Color(0xFF667085))
-                                        collectionObjects.forEach { stored ->
-                                            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                Row(
-                                                    Modifier.fillMaxWidth(),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                                ) {
-                                                    AndroidView(
-                                                        factory = { ctx -> ImageView(ctx).apply {
-                                                            scaleType = ImageView.ScaleType.FIT_CENTER
-                                                            adjustViewBounds = false
-                                                        } },
-                                                        update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
-                                                        modifier = Modifier.size(64.dp)
-                                                    )
-                                                    Column(Modifier.weight(1f)) {
-                                                        Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
-                                                    }
-                                                    OutlinedButton(onClick = {
-                                                        storyObjectEditorState.beginEdit(stored)
-                                                        storyObjectInventoryState.refresh(context)
-                                                        parentSection = "stories-object-create"
-                                                    }) { Text("Editar") }
-                                                }
-                                                val isInInventory = storedInventoryFolders.contains(stored.folderName)
-                                                OutlinedButton(
-                                                    onClick = {
-                                                        val error = storyObjectInventoryState.toggle(context, stored.folderName)
-                                                        storyObjectCollectionMessage = error ?: if (isInInventory) {
-                                                            "${stored.metadata.name} retirado del inventario."
-                                                        } else {
-                                                            "${stored.metadata.name} añadido al inventario."
-                                                        }
-                                                    },
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Text(if (isInInventory) "Retirar del inventario" else "Añadir al inventario")
-                                                }
-                                            }
-                                        }
-                                        if (storyObjectCollectionToDelete == name) {
-                                            Text("¿Eliminar esta colección?", fontWeight = FontWeight.SemiBold)
-                                            Text("Solo se puede eliminar si no contiene objetos.", fontSize = 13.sp, color = Color(0xFF667085))
-                                            Button(onClick = { storyObjectCollectionsState.deleteCollection(name) }, enabled = collectionObjects.isEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Eliminar colección") }
-                                            if (collectionObjects.isNotEmpty()) {
-                                                Text("No se puede eliminar: primero hay que reasignar o retirar sus objetos.", fontSize = 13.sp, color = Color(0xFFB3261E))
-                                            }
-                                            OutlinedButton(onClick = { storyObjectCollectionsState.cancelDelete() }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-                                        } else {
-                                            OutlinedButton(onClick = { storyObjectCollectionsState.requestDelete(name) }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar") }
-                                        }
+                            StoryObjectCollectionManagementScreen(
+                                collections = storyObjectCollections,
+                                draft = storyObjectCollectionDraft,
+                                message = storyObjectCollectionMessage,
+                                collectionToDelete = storyObjectCollectionToDelete,
+                                objects = storedStoryObjects,
+                                inventoryFolders = storedInventoryFolders,
+                                onDraftChange = { storyObjectCollectionDraft = NameRules.filterInput(it) },
+                                onAddCollection = { storyObjectCollectionsState.addCollection() },
+                                onRequestDelete = { storyObjectCollectionsState.requestDelete(it) },
+                                onDeleteCollection = { storyObjectCollectionsState.deleteCollection(it) },
+                                onCancelDelete = { storyObjectCollectionsState.cancelDelete() },
+                                onEditObject = { stored ->
+                                    storyObjectEditorState.beginEdit(stored)
+                                    storyObjectInventoryState.refresh(context)
+                                    parentSection = "stories-object-create"
+                                },
+                                onToggleInventory = { stored, isInInventory ->
+                                    val error = storyObjectInventoryState.toggle(context, stored.folderName)
+                                    storyObjectCollectionMessage = error ?: if (isInInventory) {
+                                        "${stored.metadata.name} retirado del inventario."
+                                    } else {
+                                        "${stored.metadata.name} añadido al inventario."
                                     }
                                 }
-                            }
+                            )
                         }
                     }
                     "stories-object-inventory" -> {
-                        item { Text("Inventario actual", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Objetos que posee actualmente el niño. Los cambios realizados aquí también se reflejan en el editor de cada objeto.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        val inventoryObjects = storedStoryObjects.filter { storedInventoryFolders.contains(it.folderName) }
-                        if (inventoryObjects.isEmpty()) {
-                            item { Text("El inventario está vacío. Añade objetos desde «Editar objeto».", color = Color(0xFF667085)) }
-                        } else {
-                            item {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    items(inventoryObjects, key = { it.folderName }) { stored ->
-                                        Card(
-                                            Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                                        ) {
-                                            Row(
-                                                Modifier.fillMaxWidth().padding(12.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                AndroidView(
-                                                    factory = { ctx -> ImageView(ctx).apply {
-                                                        scaleType = ImageView.ScaleType.FIT_CENTER
-                                                        adjustViewBounds = false
-                                                    } },
-                                                    update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
-                                                    modifier = Modifier.size(64.dp)
-                                                )
-                                                Column(Modifier.weight(1f)) {
-                                                    Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
-                                                    Text(stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
-                                                }
-                                                OutlinedButton(onClick = {
-                                                    storyObjectInventoryState.remove(context, stored.folderName)?.let { storyObjectMessage = it }
-                                                }) { Text("Retirar") }
-                                            }
-                                        }
-                                    }
+                        item {
+                            StoryObjectInventoryManagementScreen(
+                                objects = storedStoryObjects,
+                                inventoryFolders = storedInventoryFolders,
+                                onRemove = { stored ->
+                                    storyObjectInventoryState.remove(context, stored.folderName)?.let { storyObjectMessage = it }
                                 }
-                            }
+                            )
                         }
                     }
                     "sequences-settings" -> {
