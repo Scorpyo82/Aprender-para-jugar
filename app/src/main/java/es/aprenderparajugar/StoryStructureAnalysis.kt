@@ -58,7 +58,14 @@ internal object StoryStructureAnalysis {
             cycleComponents = components,
             cyclesWithoutUnconditionalExit = unsafeCycles,
             hasReachableFinal = finals.isNotEmpty(),
-            orphanedConnections = (if (hasNewAlternatives) alternatives.groupBy { it.fromScene }.mapValues { (_, items) -> items.map { it.toScene } } else connections).flatMap { (origin, destinations) -> destinations.filter { it == STORY_LOST_DESTINATION }.map { origin to it } }
+            orphanedConnections = if (hasNewAlternatives) {
+                alternatives.filter { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }
+                    .map { it.fromScene to it.toScene }
+            } else {
+                connections.flatMap { (origin, destinations) ->
+                    destinations.filter { it == STORY_LOST_DESTINATION }.map { origin to it }
+                }
+            }
         )
     }
 
