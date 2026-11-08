@@ -2080,7 +2080,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
                     }
                     "library-delete" -> {
-                        val labels = mapOf(ContentStorage.Modality.TARJETAS to "Tarjetas", ContentStorage.Modality.PALABRAS to "Palabras", ContentStorage.Modality.SECUENCIAS to "Secuencias")
                         val modalityCategories = ContentStorage.Modality.entries.associateWith { modality ->
                             val exercises = ExerciseRepository.list(context, modality)
                             val prefKey = when (modality) {
@@ -2092,202 +2091,62 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             (registered + exercises.map { it.metadata.category }).distinctBy { it.trim().lowercase() }.sortedBy { it.lowercase() }
                                 .map { category -> category to exercises.filter { it.metadata.category.equals(category, true) } }
                         }
-                        val allExercises = modalityCategories.values.flatten().flatMap { it.second }
-                        val selectedCategories = deleteSelectedItems.filter { it.startsWith("C|") }
-                        val selectedCategoryCount = selectedCategories.size
-                        val selectedExerciseCount = allExercises.count { stored ->
-                            ("C|" + stored.metadata.modality.name + "|" + stored.metadata.category) in selectedCategories ||
-                                ("E|" + stored.directory.absolutePath) in deleteSelectedItems
-                        }
-                        val selectedStatsCount = allExercises.count { stored ->
-                            val path = stored.directory.absolutePath
-                            ("S|" + path) in deleteSelectedItems && ("E|" + path) !in deleteSelectedItems &&
-                                ("C|" + stored.metadata.modality.name + "|" + stored.metadata.category) !in selectedCategories
-                        }
-                        item {
-                            Text("Eliminar contenido", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
-                            Text("Selecciona categorías completas, ejercicios individuales o solamente las estadísticas de cada ejercicio. Las imágenes se eliminan junto con su ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
-                        }
-                        ContentStorage.Modality.entries.forEach { modality ->
-                            val categories = modalityCategories[modality].orEmpty()
-                            val modalityExercises = categories.flatMap { it.second }
-                            item {
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(labels[modality] ?: modality.directoryName, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = categories.isNotEmpty() && categories.all { pair ->
-                                                val key = "C|" + modality.name + "|" + pair.first
-                                                key in deleteSelectedItems || (pair.second.isNotEmpty() && pair.second.all { ("E|" + it.directory.absolutePath) in deleteSelectedItems })
-                                            },
-                                            onCheckedChange = { checked ->
-                                                val next = deleteSelectedItems.toMutableSet()
-                                                categories.forEach { pair ->
-                                                    val key = "C|" + modality.name + "|" + pair.first
-                                                    if (checked) {
-                                                        next.add(key)
-                                                        pair.second.forEach { stored ->
-                                                            next.remove("E|" + stored.directory.absolutePath)
-                                                            next.remove("S|" + stored.directory.absolutePath)
-                                                        }
-                                                    } else {
-                                                        next.remove(key)
-                                                        pair.second.forEach { stored ->
-                                                            next.remove("E|" + stored.directory.absolutePath)
-                                                            next.remove("S|" + stored.directory.absolutePath)
-                                                        }
-                                                    }
-                                                }
-                                                deleteSelectedItems = next
-                                                deleteConfirmArmed = false
-                                            }
-                                        )
-                                        Text("Seleccionar toda la biblioteca (" + modalityExercises.size + ")", fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                            }
-                            categories.forEach { pair ->
-                                val category = pair.first
-                                val exercises = pair.second
-                                val categoryKey = "C|" + modality.name + "|" + category
-                                val selectedCount = if (categoryKey in deleteSelectedItems) exercises.size else exercises.count { ("E|" + it.directory.absolutePath) in deleteSelectedItems }
-                                val expanded = categoryKey in deleteExpandedCategories
-                                item {
-                                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                        Column(Modifier.padding(10.dp)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
-                                                    checked = categoryKey in deleteSelectedItems || (exercises.isNotEmpty() && selectedCount == exercises.size),
-                                                    onCheckedChange = { checked ->
-                                                        val next = deleteSelectedItems.toMutableSet()
-                                                        if (checked) {
-                                                            next.add(categoryKey)
-                                                            exercises.forEach { stored ->
-                                                                next.remove("E|" + stored.directory.absolutePath)
-                                                                next.remove("S|" + stored.directory.absolutePath)
-                                                            }
-                                                        } else {
-                                                            next.remove(categoryKey)
-                                                            exercises.forEach { stored ->
-                                                                next.remove("E|" + stored.directory.absolutePath)
-                                                                next.remove("S|" + stored.directory.absolutePath)
-                                                            }
-                                                        }
-                                                        deleteSelectedItems = next
-                                                        deleteConfirmArmed = false
-                                                    }
-                                                )
-                                                Column(Modifier.weight(1f)) {
-                                                    Text(category, fontWeight = FontWeight.Bold)
-                                                    Text(exercises.size.toString() + " ejercicios" + if (selectedCount in 1 until exercises.size) " · selección parcial" else "", fontSize = 12.sp, color = Color(0xFF667085))
-                                                }
-                                                Text(if (expanded) "Ocultar" else "Ver", color = Color(0xFF6750A4),
-                                                    modifier = Modifier.clickable {
-                                                        deleteExpandedCategories = if (expanded) deleteExpandedCategories - categoryKey else deleteExpandedCategories + categoryKey
-                                                    }.padding(8.dp))
-                                            }
-                                            if (expanded) {
-                                                if (exercises.isEmpty()) Text("Categoría vacía: selecciónala para eliminarla.", fontSize = 13.sp, color = Color(0xFF667085))
-                                                exercises.forEach { stored ->
-                                                    val path = stored.directory.absolutePath
-                                                    val exerciseKey = "E|" + path
-                                                    val statsKey = "S|" + path
-                                                    val exerciseChecked = categoryKey in deleteSelectedItems || exerciseKey in deleteSelectedItems
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Checkbox(checked = exerciseChecked, onCheckedChange = { checked ->
-                                                            val next = deleteSelectedItems.toMutableSet()
-                                                            next.remove(categoryKey)
-                                                            next.remove("S|" + path)
-                                                            if (checked) next.add(exerciseKey) else next.remove(exerciseKey)
-                                                            deleteSelectedItems = next
-                                                            deleteConfirmArmed = false
-                                                        })
-                                                        Column(Modifier.weight(1f)) {
-                                                            Text(stored.metadata.title, fontWeight = FontWeight.Medium)
-                                                            Text(stored.metadata.difficulty, fontSize = 12.sp, color = Color(0xFF667085))
-                                                        }
-                                                    }
-                                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 42.dp)) {
-                                                        Checkbox(checked = statsKey in deleteSelectedItems, enabled = !exerciseChecked, onCheckedChange = { checked ->
-                                                            val next = deleteSelectedItems.toMutableSet()
-                                                            if (checked) next.add(statsKey) else next.remove(statsKey)
-                                                            deleteSelectedItems = next
-                                                            deleteConfirmArmed = false
-                                                        })
-                                                        Text("Eliminar solo las estadísticas", fontSize = 12.sp, color = Color(0xFF667085))
-                                                    }
-                                                }
+                        LibraryDeleteScreen(
+                            modalityCategories = modalityCategories,
+                            selectedItems = deleteSelectedItems,
+                            expandedCategories = deleteExpandedCategories,
+                            confirmArmed = deleteConfirmArmed,
+                            onSelectionChanged = { deleteSelectedItems = it; deleteConfirmArmed = false },
+                            onExpandedCategoriesChanged = { deleteExpandedCategories = it },
+                            onConfirmArmedChanged = { deleteConfirmArmed = it },
+                            onDeleteConfirmed = {
+                                try {
+                                    var removedExercises = 0
+                                    var removedStatistics = 0
+                                    ContentStorage.Modality.entries.forEach { modality ->
+                                        val exercises = ExerciseRepository.list(context, modality)
+                                        val categoriesToRemove = deleteSelectedItems.filter { it.startsWith("C|" + modality.name + "|") }
+                                            .map { it.removePrefix("C|" + modality.name + "|") }.toSet()
+                                        exercises.forEach { stored ->
+                                            val path = stored.directory.absolutePath
+                                            if (stored.metadata.category in categoriesToRemove || ("E|" + path) in deleteSelectedItems) {
+                                                ExerciseRepository.delete(context, modality, stored.directory)
+                                                removedExercises++
+                                            } else if (("S|" + path) in deleteSelectedItems) {
+                                                if (ExerciseRepository.deleteStatistics(stored.directory)) removedStatistics++
                                             }
                                         }
-                                    }
-                                }
-                            }
-                        }
-                        item {
-                            Text("Selección: " + selectedCategoryCount + " categorías, " + selectedExerciseCount + " ejercicios y " + selectedStatsCount + " conjuntos de estadísticas. El PIN, los límites y las preferencias generales se conservarán.", fontSize = 13.sp, color = Color(0xFF667085))
-                        }
-                        item {
-                            if (!deleteConfirmArmed) {
-                                Button(onClick = { deleteConfirmArmed = true }, enabled = deleteSelectedItems.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
-                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E))) {
-                                    Text("Continuar con la eliminación")
-                                }
-                            } else {
-                                Text("CONFIRMACIÓN: se eliminarán " + selectedCategoryCount + " categorías, " + selectedExerciseCount + " ejercicios y " + selectedStatsCount + " conjuntos de estadísticas. Esta acción no se puede deshacer.", fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
-                                Button(onClick = {
-                                    try {
-                                        var removedExercises = 0
-                                        var removedStatistics = 0
-                                        ContentStorage.Modality.entries.forEach { modality ->
-                                            val exercises = ExerciseRepository.list(context, modality)
-                                            val categoriesToRemove = deleteSelectedItems.filter { it.startsWith("C|" + modality.name + "|") }
-                                                .map { it.removePrefix("C|" + modality.name + "|") }.toSet()
-                                            exercises.forEach { stored ->
-                                                val path = stored.directory.absolutePath
-                                                if (stored.metadata.category in categoriesToRemove || ("E|" + path) in deleteSelectedItems) {
-                                                    ExerciseRepository.delete(context, modality, stored.directory)
-                                                    removedExercises++
-                                                } else if (("S|" + path) in deleteSelectedItems) {
-                                                    if (ExerciseRepository.deleteStatistics(stored.directory)) removedStatistics++
-                                                }
+                                        if (categoriesToRemove.isNotEmpty()) {
+                                            categoriesToRemove.forEach { category ->
+                                                val categoryDirectory = ContentStorage.categoryDirectory(context, modality, category)
+                                                if (categoryDirectory.list()?.isEmpty() == true) categoryDirectory.delete()
                                             }
-                                            if (categoriesToRemove.isNotEmpty()) {
-                                                categoriesToRemove.forEach { category ->
-                                                    val categoryDirectory = ContentStorage.categoryDirectory(context, modality, category)
-                                                    if (categoryDirectory.list()?.isEmpty() == true) categoryDirectory.delete()
-                                                }
-                                                val prefKey = when (modality) {
-                                                    ContentStorage.Modality.TARJETAS -> "categories"
-                                                    ContentStorage.Modality.PALABRAS -> "letter_word_categories_v1"
-                                                    ContentStorage.Modality.SECUENCIAS -> "sequence_categories_v1"
-                                                }
-                                                val current = (preferences.getString(prefKey, "") ?: "").split("|").filter { it.isNotBlank() }
-                                                preferences.edit().putString(prefKey, current.filterNot { name -> categoriesToRemove.any { it.equals(name, true) } }.joinToString("|")).apply()
+                                            val prefKey = when (modality) {
+                                                ContentStorage.Modality.TARJETAS -> "categories"
+                                                ContentStorage.Modality.PALABRAS -> "letter_word_categories_v1"
+                                                ContentStorage.Modality.SECUENCIAS -> "sequence_categories_v1"
                                             }
+                                            val current = (preferences.getString(prefKey, "") ?: "").split("|").filter { it.isNotBlank() }
+                                            preferences.edit().putString(prefKey, current.filterNot { name -> categoriesToRemove.any { it.equals(name, true) } }.joinToString("|")).apply()
                                         }
-                                        categoryNames = (preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }
-                                        wordLibraryState.saveCategories((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() })
-                                        sequenceCategoryNames = (preferences.getString("sequence_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
-                                        pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
-                                        wordExercises = wordLibraryState.reloadExercises()
-                                        sequenceExercises = sequenceLibraryState.reloadExercises()
-                                        deleteSelectedItems = emptySet()
-                                        deleteExpandedCategories = emptySet()
-                                        deleteConfirmArmed = false
-                                        transferMessage = "Eliminación completada: " + removedExercises + " ejercicios y " + removedStatistics + " estadísticas eliminados."
-                                        parentSection = "library-transfer"
-                                    } catch (e: Exception) {
-                                        deleteConfirmArmed = false
-                                        transferMessage = "No se pudo completar la eliminación: " + (e.message ?: "error")
                                     }
-                                }, modifier = Modifier.fillMaxWidth(), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFB3261E))) {
-                                    Text("Sí, eliminar definitivamente")
-                                }
-                                OutlinedButton(onClick = { deleteConfirmArmed = false }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Cancelar y conservar los datos")
+                                    categoryNames = (preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }
+                                    wordLibraryState.saveCategories((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() })
+                                    sequenceCategoryNames = (preferences.getString("sequence_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
+                                    pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
+                                    wordExercises = wordLibraryState.reloadExercises()
+                                    sequenceExercises = sequenceLibraryState.reloadExercises()
+                                    deleteSelectedItems = emptySet()
+                                    deleteExpandedCategories = emptySet()
+                                    deleteConfirmArmed = false
+                                    transferMessage = "Eliminación completada: " + removedExercises + " ejercicios y " + removedStatistics + " estadísticas eliminados."
+                                    parentSection = "library-transfer"
+                                } catch (e: Exception) {
+                                    deleteConfirmArmed = false
+                                    transferMessage = "No se pudo completar la eliminación: " + (e.message ?: "error")
                                 }
                             }
-                        }
+                        )
                     }
                     "learning-stats" -> {
                         val records = ContentStorage.Modality.entries.flatMap { modality ->
