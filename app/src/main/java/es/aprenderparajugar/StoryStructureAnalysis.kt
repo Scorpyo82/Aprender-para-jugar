@@ -17,11 +17,16 @@ internal object StoryStructureAnalysis {
         scenes: List<String>,
         connections: Map<String, List<String>>,
         conditions: List<StoryConnectionCondition>,
-        startScene: String
+        startScene: String,
+        alternatives: List<StoryConnectionAlternative> = emptyList()
     ): StoryStructureDiagnostics {
         val sceneSet = scenes.toSet()
+        val hasNewAlternatives = alternatives.isNotEmpty()
+        val outgoingByScene = if (hasNewAlternatives) {
+            alternatives.groupBy { it.fromScene }.mapValues { (_, items) -> items.map { it.toScene }.distinct() }
+        } else connections
         val adjacency = scenes.associateWith { scene ->
-            connections[scene].orEmpty().filter { it in sceneSet }.distinct()
+            outgoingByScene[scene].orEmpty().filter { it in sceneSet }.distinct()
         }
         val reachable = reachableFrom(startScene, adjacency)
         val unreachable = sceneSet - reachable
@@ -29,8 +34,12 @@ internal object StoryStructureAnalysis {
 
         val unconditionalAdjacency = scenes.associateWith { origin ->
             adjacency[origin].orEmpty().filter { destination ->
-                conditions.none {
-                    it.fromScene == origin && it.toScene == destination && it.requiredObject != null
+                if (hasNewAlternatives) {
+                    alternatives.any { it.fromScene == origin && it.toScene == destination && it.kind == "free" }
+                } else {
+                    conditions.none {
+                        it.fromScene == origin && it.toScene == destination && it.requiredObject != null
+                    }
                 }
             }
         }
@@ -49,7 +58,7 @@ internal object StoryStructureAnalysis {
             cycleComponents = components,
             cyclesWithoutUnconditionalExit = unsafeCycles,
             hasReachableFinal = finals.isNotEmpty(),
-            orphanedConnections = connections.flatMap { (origin, destinations) -> destinations.filter { it == STORY_LOST_DESTINATION }.map { origin to it } }
+            orphanedConnections = (if (hasNewAlternatives) alternatives.groupBy { it.fromScene }.mapValues { (_, items) -> items.map { it.toScene } } else connections).flatMap { (origin, destinations) -> destinations.filter { it == STORY_LOST_DESTINATION }.map { origin to it } }
         )
     }
 
