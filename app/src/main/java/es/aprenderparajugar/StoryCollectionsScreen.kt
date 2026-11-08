@@ -45,7 +45,7 @@ internal fun StoryCollectionsScreen(
     onRequestDelete: (String) -> Unit,
     onCancelDelete: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Colecciones", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Text("Organiza tus cuentos en colecciones. Cada una puede tener su propia portada.", fontSize = 14.sp, color = Color(0xFF667085))
         OutlinedTextField(
