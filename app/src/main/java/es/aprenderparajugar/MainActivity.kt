@@ -1538,15 +1538,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             onFinish = { finishWelcomeTour() }
         )
     } else if (screen == "exit-pin" && !rewardMode.isStars) {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🔒 Salir de la aplicación", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-            Spacer(Modifier.height(8.dp))
-            Text("Introduce el PIN familiar para confirmar la salida.", fontSize = 17.sp)
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(value = pinEntry, onValueChange = { value -> pinEntry = value.filter { it.isDigit() }.take(4); pinError = false }, label = { Text("PIN de 4 cifras") }, singleLine = true)
-            if (pinError) Text("PIN incorrecto. Prueba otra vez.", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = {
+        PinGateScreen(
+            title = "🔒 Salir de la aplicación",
+            instruction = "Introduce el PIN familiar para confirmar la salida.",
+            pin = pinEntry,
+            error = pinError,
+            confirmLabel = "Confirmar salida",
+            onPinChange = { pinEntry = it.filter(Char::isDigit).take(4); pinError = false },
+            onConfirm = {
                 if (pinEntry == pinStored) {
                     preferences.edit()
                         .putBoolean("manual_exit_allowed", true)
@@ -1558,25 +1557,31 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 } else {
                     pinError = true
                 }
-            }, modifier = Modifier.fillMaxWidth()) { Text("Confirmar salida") }
-            OutlinedButton(onClick = { screen = "home"; pinEntry = ""; pinError = false }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-        }
+            },
+            onCancel = { screen = "home"; pinEntry = ""; pinError = false }
+        )
     } else if (screen == "parent-pin") {
-        Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🔐 Zona de familias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-            Spacer(Modifier.height(8.dp))
-            Text("Introduce el PIN para acceder a los controles.", fontSize = 17.sp)
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(value = pinEntry, onValueChange = { value -> pinEntry = value.filter { it.isDigit() }.take(4); pinError = false }, label = { Text("PIN de 4 cifras") }, singleLine = true)
-            if (pinError) Text("PIN incorrecto. Prueba otra vez.", color = Color(0xFFB3261E), fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = {
-                if (pinEntry == pinStored) { screen = "parent"; parentSection = "menu"; pinEntry = ""; pinError = false }
-                else pinError = true
-            }, modifier = Modifier.fillMaxWidth()) { Text("Entrar") }
-            OutlinedButton(onClick = { screen = "home"; pinEntry = ""; pinError = false }, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
-            Text("Si olvidas el PIN, tendrás que restablecer la aplicación borrando sus datos desde los ajustes de Android. Esta operación elimina el contenido guardado localmente; conserva copias de tus bibliotecas.", fontSize = 12.sp, color = Color(0xFF8A4B08))
-        }
+        PinGateScreen(
+            title = "🔐 Zona de familias",
+            instruction = "Introduce el PIN para acceder a los controles.",
+            pin = pinEntry,
+            error = pinError,
+            confirmLabel = "Entrar",
+            warning = "Si olvidas el PIN, tendrás que restablecer la aplicación borrando sus datos desde los ajustes de Android. Esta operación elimina el contenido guardado localmente; conserva copias de tus bibliotecas.",
+            onPinChange = { pinEntry = it.filter(Char::isDigit).take(4); pinError = false },
+            onConfirm = {
+                if (pinEntry == pinStored) {
+                    screen = "parent"
+                    parentSection = "menu"
+                    pinEntry = ""
+                    pinError = false
+                } else {
+                    pinError = true
+                }
+            },
+            onCancel = { screen = "home"; pinEntry = ""; pinError = false },
+            cancelLabel = "Volver al inicio"
+        )
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
