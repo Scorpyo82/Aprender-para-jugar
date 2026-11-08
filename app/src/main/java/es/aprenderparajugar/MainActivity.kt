@@ -3440,6 +3440,93 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         }
                         item {
+                            val prompt = storyDecisionPromptByScene[storyEditorSelectedScene].orEmpty()
+                            val options = storyDecisionOptionsByScene[storyEditorSelectedScene].orEmpty()
+                            val nextNumber = storyNextDecisionOptionNumberByScene[storyEditorSelectedScene] ?: 1
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Decisión de la escena", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Opcional. Si esta escena plantea una elección, escribe la pregunta y añade las respuestas que podrá seleccionar el niño.", fontSize = 13.sp, color = Color(0xFF667085))
+                                OutlinedTextField(
+                                    value = prompt,
+                                    onValueChange = { value ->
+                                        storyDecisionPromptByScene = storyDecisionPromptByScene.toMutableMap().apply { put(storyEditorSelectedScene, value) }
+                                    },
+                                    label = { Text("Pregunta o planteamiento") },
+                                    placeholder = { Text("¿Qué debería hacer?") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    minLines = 2
+                                )
+                                options.forEachIndexed { index, option ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F7FA))
+                                    ) {
+                                        Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            OutlinedTextField(
+                                                value = option.text,
+                                                onValueChange = { value ->
+                                                    storyDecisionOptionsByScene = storyDecisionOptionsByScene.toMutableMap().apply {
+                                                        put(storyEditorSelectedScene, options.map { if (it.key == option.key) it.copy(text = value) else it })
+                                                    }
+                                                },
+                                                label = { Text("Opción ${index + 1}") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true
+                                            )
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        if (index > 0) {
+                                                            val reordered = options.toMutableList()
+                                                            val item = reordered.removeAt(index)
+                                                            reordered.add(index - 1, item)
+                                                            storyDecisionOptionsByScene = storyDecisionOptionsByScene.toMutableMap().apply { put(storyEditorSelectedScene, reordered) }
+                                                        }
+                                                    },
+                                                    enabled = index > 0,
+                                                    modifier = Modifier.weight(1f)
+                                                ) { Text("↑ Subir") }
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        if (index < options.lastIndex) {
+                                                            val reordered = options.toMutableList()
+                                                            val item = reordered.removeAt(index)
+                                                            reordered.add(index + 1, item)
+                                                            storyDecisionOptionsByScene = storyDecisionOptionsByScene.toMutableMap().apply { put(storyEditorSelectedScene, reordered) }
+                                                        }
+                                                    },
+                                                    enabled = index < options.lastIndex,
+                                                    modifier = Modifier.weight(1f)
+                                                ) { Text("↓ Bajar") }
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        storyDecisionOptionsByScene = storyDecisionOptionsByScene.toMutableMap().apply {
+                                                            put(storyEditorSelectedScene, options.filterNot { it.key == option.key })
+                                                        }
+                                                    },
+                                                    modifier = Modifier.weight(1f)
+                                                ) { Text("Eliminar") }
+                                            }
+                                        }
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        storyDecisionOptionsByScene = storyDecisionOptionsByScene.toMutableMap().apply {
+                                            put(storyEditorSelectedScene, options + StoryDecisionOption("option_$nextNumber", ""))
+                                        }
+                                        storyNextDecisionOptionNumberByScene = storyNextDecisionOptionNumberByScene.toMutableMap().apply {
+                                            put(storyEditorSelectedScene, nextNumber + 1)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text("＋ Añadir opción") }
+                                if (options.isNotEmpty()) {
+                                    Text("Las opciones conservan su identificador interno aunque cambies el texto o el orden.", fontSize = 12.sp, color = Color(0xFF667085))
+                                }
+                            }
+                        }
+                        item {
                             OutlinedButton(onClick = {
                                 preferences.edit().putBoolean("content_picker_active", true).apply()
                                 storyIllustrationPicker.launch(arrayOf("image/*"))
