@@ -34,8 +34,27 @@ internal class StoryPlaybackEngine(
     private var finished = false
 
     fun start(): Snapshot {
-        require(story.metadata.connections.values.none { STORY_LOST_DESTINATION in it }) {
+        require(story.metadata.connections.values.none { STORY_LOST_DESTINATION in it } &&
+            story.metadata.connectionAlternatives.none { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }) {
             "Este cuento tiene conexiones huérfanas. Repara su estructura narrativa antes de reproducirlo."
+        }
+        val sceneMetadata = story.metadata.scenes.associateWith { folder -> StoryRepository.readScene(story, folder).metadata }
+        val orphanedDecision = story.metadata.connectionAlternatives.firstOrNull { alternative ->
+            alternative.kind == "decision" && sceneMetadata[alternative.fromScene]?.decisionOptions.orEmpty().none { it.key == alternative.decisionOptionKey }
+        }
+        require(orphanedDecision == null) {
+            "Hay una alternativa que apunta a una opción de decisión eliminada o inexistente. Repara la estructura narrativa antes de reproducir el cuento."
+        }
+        val unassignedOption = sceneMetadata.entries.firstNotNullOfOrNull { (scene, metadata) ->
+            metadata.decisionOptions.firstOrNull { option ->
+                story.metadata.connectionAlternatives.none { it.fromScene == scene && it.kind == "decision" && it.decisionOptionKey == option.key }
+            }?.let { scene to it }
+        }
+        require(unassignedOption == null) {
+            "Hay una opción de decisión sin destino asignado. Completa la estructura narrativa antes de reproducir el cuento."
+        }
+        require(sceneMetadata.values.all { metadata -> metadata.decisionOptions.isEmpty() || metadata.decisionPrompt.isNotBlank() }) {
+            "Hay una escena con opciones de decisión pero sin pregunta o planteamiento."
         }
         currentSceneFolder = story.metadata.startScene
         started = true
