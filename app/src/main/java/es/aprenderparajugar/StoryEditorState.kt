@@ -46,15 +46,29 @@ internal class StoryEditorState(private val context: Context) {
         connections.value = metadata.scenes.associate { folder ->
             visibleByFolder.getValue(folder) to metadata.connections[folder].orEmpty().map { destination -> if (destination == STORY_LOST_DESTINATION) STORY_LOST_DESTINATION else visibleByFolder[destination] ?: STORY_LOST_DESTINATION }
         }
-        connectionConditions.value = metadata.connectionConditions.mapNotNull { condition ->
-            val from = visibleByFolder[condition.fromScene] ?: return@mapNotNull null
-            val to = visibleByFolder[condition.toScene] ?: return@mapNotNull null
-            condition.copy(fromScene = from, toScene = to)
+        connectionConditions.value = metadata.connectionConditions.map { condition ->
+            condition.copy(
+                fromScene = when (condition.fromScene) {
+                    STORY_LOST_ORIGIN -> STORY_LOST_ORIGIN
+                    else -> visibleByFolder[condition.fromScene] ?: STORY_LOST_ORIGIN
+                },
+                toScene = when (condition.toScene) {
+                    STORY_LOST_DESTINATION -> STORY_LOST_DESTINATION
+                    else -> visibleByFolder[condition.toScene] ?: STORY_LOST_DESTINATION
+                }
+            )
         }
-        connectionAlternatives.value = metadata.connectionAlternatives.mapNotNull { alternative ->
-            val from = visibleByFolder[alternative.fromScene] ?: return@mapNotNull null
-            val to = visibleByFolder[alternative.toScene] ?: return@mapNotNull null
-            alternative.copy(fromScene = from, toScene = to)
+        connectionAlternatives.value = metadata.connectionAlternatives.map { alternative ->
+            alternative.copy(
+                fromScene = when (alternative.fromScene) {
+                    STORY_LOST_ORIGIN -> STORY_LOST_ORIGIN
+                    else -> visibleByFolder[alternative.fromScene] ?: STORY_LOST_ORIGIN
+                },
+                toScene = when (alternative.toScene) {
+                    STORY_LOST_DESTINATION -> STORY_LOST_DESTINATION
+                    else -> visibleByFolder[alternative.toScene] ?: STORY_LOST_DESTINATION
+                }
+            )
         }
     }
 
@@ -83,11 +97,15 @@ internal class StoryEditorState(private val context: Context) {
         }
         connections.value = next
         val edges = next.flatMap { (from, destinations) -> destinations.map { from to it } }.toSet()
+        // Las referencias huérfanas se conservan para que el editor pueda repararlas.
+        // Solo se descartan referencias normales cuya arista ya no existe por una edición explícita.
         connectionConditions.value = connectionConditions.value.filter {
-            it.toScene != STORY_LOST_DESTINATION && (it.fromScene to it.toScene) in edges
+            it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION ||
+                (it.fromScene to it.toScene) in edges
         }
         connectionAlternatives.value = connectionAlternatives.value.filter {
-            it.toScene != STORY_LOST_DESTINATION && (it.fromScene to it.toScene) in edges
+            it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION ||
+                (it.fromScene to it.toScene) in edges
         }
     }
 
@@ -101,8 +119,18 @@ internal class StoryEditorState(private val context: Context) {
             if (origin == sceneName) emptyList()
             else currentConnections[origin].orEmpty().map { if (it == sceneName) STORY_LOST_DESTINATION else it }.distinct()
         }
-        connectionConditions.value = connectionConditions.value.filter { it.fromScene != sceneName && it.toScene != sceneName }
-        connectionAlternatives.value = connectionAlternatives.value.filter { it.fromScene != sceneName && it.toScene != sceneName }
+        connectionConditions.value = connectionConditions.value.map { condition ->
+            condition.copy(
+                fromScene = if (condition.fromScene == sceneName) STORY_LOST_ORIGIN else condition.fromScene,
+                toScene = if (condition.toScene == sceneName) STORY_LOST_DESTINATION else condition.toScene
+            )
+        }
+        connectionAlternatives.value = connectionAlternatives.value.map { alternative ->
+            alternative.copy(
+                fromScene = if (alternative.fromScene == sceneName) STORY_LOST_ORIGIN else alternative.fromScene,
+                toScene = if (alternative.toScene == sceneName) STORY_LOST_DESTINATION else alternative.toScene
+            )
+        }
         illustrations.value = illustrations.value - sceneName
         ambientAudio.value = ambientAudio.value - sceneName
         narrationAudio.value = narrationAudio.value - sceneName
@@ -146,15 +174,17 @@ internal class StoryEditorState(private val context: Context) {
                 val folderFrom = folderByVisible[from] ?: return@mapNotNull null
                 folderFrom to destinations.map { if (it == STORY_LOST_DESTINATION) it else folderByVisible[it] ?: STORY_LOST_DESTINATION }.distinct()
             }.toMap()
-            val persistedConditions = connectionConditions.value.mapNotNull { condition ->
-                val from = folderByVisible[condition.fromScene] ?: return@mapNotNull null
-                val to = folderByVisible[condition.toScene] ?: return@mapNotNull null
-                condition.copy(fromScene = from, toScene = to)
+            val persistedConditions = connectionConditions.value.map { condition ->
+                condition.copy(
+                    fromScene = if (condition.fromScene == STORY_LOST_ORIGIN) STORY_LOST_ORIGIN else folderByVisible[condition.fromScene] ?: STORY_LOST_ORIGIN,
+                    toScene = if (condition.toScene == STORY_LOST_DESTINATION) STORY_LOST_DESTINATION else folderByVisible[condition.toScene] ?: STORY_LOST_DESTINATION
+                )
             }
-            val persistedAlternatives = connectionAlternatives.value.mapNotNull { alternative ->
-                val from = folderByVisible[alternative.fromScene] ?: return@mapNotNull null
-                val to = folderByVisible[alternative.toScene] ?: return@mapNotNull null
-                alternative.copy(fromScene = from, toScene = to)
+            val persistedAlternatives = connectionAlternatives.value.map { alternative ->
+                alternative.copy(
+                    fromScene = if (alternative.fromScene == STORY_LOST_ORIGIN) STORY_LOST_ORIGIN else folderByVisible[alternative.fromScene] ?: STORY_LOST_ORIGIN,
+                    toScene = if (alternative.toScene == STORY_LOST_DESTINATION) STORY_LOST_DESTINATION else folderByVisible[alternative.toScene] ?: STORY_LOST_DESTINATION
+                )
             }
             val metadata = StoryMetadata(
                 title = title.value.trim(),
