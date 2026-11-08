@@ -5855,7 +5855,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             item {
                 HomeFoxHeader()
             }
-            item { Text("Elige cómo aprender", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)) }
+            item { HomeSectionTitle("Elige cómo aprender") }
             item {
                 Card(
                     Modifier.fillMaxWidth().clickable(enabled = gameActiveCards) { screen = "cards-options"; cardsStartMessage = "" },
