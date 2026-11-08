@@ -331,13 +331,14 @@ internal fun StoryPlayerScreen(
                     }
                 }
 
-                AnimatedVisibility(
-                    visible = pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                    enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { -it / 3 },
-                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { -it / 4 }
-                ) {
-                    pendingStoreUnlocks.firstOrNull()?.let { StoreUnlockNotification(it, fontFamily) }
+                Box(Modifier.align(Alignment.TopEnd).padding(12.dp)) {
+                    AnimatedVisibility(
+                        visible = pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen,
+                        enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { -it / 3 },
+                        exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { -it / 4 }
+                    ) {
+                        pendingStoreUnlocks.firstOrNull()?.let { StoreUnlockNotification(it, fontFamily) }
+                    }
                 }
 
                 OutlinedButton(
