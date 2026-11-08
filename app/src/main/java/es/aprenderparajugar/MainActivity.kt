@@ -1663,11 +1663,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
                 item { Text("CONFIGURACIÓN GENERAL", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF667085)) }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "typography" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🔤", fontSize = 30.sp)
-                            Column { Text("Tipografía de los ejercicios", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text(if (linkedExerciseFont) "Playwrite ES · Letra escolar ligada" else "Fuente del teléfono", color = Color(0xFF667085)) }
-                        }
+                    ParentMenuNavigationCard(
+                        "🔤",
+                        "Tipografía de los ejercicios",
+                        if (linkedExerciseFont) "Playwrite ES · Letra escolar ligada" else "Fuente del teléfono"
+                    ) {
+                        parentSection = "typography"
                     }
                 }
                 item {
@@ -1713,12 +1714,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "about" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("ℹ️ Acerca de esta app", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
-                            Text("Propósito, créditos, versión y repositorio compartido.", fontSize = 14.sp, color = Color(0xFF667085))
-                        }
-                    }
+                    ParentMenuAboutCard(onClick = { parentSection = "about" })
                 }
                 item {
                     ParentMenuNavigationCard("🔐", "Cambiar PIN", "Modificar el PIN de acceso familiar") {
@@ -1727,11 +1723,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
                 item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "device-setup" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("⚙️", fontSize = 30.sp)
-                            Column { Text("Configuración de permisos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text(if (rewardMode.isStars) "Puedes prepararlos para utilizar el modo Tiempo" else "Permisos y servicio de accesibilidad", color = Color(0xFF667085)) }
-                        }
+                    ParentMenuNavigationCard(
+                        "⚙️",
+                        "Configuración de permisos",
+                        if (rewardMode.isStars) "Puedes prepararlos para utilizar el modo Tiempo" else "Permisos y servicio de accesibilidad"
+                    ) {
+                        parentSection = "device-setup"
                     }
                 }
             } else {
