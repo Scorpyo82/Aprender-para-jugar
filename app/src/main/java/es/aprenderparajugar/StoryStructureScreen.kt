@@ -108,6 +108,15 @@ internal fun StoryStructureScreen(
             connections = connections,
             onConnectionsChange = { connections = it }
         )
+        StoryMissingObjectReferences(
+            availableObjects = availableObjects,
+            conditions = conditions,
+            alternatives = alternatives,
+            onConditionsChange = { conditions = it },
+            onAlternativesChange = { alternatives = it },
+            connections = connections,
+            onConnectionsChange = { connections = it }
+        )
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Comprobación de la estructura", fontWeight = FontWeight.Bold)
             if (diagnostics.orphanedConnections.isNotEmpty()) {
