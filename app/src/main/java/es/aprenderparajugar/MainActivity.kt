@@ -5201,77 +5201,45 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             resultCorrectCount * 2 == resultTotalCount -> "¡Bien hecho! Has conseguido la mitad"
             else -> "¡Muy bien! Cada vez lo haces mejor"
         }
-        val celebration = rememberInfiniteTransition(label = "celebracion")
-        val iconScale by celebration.animateFloat(initialValue = 0.88f, targetValue = 1.12f, animationSpec = infiniteRepeatable(animation = tween(650), repeatMode = RepeatMode.Reverse), label = "rebote")
-        val timeScale by celebration.animateFloat(initialValue = 1f, targetValue = 1.045f, animationSpec = infiniteRepeatable(animation = tween(900), repeatMode = RepeatMode.Reverse), label = "pulsoTiempo")
-        Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (rewardStars > 0) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale }
-                ) {
-                    repeat(rewardStars) {
-                        Text("⭐", fontSize = 76.sp)
+        ExerciseResultScreen(
+            rewardStars = rewardStars,
+            rewardIcon = rewardIcon,
+            rewardMessage = rewardMessage,
+            isPerfectCardsResult = correct == pairCount,
+            rewardAmountText = if (rewardMode.isStars) "+${formatRewardBalance(lastEarnedSeconds, rewardMode)} ⭐" else "+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}",
+            rewardUnitText = if (rewardMode.isStars) "ESTRELLAS GANADAS" else "MINUTOS GANADOS",
+            correctCount = resultCorrectCount,
+            totalCount = resultTotalCount,
+            onHome = {
+                screen = "home"
+                resolved = emptySet()
+                selected = emptyMap()
+                selectedPicture = ""
+                evaluatedPictures = emptyMap()
+                correct = 0
+                feedback = ""
+                lastEarnedSeconds = 0
+                wordExerciseTarget = null
+                wordExercisePlaced = emptyList()
+                wordExerciseMessage = ""
+                sequenceSelectedOrder = emptyList()
+                sequencePlayMessage = ""
+            },
+            onNextExercise = {
+                when (screen) {
+                    "sequence-result" -> {
+                        if (!startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty)) screen = "sequence-difficulty"
+                    }
+                    else -> {
+                        if (wordExerciseTarget != null) {
+                            startWordExercise(wordCurrentCategory)
+                        } else {
+                            startCardsGame(mode, if (mode == "Elegir") selectedExerciseCategory else null)
+                        }
                     }
                 }
-            } else {
-                Text(rewardIcon, fontSize = if (correct == pairCount) 104.sp else 76.sp, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale })
             }
-            Spacer(Modifier.height(8.dp))
-            Text(rewardMessage, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Spacer(Modifier.height(18.dp))
-            Text(if (rewardMode.isStars) "+${formatRewardBalance(lastEarnedSeconds, rewardMode)} ⭐" else "+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
-            Text(if (rewardMode.isStars) "ESTRELLAS GANADAS" else "MINUTOS GANADOS", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
-            Spacer(Modifier.height(14.dp))
-            Text("$resultCorrectCount de $resultTotalCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
-            Spacer(Modifier.height(24.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(
-                    onClick = {
-                        screen = "home"
-                        resolved = emptySet()
-                        selected = emptyMap()
-                        selectedPicture = ""
-                        evaluatedPictures = emptyMap()
-                        correct = 0
-                        feedback = ""
-                        lastEarnedSeconds = 0
-                        wordExerciseTarget = null
-                        wordExercisePlaced = emptyList()
-                        wordExerciseMessage = ""
-                        sequenceSelectedOrder = emptyList()
-                        sequencePlayMessage = ""
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("🏠  Volver al inicio", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-                Button(
-                    onClick = {
-                        when (screen) {
-                            "sequence-result" -> {
-                                if (!startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty)) screen = "sequence-difficulty"
-                            }
-                            else -> {
-                                if (wordExerciseTarget != null) {
-                                    startWordExercise(wordCurrentCategory)
-                                } else {
-                                    startCardsGame(mode, if (mode == "Elegir") selectedExerciseCategory else null)
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Siguiente ejercicio", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+        )
     } else if (screen == "sequences" || screen == "sequence-difficulty") {
         SequenceSelectionScreen(
             isDifficultyScreen = screen == "sequence-difficulty",
