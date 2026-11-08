@@ -5031,98 +5031,28 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             }
         }
     } else if (screen == "play-time" && !rewardMode.isStars) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 22.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "¡Hola de nuevo!",
-                fontSize = 29.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontFamily = exerciseFontFamily,
-                color = Color(0xFF713F20),
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "¿Seguimos aprendiendo?",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = exerciseFontFamily,
-                color = Color(0xFF9A5B2D),
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(10.dp))
-            Image(
-                painter = painterResource(id = R.drawable.home_header_fox),
-                contentDescription = "El zorrito de Aprender para jugar",
-                modifier = Modifier.fillMaxWidth().height(172.dp),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(Modifier.height(12.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE9C7)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        if (rewardMode.isStars) "Tus estrellas" else "Tu tiempo disponible",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = exerciseFontFamily,
-                        color = Color(0xFF75451F),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        formatRewardBalance(balanceSeconds, rewardMode),
-                        fontSize = 54.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontFamily = exerciseFontFamily,
-                        color = Color(0xFF267A55),
-                        textAlign = TextAlign.Center
-                    )
-                }
+        PlayTimeScreen(
+            balanceText = formatRewardBalance(balanceSeconds, rewardMode),
+            exerciseFontFamily = exerciseFontFamily,
+            onResumeLearning = {
+                val deadline = preferences.getLong("play_deadline_ms", 0L)
+                val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else balanceSeconds.coerceAtLeast(0)
+                // Returning to learning pauses the countdown but keeps this session
+                // authorized while any earned time remains. A later exit resumes it.
+                preferences.edit()
+                    .putLong("play_deadline_ms", 0L)
+                    .putInt("balance_seconds", remaining)
+                    .putBoolean("play_session_authorized", remaining > 0)
+                    .putBoolean("play_paused_for_screen_lock", false)
+                    .commit()
+                context.stopService(Intent(context, PlayTimeService::class.java))
+                balanceSeconds = remaining
+                val returnScreen = preferences.getString("play_time_return_screen", "home")
+                    ?.takeIf { it.isNotBlank() && it != "play-time" } ?: "home"
+                preferences.edit().remove("play_time_return_screen").apply()
+                screen = returnScreen
             }
-            Spacer(Modifier.height(18.dp))
-            Button(
-                onClick = {
-                    val deadline = preferences.getLong("play_deadline_ms", 0L)
-                    val remaining = if (deadline > 0L) ((deadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0) else balanceSeconds.coerceAtLeast(0)
-                    // Returning to learning pauses the countdown but keeps this session
-                    // authorized while any earned time remains. A later exit resumes it.
-                    preferences.edit()
-                        .putLong("play_deadline_ms", 0L)
-                        .putInt("balance_seconds", remaining)
-                        .putBoolean("play_session_authorized", remaining > 0)
-                        .putBoolean("play_paused_for_screen_lock", false)
-                        .commit()
-                    context.stopService(Intent(context, PlayTimeService::class.java))
-                    balanceSeconds = remaining
-                    val returnScreen = preferences.getString("play_time_return_screen", "home")
-                        ?.takeIf { it.isNotBlank() && it != "play-time" } ?: "home"
-                    preferences.edit().remove("play_time_return_screen").apply()
-                    screen = returnScreen
-                },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 62.dp)
-            ) {
-                Text(
-                    "¡Volver a aprender!",
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = exerciseFontFamily,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
+        )
     } else if (screen == "result" || screen == "sequence-result") {
         val rewardStars = when {
             resultCorrectCount * 2 == resultTotalCount -> 2
