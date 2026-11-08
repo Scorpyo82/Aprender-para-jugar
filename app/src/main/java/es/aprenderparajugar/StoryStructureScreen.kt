@@ -31,6 +31,8 @@ internal fun StoryStructureScreen(
     initialConnections: Map<String, List<String>>,
     initialConditions: List<StoryConnectionCondition>,
     initialAlternatives: List<StoryConnectionAlternative>,
+    decisionOptionsByScene: Map<String, List<StoryDecisionOption>>,
+    decisionPromptsByScene: Map<String, String>,
     initialStartScene: String,
     availableObjects: List<StoredObject>,
     message: String,
@@ -91,6 +93,8 @@ internal fun StoryStructureScreen(
             conditions = conditions,
             alternatives = alternatives,
             availableObjects = availableObjects,
+            decisionOptionsByScene = decisionOptionsByScene,
+            decisionPromptsByScene = decisionPromptsByScene,
             onConnectionsChange = { connections = it },
             onConditionsChange = { conditions = it },
             onAlternativesChange = { alternatives = it }
@@ -109,6 +113,12 @@ internal fun StoryStructureScreen(
             if (diagnostics.orphanedConnections.isNotEmpty()) {
                 Text("Hay ${diagnostics.orphanedConnections.size} conexión(es) huérfana(s). Reasigna su destino o elimina esas salidas antes de reproducir el cuento.", color = androidx.compose.ui.graphics.Color(0xFFB3261E))
             }
+            val orphanedDecisionOptions = alternatives.filter { alternative -> alternative.kind == "decision" && decisionOptionsByScene[alternative.fromScene].orEmpty().none { it.key == alternative.decisionOptionKey } }
+            if (orphanedDecisionOptions.isNotEmpty()) {
+                Text("Hay ${orphanedDecisionOptions.size} alternativa(s) que apuntan a opciones eliminadas o inexistentes. Reasígnalas desde el selector o elimínalas expresamente.", color = androidx.compose.ui.graphics.Color(0xFFB3261E))
+            }
+            val unassignedDecisionOptions = scenes.sumOf { scene -> decisionOptionsByScene[scene].orEmpty().count { option -> alternatives.none { it.fromScene == scene && it.kind == "decision" && it.decisionOptionKey == option.key } } }
+            if (unassignedDecisionOptions > 0) Text("Opciones de decisión sin destino: $unassignedDecisionOptions. Asígnalas si deben permitir avanzar.", color = androidx.compose.ui.graphics.Color(0xFF8A5A00))
             if (diagnostics.finalScenes.isEmpty()) {
                 Text(
                     "No se ha encontrado ninguna escena final alcanzable desde la escena inicial.",
