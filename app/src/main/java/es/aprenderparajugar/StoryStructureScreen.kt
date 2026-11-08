@@ -29,10 +29,11 @@ internal fun StoryStructureScreen(
     sceneSummaries: Map<String, String>,
     initialConnections: Map<String, List<String>>,
     initialConditions: List<StoryConnectionCondition>,
+    initialAlternatives: List<StoryConnectionAlternative>,
     initialStartScene: String,
     availableObjects: List<StoredObject>,
     message: String,
-    onSave: (Map<String, List<String>>, List<StoryConnectionCondition>, String) -> Boolean,
+    onSave: (Map<String, List<String>>, List<StoryConnectionCondition>, List<StoryConnectionAlternative>, String) -> Boolean,
     onCancel: () -> Unit
 ) {
     var connections by remember(scenes, initialConnections) {
@@ -41,10 +42,13 @@ internal fun StoryStructureScreen(
     var conditions by remember(scenes, initialConditions) {
         mutableStateOf(initialConditions.toList())
     }
+    var alternatives by remember(scenes, initialAlternatives) {
+        mutableStateOf(initialAlternatives.toList())
+    }
     var startScene by remember(scenes, initialStartScene) { mutableStateOf(initialStartScene) }
     var startMenuExpanded by remember { mutableStateOf(false) }
-    val diagnostics = remember(scenes, connections, conditions, startScene) {
-        StoryStructureAnalysis.analyze(scenes, connections, conditions, startScene)
+    val diagnostics = remember(scenes, connections, conditions, alternatives, startScene) {
+        StoryStructureAnalysis.analyze(scenes, connections, conditions, startScene, alternatives)
     }
 
     Column(
@@ -72,6 +76,14 @@ internal fun StoryStructureScreen(
             availableObjects = availableObjects,
             onConnectionsChange = { connections = it },
             onConditionsChange = { conditions = it }
+        )
+        OrphanedNarrativeReferences(
+            scenes = scenes,
+            conditions = conditions,
+            alternatives = alternatives,
+            onConditionsChange = { conditions = it },
+            onAlternativesChange = { alternatives = it },
+            onConnectionsChange = { connections = it }
         )
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Comprobación de la estructura", fontWeight = FontWeight.Bold)
@@ -120,9 +132,99 @@ internal fun StoryStructureScreen(
                 modifier = Modifier.weight(1f)
             ) { Text("Cancelar") }
             Button(
-                onClick = { onSave(connections, conditions, startScene) },
+                onClick = { onSave(connections, conditions, alternatives, startScene) },
                 modifier = Modifier.weight(1f)
             ) { Text("Guardar estructura") }
+        }
+    }
+}
+
+
+@Composable
+private fun OrphanedNarrativeReferences(
+    scenes: List<String>,
+    conditions: List<StoryConnectionCondition>,
+    alternatives: List<StoryConnectionAlternative>,
+    onConditionsChange: (List<StoryConnectionCondition>) -> Unit,
+    onAlternativesChange: (List<StoryConnectionAlternative>) -> Unit,
+    onConnectionsChange: (Map<String, List<String>>) -> Unit
+) {
+    val orphanConditions = conditions.filter { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }
+    val orphanAlternatives = alternatives.filter { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }
+    if (orphanConditions.isEmpty() && orphanAlternatives.isEmpty()) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Referencias que necesitan reparación", fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFFB3261E))
+        Text("Estas conexiones se conservaron porque una de sus escenas fue eliminada. Reasigna la referencia o elimínala expresamente.")
+        orphanConditions.forEach { item ->
+            OrphanReferenceRow(
+                title = "Condición por objeto",
+                fromScene = item.fromScene,
+                toScene = item.toScene,
+                scenes = scenes,
+                onRepair = { from, to ->
+                    onConditionsChange(conditions.map { if (it == item) it.copy(fromScene = from, toScene = to) else it })
+                },
+                onRemove = { onConditionsChange(conditions - item) }
+            )
+        }
+        orphanAlternatives.forEach { item ->
+            OrphanReferenceRow(
+                title = when (item.kind) {
+                    "object" -> "Alternativa por objeto"
+                    "decision" -> "Alternativa por decisión"
+                    else -> "Alternativa libre"
+                },
+                fromScene = item.fromScene,
+                toScene = item.toScene,
+                scenes = scenes,
+                onRepair = { from, to ->
+                    onAlternativesChange(alternatives.map { if (it == item) it.copy(fromScene = from, toScene = to) else it })
+                },
+                onRemove = { onAlternativesChange(alternatives - item) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrphanReferenceRow(
+    title: String,
+    fromScene: String,
+    toScene: String,
+    scenes: List<String>,
+    onRepair: (String, String) -> Unit,
+    onRemove: () -> Unit
+) {
+    var fromMenu by remember(fromScene, toScene) { mutableStateOf(false) }
+    var toMenu by remember(fromScene, toScene) { mutableStateOf(false) }
+    var selectedFrom by remember(fromScene, toScene) { mutableStateOf(fromScene) }
+    var selectedTo by remember(fromScene, toScene) { mutableStateOf(toScene) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            if (fromScene == STORY_LOST_ORIGIN) {
+                OutlinedButton(onClick = { fromMenu = true }, modifier = Modifier.fillMaxWidth()) { Text("Origen: ${selectedFrom.takeUnless { it == STORY_LOST_ORIGIN } ?: "Escena eliminada"}") }
+                DropdownMenu(expanded = fromMenu, onDismissRequest = { fromMenu = false }) {
+                    scenes.forEach { scene -> DropdownMenuItem(text = { Text(scene) }, onClick = { selectedFrom = scene; fromMenu = false }) }
+                }
+            } else Text("Origen: $fromScene")
+            if (toScene == STORY_LOST_DESTINATION) {
+                OutlinedButton(onClick = { toMenu = true }, modifier = Modifier.fillMaxWidth()) { Text("Destino: ${selectedTo.takeUnless { it == STORY_LOST_DESTINATION } ?: "Escena eliminada"}") }
+                DropdownMenu(expanded = toMenu, onDismissRequest = { toMenu = false }) {
+                    scenes.filter { it != selectedFrom }.forEach { scene -> DropdownMenuItem(text = { Text(scene) }, onClick = { selectedTo = scene; toMenu = false }) }
+                }
+            } else Text("Destino: $toScene")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onRemove, modifier = Modifier.weight(1f)) { Text("Eliminar referencia") }
+                Button(
+                    onClick = { onRepair(selectedFrom, selectedTo) },
+                    enabled = (fromScene != STORY_LOST_ORIGIN || selectedFrom != STORY_LOST_ORIGIN) &&
+                        (toScene != STORY_LOST_DESTINATION || selectedTo != STORY_LOST_DESTINATION) &&
+                        selectedFrom != selectedTo,
+                    modifier = Modifier.weight(1f)
+                ) { Text("Reparar") }
+            }
         }
     }
 }
