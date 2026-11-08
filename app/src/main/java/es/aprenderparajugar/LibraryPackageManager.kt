@@ -126,7 +126,7 @@ internal object LibraryPackageManager {
                 addDirectory(zip, story.directory, storyPrefix, includeStatistics = false)
 
                 val referencedObjects = linkedSetOf<String>()
-                story.metadata.connectionConditions.mapNotNullTo(referencedObjects) { it.requiredObject }
+                addTransitionObjectReferences(story.metadata, referencedObjects)
                 story.metadata.scenes.forEach { sceneName ->
                     // Un cuento puede estar guardado a medio crear. Si todavía no
                     // existe escena.json, se conserva su carpeta sin exigir contenido.
@@ -325,7 +325,7 @@ internal object LibraryPackageManager {
             storyInfos.forEach { storyInfo ->
                 val story = StoryRepository.read(File(staging, "cuentos/${storyInfo.key}"))
                 val referenced = linkedSetOf<String>()
-                story.metadata.connectionConditions.mapNotNullTo(referenced) { it.requiredObject }
+                addTransitionObjectReferences(story.metadata, referenced)
                 story.metadata.scenes.forEach { sceneName ->
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) {
@@ -357,7 +357,7 @@ internal object LibraryPackageManager {
             .filter { "${it.collection}/${it.folderName}" in selectedStories }
             .forEach { story ->
                 val referencedNames = linkedSetOf<String>()
-                story.metadata.connectionConditions.mapNotNullTo(referencedNames) { it.requiredObject }
+                addTransitionObjectReferences(story.metadata, referencedNames)
                 story.metadata.scenes.forEach { sceneName ->
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) {
@@ -386,7 +386,7 @@ internal object LibraryPackageManager {
         packageInfo.stories.filter { it.key in selectedStories }.forEach { info ->
             val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
             val referencedNames = linkedSetOf<String>()
-            story.metadata.connectionConditions.mapNotNullTo(referencedNames) { it.requiredObject }
+            addTransitionObjectReferences(story.metadata, referencedNames)
             story.metadata.scenes.forEach { sceneName ->
                 val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                 if (sceneFile.isFile) {
@@ -421,7 +421,7 @@ internal object LibraryPackageManager {
             .mapTo(requiredNames) { it.directory }
         packageInfo.stories.filter { it.key in selectedStories }.forEach { info ->
             val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
-            story.metadata.connectionConditions.mapNotNullTo(requiredNames) { it.requiredObject }
+            addTransitionObjectReferences(story.metadata, requiredNames)
             story.metadata.scenes.forEach { sceneName ->
                 val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                 if (sceneFile.isFile) {
@@ -454,7 +454,7 @@ internal object LibraryPackageManager {
             } else differences
             val references = StoryRepository.list(context).filter { story ->
                 val refs = linkedSetOf<String>()
-                story.metadata.connectionConditions.mapNotNullTo(refs) { it.requiredObject }
+                addTransitionObjectReferences(story.metadata, refs)
                 story.metadata.scenes.forEach { sceneName ->
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) runCatching {
@@ -530,7 +530,7 @@ internal object LibraryPackageManager {
                 .mapTo(selectedObjectNames) { it.directory }
             selectedStoryInfos.forEach { info ->
                 val story = StoryRepository.read(File(packageInfo.staging, "cuentos/${info.key}"))
-                story.metadata.connectionConditions.mapNotNullTo(selectedObjectNames) { it.requiredObject }
+                addTransitionObjectReferences(story.metadata, selectedObjectNames)
                 story.metadata.scenes.forEach { sceneName ->
                     val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
                     if (sceneFile.isFile) {
@@ -749,6 +749,9 @@ internal object LibraryPackageManager {
             val remapped = metadata.copy(
                 connectionConditions = metadata.connectionConditions.map { condition ->
                     condition.copy(requiredObject = condition.requiredObject?.let { mapping[it] ?: it })
+                },
+                connectionAlternatives = metadata.connectionAlternatives.map { alternative ->
+                    alternative.copy(requiredObject = alternative.requiredObject?.let { mapping[it] ?: it })
                 }
             )
             storyFile.writeText(StoryJsonCodec.encode(remapped).toString(2), Charsets.UTF_8)
@@ -767,6 +770,23 @@ internal object LibraryPackageManager {
                 sceneFile.writeText(StorySceneJsonCodec.encode(remapped).toString(2), Charsets.UTF_8)
             }
         }
+    }
+
+    /**
+     * Recoge las referencias de objetos de las transiciones usando la misma
+     * precedencia por origen que el motor: alternativas nuevas o condiciones legacy.
+     */
+    private fun addTransitionObjectReferences(
+        metadata: StoryMetadata,
+        destination: MutableSet<String>
+    ) {
+        val configuredOrigins = metadata.connectionAlternatives.map { it.fromScene }.toSet()
+        metadata.connectionAlternatives
+            .filter { it.kind == "object" }
+            .mapNotNullTo(destination) { it.requiredObject }
+        metadata.connectionConditions
+            .filterNot { it.fromScene in configuredOrigins }
+            .mapNotNullTo(destination) { it.requiredObject }
     }
 
     fun discard(packageInfo: PackageInfo) {
