@@ -96,12 +96,10 @@ fun LazyListScope.CardsSettingsScreen(
         ) {
             OutlinedButton(
                 onClick = { onDailyManualLimitChange(-1) },
-                enabled = dailyManualLimit > 0
             ) { Text("−") }
             Text("$dailyManualLimit", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             OutlinedButton(
                 onClick = { onDailyManualLimitChange(1) },
-                enabled = dailyManualLimit < 10
             ) { Text("+") }
         }
     }
