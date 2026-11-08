@@ -41,6 +41,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -135,6 +136,7 @@ internal fun StoryPlayerScreen(
     var backpackPromptDismissedScene by remember { mutableStateOf<String?>(null) }
     var decisionDialogOpen by remember { mutableStateOf(false) }
     var decisionSelectionInProgress by remember { mutableStateOf(false) }
+    val decisionOptionsListState = remember(snapshot.scene.folderName) { LazyListState() }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
     var narrationFinished by remember { mutableStateOf(false) }
     var narrationIsPlaying by remember { mutableStateOf(false) }
@@ -425,6 +427,7 @@ internal fun StoryPlayerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 LazyColumn(
+                                    state = decisionOptionsListState,
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
                                     verticalArrangement = Arrangement.spacedBy(7.dp)
                                 ) {
@@ -449,14 +452,18 @@ internal fun StoryPlayerScreen(
                                     }
                                 }
                                 }
-                                if (snapshot.decisionOptions.size > 3) {
+                                if (decisionOptionsListState.canScrollBackward || decisionOptionsListState.canScrollForward) {
                                     Column(
                                         modifier = Modifier.fillMaxHeight().padding(start = 8.dp, top = 12.dp, bottom = 12.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("▲", color = Color(0xFF34445F), fontSize = 27.sp, fontWeight = FontWeight.Black)
-                                        Text("▼", color = Color(0xFF34445F), fontSize = 27.sp, fontWeight = FontWeight.Black)
+                                        if (decisionOptionsListState.canScrollBackward) {
+                                            Text("▲", color = Color(0xFF34445F), fontSize = 30.sp, fontWeight = FontWeight.Black)
+                                        }
+                                        if (decisionOptionsListState.canScrollForward) {
+                                            Text("▼", color = Color(0xFF34445F), fontSize = 30.sp, fontWeight = FontWeight.Black)
+                                        }
                                     }
                                 }
                             }
