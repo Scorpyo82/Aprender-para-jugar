@@ -133,6 +133,7 @@ internal fun StoryPlayerScreen(
     val engine = remember(story.directory.absolutePath) { StoryPlaybackEngine(context, story) }
     var snapshot by remember(story.directory.absolutePath) { mutableStateOf(engine.start()) }
     var backpackOpen by remember { mutableStateOf(false) }
+    var backpackPromptDismissedScene by remember { mutableStateOf<String?>(null) }
     var decisionDialogOpen by remember { mutableStateOf(false) }
     var decisionSelectionInProgress by remember { mutableStateOf(false) }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
@@ -310,7 +311,8 @@ internal fun StoryPlayerScreen(
                     val hasUsableObject = snapshot.inventory.any { item ->
                         !item.metadata.collectible && engine.canUseObject(item.folderName)
                     }
-                    val backpackAttention = hasUsableObject && narrationFinished && !backpackOpen
+                    val backpackAttention = hasUsableObject && narrationFinished &&
+                        backpackPromptDismissedScene != snapshot.scene.folderName && !backpackOpen
                     val backpackPulse = rememberInfiniteTransition(label = "story-backpack-pulse")
                         .animateFloat(
                             initialValue = 1f,
@@ -322,7 +324,10 @@ internal fun StoryPlayerScreen(
                             label = "story-backpack-scale"
                         ).value
                     OutlinedButton(
-                        onClick = { backpackOpen = true },
+                        onClick = {
+                            backpackPromptDismissedScene = snapshot.scene.folderName
+                            backpackOpen = true
+                        },
                         modifier = Modifier.graphicsLayer {
                             scaleX = backpackPulse
                             scaleY = backpackPulse
