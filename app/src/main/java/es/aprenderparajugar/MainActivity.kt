@@ -5307,131 +5307,47 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             }
         )
     } else if (screen == "sequence-game") {
-        val exercise = sequencePlayingExercise
-        if (exercise == null) {
-            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("No hay ningún ejercicio seleccionado.")
-                Button(onClick = { screen = "sequences" }) { Text("Volver a ejercicios") }
-            }
-        } else {
-            val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
-            val finished = sequenceSelectedOrder.size == exercise.cards.size
-            LazyColumn(
-                Modifier.fillMaxSize().padding(if (isTabletLayout) 28.dp else 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    OutlinedButton(onClick = { screen = "sequences"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }) { Text("← Volver a ejercicios") }
-                    Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
-                    Text(
-                        if (finished) "¡Muy bien! Has completado la secuencia." else "Toca las tarjetas en el orden en que ocurren.",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (finished) Color(0xFF24733B) else Color(0xFF667085)
-                    )
-                    Text("Pasos correctos: ${sequenceSelectedOrder.size}/${exercise.cards.size}", fontSize = 14.sp, color = Color(0xFF667085))
-                }
-                items(sequencePlayOrder.size) { displayPosition ->
-                    val cardIndex = sequencePlayOrder[displayPosition]
-                    val alreadySelected = cardIndex in sequenceSelectedOrder
-                    val picture = exercise.pictures.getOrNull(cardIndex)?.takeIf { it.isNotBlank() }
-                        ?: if (exercise.pictures.isEmpty()) defaultSequencePicture(cardIndex) else ""
-                    Card(
-                        Modifier.fillMaxWidth().clickable(enabled = !finished && !alreadySelected) {
-                            if (sequenceGameState.selectCard(exercise, cardIndex)) {
-                                    sequencePlayMessage = "¡Secuencia completada!"
-                                    val baseRewardSeconds = (when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60
-                                    val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
-                                    val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(20)
-                                    addEarnedTime(baseRewardSeconds * rewardPercent / 100)
-                                    val resultSize = exercise.cards.size
-                                    resultCorrectCount = (resultSize - sequenceWrongAnswers).coerceIn(0, resultSize)
-                                    resultTotalCount = resultSize
-                                    val usageKey = sequenceGameState.dailyUsagePreferenceKey(exercise)
-                                    preferences.edit().putInt(usageKey, preferences.getInt(usageKey, 0) + 1).apply()
-                                    exercise.directory?.let { directory ->
-                                        runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, sequenceWrongAnswers) }
-                                    }
-                                    runCatching {
-                                        UsageStatisticsRepository.recordCompleted(
-                                            context,
-                                            ContentStorage.Modality.SECUENCIAS,
-                                            sequenceChosenDifficulty,
-                                            SequenceType.fromDisplayName(exercise.type)
-                                        )
-                                    }
-                                    screen = "sequence-result"
-                            }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = when {
-                                alreadySelected -> Color(0xFFD9F2D9)
-                                else -> Color.White
-                            }
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(
-                            if (alreadySelected) 2.dp else 1.dp,
-                            if (alreadySelected) Color(0xFF24733B) else Color(0xFFE0E5EA)
+        SequenceGameScreen(
+            exercise = sequencePlayingExercise,
+            selectedOrder = sequenceSelectedOrder,
+            playOrder = sequencePlayOrder,
+            contentFormat = sequenceContentFormat,
+            message = sequencePlayMessage,
+            exerciseFontFamily = exerciseFontFamily,
+            rewardMessage = if (rewardMode.isStars) "Has ganado estrellas por completar el ejercicio." else "Has ganado tiempo para jugar por completar el ejercicio.",
+            onBack = {
+                screen = "sequences"
+                sequenceSelectedOrder = emptyList()
+                sequencePlayMessage = ""
+            },
+            onSelectCard = { cardIndex ->
+                val exercise = sequencePlayingExercise
+                if (exercise != null && sequenceGameState.selectCard(exercise, cardIndex)) {
+                    sequencePlayMessage = "¡Secuencia completada!"
+                    val baseRewardSeconds = (when (sequenceChosenDifficulty) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }) * 60
+                    val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
+                    val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(20)
+                    addEarnedTime(baseRewardSeconds * rewardPercent / 100)
+                    val resultSize = exercise.cards.size
+                    resultCorrectCount = (resultSize - sequenceWrongAnswers).coerceIn(0, resultSize)
+                    resultTotalCount = resultSize
+                    val usageKey = sequenceGameState.dailyUsagePreferenceKey(exercise)
+                    preferences.edit().putInt(usageKey, preferences.getInt(usageKey, 0) + 1).apply()
+                    exercise.directory?.let { directory ->
+                        runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, sequenceWrongAnswers) }
+                    }
+                    runCatching {
+                        UsageStatisticsRepository.recordCompleted(
+                            context,
+                            ContentStorage.Modality.SECUENCIAS,
+                            sequenceChosenDifficulty,
+                            SequenceType.fromDisplayName(exercise.type)
                         )
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            if (sequenceContentFormat != "Solo texto") {
-                                if (picture.startsWith("content://") || picture.startsWith("file://")) {
-                                    AndroidView(
-                                        factory = { ctx -> ImageView(ctx).apply {
-                                            scaleType = ImageView.ScaleType.CENTER_CROP
-                                            layoutParams = ViewGroup.LayoutParams(160, 120)
-                                        } },
-                                        update = { view ->
-                                            try { view.setImageURI(Uri.parse(picture)) }
-                                            catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) }
-                                        },
-                                        modifier = Modifier.width(if (isTabletLayout) 140.dp else 96.dp).height(if (isTabletLayout) 110.dp else 82.dp).clipToBounds()
-                                    )
-                                } else {
-                                    androidx.compose.foundation.layout.Box(
-                                        Modifier.width(if (isTabletLayout) 140.dp else 96.dp).height(if (isTabletLayout) 110.dp else 82.dp)
-                                            .background(if (picture.isBlank()) Color(0xFFF2F4F7) else Color(0xFFEAF5E6), RoundedCornerShape(12.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(picture.ifBlank { "▧" }, fontSize = if (picture.isBlank()) 34.sp else 42.sp, color = Color(0xFF98A2B3))
-                                    }
-                                }
-                            }
-                            if (sequenceContentFormat != "Solo imágenes") {
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    if (alreadySelected) Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
-                                    Text(exercise.cards[cardIndex], fontSize = if (isTabletLayout) 22.sp else 18.sp, fontFamily = exerciseFontFamily, fontWeight = FontWeight.SemiBold, color = Color(0xFF253344))
-                                }
-                            } else if (alreadySelected) {
-                                Text("${sequenceSelectedOrder.indexOf(cardIndex) + 1}.", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF24733B))
-                            }
-                        }
                     }
-                }
-                if (sequencePlayMessage.isNotBlank()) {
-                    item { Text(sequencePlayMessage, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = if (finished) Color(0xFF24733B) else Color(0xFF72521B)) }
-                }
-                if (finished) {
-                    item {
-                        Button(
-                            onClick = {
-                                screen = "sequences"
-                                sequenceSelectedOrder = emptyList()
-                                sequencePlayMessage = ""
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Elegir otro ejercicio") }
-                    }
-                    item { Text(if (rewardMode.isStars) "Has ganado estrellas por completar el ejercicio." else "Has ganado tiempo para jugar por completar el ejercicio.", fontSize = 14.sp, color = Color(0xFF667085)) }
+                    screen = "sequence-result"
                 }
             }
-        }
+        )
     } else if (screen == "stories") {
         val availableStories = storedStories.filter { it.collection !in disabledStoryCollections }
         val availableCollections = availableStories.map { it.collection }.distinct().sortedBy { folder ->
