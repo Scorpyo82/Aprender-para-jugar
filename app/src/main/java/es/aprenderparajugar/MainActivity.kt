@@ -188,13 +188,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Inicializa las raíces privadas para las bibliotecas de contenido.
         ContentStorage.initialize(this)
+        NotificationQueueRepository.initialize(this)
         // A manual launch re-arms the focus guard after a parent-authorized exit.
         getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
             .edit().putBoolean("manual_exit_allowed", false).apply()
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFFFF8E8)) {
-                    AprenderApp()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AprenderApp()
+                        AppNotificationHost(Modifier.align(Alignment.TopEnd))
+                    }
                 }
             }
         }
