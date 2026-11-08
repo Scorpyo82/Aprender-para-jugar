@@ -3398,105 +3398,65 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "stories-object-create" -> {
-                        item { Text(if (storyObjectEditingFolder == null) "Añadir objeto" else "Editar objeto", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Completa los datos del objeto y guarda. Podrás reutilizarlo en distintos cuentos.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        if (storyObjectEditingFolder != null) {
-                            item {
-                                val isInInventory = storedInventoryFolders.contains(storyObjectEditingFolder)
-                                OutlinedButton(
-                                    onClick = {
-                                        storyObjectInventoryState.toggle(context, storyObjectEditingFolder!!)?.let {
-                                            storyObjectMessage = it
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(if (isInInventory) "Retirar del inventario" else "Añadir al inventario")
-                                }
-                                Text(
-                                    if (isInInventory) "Este objeto está actualmente en el inventario del niño."
-                                    else "Este objeto todavía no está en el inventario del niño.",
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF667085)
-                                )
-                            }
-                        }
                         item {
-                            OutlinedTextField(value = storyObjectNameDraft, onValueChange = { storyObjectNameDraft = if (storyObjectEditingFolder == null) NameRules.filterInput(it) else it }, label = { Text("Nombre del objeto") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        }
-                        item {
-                            Column {
-                                Text("Colección", fontWeight = FontWeight.SemiBold)
-                                Box {
-                                    OutlinedButton(onClick = { storyObjectCollectionMenuExpanded = true }, enabled = storyObjectCollections.isNotEmpty() && storyObjectEditingFolder == null, modifier = Modifier.fillMaxWidth()) {
-                                        Text(storyObjectSelectedCollection.ifBlank { "Seleccionar colección" })
+                            StoryObjectEditorScreen(
+                                editingFolder = storyObjectEditingFolder,
+                                inInventory = storedInventoryFolders.contains(storyObjectEditingFolder),
+                                name = storyObjectNameDraft,
+                                picture = storyObjectPictureDraft,
+                                collections = storyObjectCollections,
+                                selectedCollection = storyObjectSelectedCollection,
+                                collectionMenuExpanded = storyObjectCollectionMenuExpanded,
+                                availableInStore = storyObjectAvailableInStore,
+                                requiresUnlock = storyObjectRequiresUnlock,
+                                collectible = storyObjectCollectible,
+                                storePrice = storyObjectStorePriceMinutes,
+                                isStarsMode = rewardMode.isStars,
+                                message = storyObjectMessage,
+                                onToggleInventory = {
+                                    storyObjectInventoryState.toggle(context, storyObjectEditingFolder!!)?.let {
+                                        storyObjectMessage = it
                                     }
-                                    DropdownMenu(expanded = storyObjectCollectionMenuExpanded && storyObjectCollections.isNotEmpty(), onDismissRequest = { storyObjectCollectionMenuExpanded = false }) {
-                                        storyObjectCollections.forEach { name ->
-                                            DropdownMenuItem(text = { Text(name) }, onClick = { storyObjectSelectedCollection = name; storyObjectCollectionMenuExpanded = false })
-                                        }
+                                },
+                                onNameChange = {
+                                    storyObjectNameDraft = if (storyObjectEditingFolder == null) NameRules.filterInput(it) else it
+                                },
+                                onCollectionMenuChange = { storyObjectCollectionMenuExpanded = it },
+                                onCollectionSelected = {
+                                    storyObjectSelectedCollection = it
+                                    storyObjectCollectionMenuExpanded = false
+                                },
+                                onAvailableInStoreChange = {
+                                    storyObjectAvailableInStore = it
+                                    if (!it) storyObjectRequiresUnlock = false
+                                },
+                                onRequiresUnlockChange = { storyObjectRequiresUnlock = it },
+                                onCollectibleChange = { storyObjectCollectible = it },
+                                onStorePriceChange = { storyObjectStorePriceMinutes = it.filter(Char::isDigit).take(5) },
+                                onChooseGallery = {
+                                    preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                    storyObjectImagePicker.launch(arrayOf("image/*"))
+                                },
+                                onTakePhoto = {
+                                    preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
+                                    pendingCameraTarget = "story-object"
+                                    cameraLauncher.launch(null)
+                                },
+                                onSave = {
+                                    storyObjectEditorState.save(context)?.let { savedObjects ->
+                                        storedStoryObjects = savedObjects
+                                        parentSection = "stories-object-collection"
                                     }
+                                },
+                                canSave = storyObjectNameDraft.isNotBlank() &&
+                                    storyObjectSelectedCollection.isNotBlank() &&
+                                    storyObjectPictureDraft.isNotBlank() &&
+                                    (!storyObjectAvailableInStore || (storyObjectStorePriceMinutes.toIntOrNull() ?: 0) > 0),
+                                onCancel = {
+                                    storyObjectEditorState.reset()
+                                    parentSection = "stories-objects"
                                 }
-                                if (storyObjectCollections.isEmpty()) {
-                                    Text("Todavía no existen colecciones. Crea una antes de añadir objetos.", fontSize = 13.sp, color = Color(0xFF667085))
-                                }
-                            }
-                        }
-                        item {
-                            if (storyObjectPictureDraft.startsWith("content://") || storyObjectPictureDraft.startsWith("file://")) {
-                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 320) } }, update = { view -> try { view.setImageURI(Uri.parse(storyObjectPictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(180.dp))
-                            } else Text(if (storyObjectPictureDraft.isBlank()) "Todavía no has elegido una imagen." else "Imagen: $storyObjectPictureDraft", fontSize = 18.sp)
-                        }
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = storyObjectAvailableInStore, onCheckedChange = { enabled ->
-                                        storyObjectAvailableInStore = enabled
-                                        if (!enabled) storyObjectRequiresUnlock = false
-                                    })
-                                    Text("Aparece en la tienda", fontWeight = FontWeight.SemiBold)
-                                }
-                                Text("Indica si este objeto se ofrece en la tienda del juego.", fontSize = 12.sp, color = Color(0xFF667085))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = storyObjectRequiresUnlock && storyObjectAvailableInStore, enabled = storyObjectAvailableInStore, onCheckedChange = { storyObjectRequiresUnlock = it })
-                                    Text("Requiere desbloqueo", fontWeight = FontWeight.SemiBold, color = if (storyObjectAvailableInStore) Color.Unspecified else Color(0xFF98A2B3))
-                                }
-                                Text("El niño tendrá que desbloquearlo en un cuento antes de que aparezca para comprarlo.", fontSize = 12.sp, color = Color(0xFF667085))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = storyObjectCollectible, onCheckedChange = { storyObjectCollectible = it })
-                                    Text("Es un coleccionable", fontWeight = FontWeight.SemiBold)
-                                }
-                                Text("Los coleccionables tienen una sección especial en el inventario.", fontSize = 12.sp, color = Color(0xFF667085))
-                                if (storyObjectAvailableInStore) { OutlinedTextField(value = storyObjectStorePriceMinutes, onValueChange = { storyObjectStorePriceMinutes = it.filter(Char::isDigit).take(5) }, label = { Text("Precio · Minutos/Estrellas") }, suffix = { Text(if (rewardMode.isStars) "⭐" else "min") }, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number), modifier = Modifier.fillMaxWidth()) }
-                            }
-                        }
-                        item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                storyObjectImagePicker.launch(arrayOf("image/*"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
-                        }
-                        item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                pendingCameraTarget = "story-object"
-                                cameraLauncher.launch(null)
-                            }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
-                        }
-                        item {
-                            Button(onClick = {
-                                storyObjectEditorState.save(context)?.let { savedObjects ->
-                                    storedStoryObjects = savedObjects
-                                    parentSection = "stories-object-collection"
-                                }
-                            }, enabled = storyObjectNameDraft.isNotBlank() && storyObjectSelectedCollection.isNotBlank() && storyObjectPictureDraft.isNotBlank() && (!storyObjectAvailableInStore || (storyObjectStorePriceMinutes.toIntOrNull() ?: 0) > 0), modifier = Modifier.fillMaxWidth()) { Text("Guardar objeto") }
-                            if (storyObjectMessage.isNotBlank()) Text(storyObjectMessage, color = if (storyObjectMessage.contains("correctamente")) Color(0xFF24733B) else Color(0xFFB3261E))
-                        }
-                        item {
-                            OutlinedButton(onClick = {
-                                storyObjectEditorState.reset()
-                                parentSection = "stories-objects"
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a Objetos") }
+                            )
                         }
                     }
                     "stories-object-collection" -> {
