@@ -27,6 +27,9 @@ internal class StoryEditorState(private val context: Context) {
     val scenes: MutableState<List<String>> = mutableStateOf(listOf("Escena 1"))
     val selectedScene: MutableState<String> = mutableStateOf("")
     val sceneText: MutableState<String> = mutableStateOf("")
+    val decisionPromptByScene: MutableState<Map<String, String>> = mutableStateOf(emptyMap())
+    val decisionOptionsByScene: MutableState<Map<String, List<StoryDecisionOption>>> = mutableStateOf(emptyMap())
+    val nextDecisionOptionNumberByScene: MutableState<Map<String, Int>> = mutableStateOf(emptyMap())
     val objectTiming: MutableState<String> = mutableStateOf("Al salir")
     val awardedObjectByScene: MutableState<Map<String, String?>> = mutableStateOf(emptyMap())
     val awardedObjectsByScene: MutableState<Map<String, List<String>>> = mutableStateOf(emptyMap())
@@ -229,9 +232,9 @@ internal class StoryEditorState(private val context: Context) {
                         awardTiming = if (objectTiming.value == "Al entrar") "onEnter" else "onExit",
                         awardedObjects = awardedObjectsByScene.value[selectedScene.value] ?: (listOfNotNull(existing?.awardedObject) + existing?.awardedObjects.orEmpty()).distinct(),
                         unlockedObjects = unlockedObjectsByScene.value[selectedScene.value] ?: existing?.unlockedObjects.orEmpty(),
-                        decisionPrompt = existing?.decisionPrompt.orEmpty(),
-                        decisionOptions = existing?.decisionOptions.orEmpty(),
-                        nextDecisionOptionNumber = existing?.nextDecisionOptionNumber ?: 1
+                        decisionPrompt = decisionPromptByScene.value[selectedScene.value] ?: existing?.decisionPrompt.orEmpty(),
+                        decisionOptions = decisionOptionsByScene.value[selectedScene.value] ?: existing?.decisionOptions.orEmpty(),
+                        nextDecisionOptionNumber = nextDecisionOptionNumberByScene.value[selectedScene.value] ?: existing?.nextDecisionOptionNumber ?: 1
                     )
                 } else existing ?: StorySceneMetadata(title = scenes.value[index])
                 StoryRepository.saveScene(stored, sceneFolder, sceneMetadata)
