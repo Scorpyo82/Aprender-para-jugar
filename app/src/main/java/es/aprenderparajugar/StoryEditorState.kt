@@ -95,7 +95,7 @@ internal class StoryEditorState(private val context: Context) {
         scenes.value = remaining
         connections.value = remaining.associateWith { origin ->
             if (origin == sceneName) emptyList()
-            else currentConnections[origin].orEmpty().map { if (it == sceneName) STORY_LOST_DESTINATION else it }.distinct().take(2)
+            else currentConnections[origin].orEmpty().map { if (it == sceneName) STORY_LOST_DESTINATION else it }.distinct()
         }
         connectionConditions.value = connectionConditions.value.filter { it.fromScene != sceneName && it.toScene != sceneName }
         illustrations.value = illustrations.value - sceneName
@@ -139,7 +139,7 @@ internal class StoryEditorState(private val context: Context) {
             val folderByVisible = scenes.value.zip(sceneFolders).toMap()
             val persistedConnections = connections.value.mapNotNull { (from, destinations) ->
                 val folderFrom = folderByVisible[from] ?: return@mapNotNull null
-                folderFrom to destinations.map { if (it == STORY_LOST_DESTINATION) it else folderByVisible[it] ?: STORY_LOST_DESTINATION }.distinct().take(2)
+                folderFrom to destinations.map { if (it == STORY_LOST_DESTINATION) it else folderByVisible[it] ?: STORY_LOST_DESTINATION }.distinct()
             }.toMap()
             val persistedConditions = connectionConditions.value.mapNotNull { condition ->
                 val from = folderByVisible[condition.fromScene] ?: return@mapNotNull null
