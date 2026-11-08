@@ -1657,11 +1657,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     )
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "game-modes" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🎮", fontSize = 30.sp)
-                            Column { Text("Configurar actividades", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Opciones específicas de cada modalidad", color = Color(0xFF667085)) }
-                        }
+                    ParentMenuNavigationCard("🎮", "Configurar actividades", "Opciones específicas de cada modalidad") {
+                        parentSection = "game-modes"
                     }
                 }
                 item { Text("CONFIGURACIÓN GENERAL", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF667085)) }
@@ -1682,30 +1679,18 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "rewards" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("⏱️", fontSize = 30.sp)
-                            Column { Text("Recompensas y límites", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Minutos/Estrellas por dificultad", color = Color(0xFF667085)) }
-                        }
+                    ParentMenuNavigationCard("⏱️", "Recompensas y límites", "Minutos/Estrellas por dificultad") {
+                        parentSection = "rewards"
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "sound-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🔊", fontSize = 30.sp)
-                            Column { Text("Ajustes de sonido", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Música general y audio de cuentos", color = Color(0xFF667085)) }
-                        }
+                    ParentMenuNavigationCard("🔊", "Ajustes de sonido", "Música general y audio de cuentos") {
+                        parentSection = "sound-settings"
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "basic-library" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("☁️⬇️", fontSize = 30.sp)
-                            Column {
-                                Text("Descargar contenido online", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text("Explorar y descargar bibliotecas y paquetes de contenido desde Internet", color = Color(0xFF667085))
-                            }
-                        }
+                    ParentMenuNavigationCard("☁️⬇️", "Descargar contenido online", "Explorar y descargar bibliotecas y paquetes de contenido desde Internet") {
+                        parentSection = "basic-library"
                     }
                 }
                 item {
@@ -1723,14 +1708,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
 
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "statistics-menu" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("📊", fontSize = 30.sp)
-                            Column {
-                                Text("Estadísticas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text("Consulta el aprendizaje y el uso de la aplicación", color = Color(0xFF667085))
-                            }
-                        }
+                    ParentMenuNavigationCard("📊", "Estadísticas", "Consulta el aprendizaje y el uso de la aplicación") {
+                        parentSection = "statistics-menu"
                     }
                 }
                 item {
@@ -1742,11 +1721,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable { parentSection = "security" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("🔐", fontSize = 30.sp)
-                            Column { Text("Cambiar PIN", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Modificar el PIN de acceso familiar", color = Color(0xFF667085)) }
-                        }
+                    ParentMenuNavigationCard("🔐", "Cambiar PIN", "Modificar el PIN de acceso familiar") {
+                        parentSection = "security"
                     }
                 }
                 item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp)) }
