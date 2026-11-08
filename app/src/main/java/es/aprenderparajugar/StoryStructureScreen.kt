@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
@@ -83,6 +84,7 @@ internal fun StoryStructureScreen(
             alternatives = alternatives,
             onConditionsChange = { conditions = it },
             onAlternativesChange = { alternatives = it },
+            connections = connections,
             onConnectionsChange = { connections = it }
         )
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -147,8 +149,20 @@ private fun OrphanedNarrativeReferences(
     alternatives: List<StoryConnectionAlternative>,
     onConditionsChange: (List<StoryConnectionCondition>) -> Unit,
     onAlternativesChange: (List<StoryConnectionAlternative>) -> Unit,
+    connections: Map<String, List<String>>,
     onConnectionsChange: (Map<String, List<String>>) -> Unit
 ) {
+    fun repairEdge(oldFrom: String, oldTo: String, newFrom: String, newTo: String) {
+        val next = connections.mapValues { (_, destinations) ->
+            if (oldFrom != STORY_LOST_ORIGIN && oldTo == STORY_LOST_DESTINATION && newFrom == oldFrom) {
+                destinations.filterNot { it == STORY_LOST_DESTINATION }
+            } else destinations
+        }.toMutableMap()
+        if (newFrom != STORY_LOST_ORIGIN && newTo != STORY_LOST_DESTINATION) {
+            next[newFrom] = (next[newFrom].orEmpty() + newTo).distinct()
+        }
+        onConnectionsChange(next)
+    }
     val orphanConditions = conditions.filter { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }
     val orphanAlternatives = alternatives.filter { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }
     if (orphanConditions.isEmpty() && orphanAlternatives.isEmpty()) return
@@ -164,6 +178,7 @@ private fun OrphanedNarrativeReferences(
                 scenes = scenes,
                 onRepair = { from, to ->
                     onConditionsChange(conditions.map { if (it == item) it.copy(fromScene = from, toScene = to) else it })
+                    repairEdge(item.fromScene, item.toScene, from, to)
                 },
                 onRemove = { onConditionsChange(conditions - item) }
             )
@@ -180,6 +195,7 @@ private fun OrphanedNarrativeReferences(
                 scenes = scenes,
                 onRepair = { from, to ->
                     onAlternativesChange(alternatives.map { if (it == item) it.copy(fromScene = from, toScene = to) else it })
+                    repairEdge(item.fromScene, item.toScene, from, to)
                 },
                 onRemove = { onAlternativesChange(alternatives - item) }
             )
