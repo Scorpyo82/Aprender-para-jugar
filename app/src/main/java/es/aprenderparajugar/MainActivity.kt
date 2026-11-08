@@ -4931,63 +4931,23 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             OutlinedButton(onClick = { screen = "home" }) { Text("Salir del ejercicio") }
         }
     } else if (screen == "word-options") {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            OutlinedButton(onClick = { screen = "home"; wordStartMessage = "" }) { Text("← Volver al inicio") }
-            Text("Palabras", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-            Text("Elige dificultad y cómo seleccionar la categoría.", fontSize = 17.sp, color = Color(0xFF667085))
-            Text("Dificultad", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Fácil" to easyRewardMinutes, "Normal" to normalRewardMinutes, "Difícil" to hardRewardMinutes).forEach { (level, minutes) ->
-                    Card(
-                        Modifier.weight(1f).clickable { wordSelectedDifficulty = level; wordStartMessage = "" },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = if (wordSelectedDifficulty == level) Color(0xFFE8F0FE) else Color.White),
-                        border = androidx.compose.foundation.BorderStroke(if (wordSelectedDifficulty == level) 2.dp else 1.dp, if (wordSelectedDifficulty == level) Color(0xFF3E6FA8) else Color(0xFFE4E0D8))
-                    ) {
-                        Column(Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(level, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            Text("$minutes ${if (rewardMode.isStars) "estrellas" else "min"}", fontSize = 14.sp, color = Color(0xFF667085))
-                        }
-                    }
-                }
+        WordOptionsScreen(
+            selectedDifficulty = wordSelectedDifficulty,
+            easyReward = easyRewardMinutes,
+            normalReward = normalRewardMinutes,
+            hardReward = hardRewardMinutes,
+            isStarsMode = rewardMode.isStars,
+            message = wordStartMessage,
+            onBack = { screen = "home"; wordStartMessage = "" },
+            onDifficultyChange = { level -> wordSelectedDifficulty = level; wordStartMessage = "" },
+            onRandom = { startWordExercise(null) },
+            onChooseCategory = {
+                wordCategoryCandidates = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
+                    .map { it.category }.distinct().sorted()
+                wordStartMessage = ""
+                screen = "word-category-select"
             }
-            Card(
-                Modifier.fillMaxWidth().clickable { startWordExercise(null) },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0D9)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE4C07B))
-            ) {
-                Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("🎲", fontSize = 38.sp)
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Al azar", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7B4B16))
-                        Text("Elegir una categoría disponible al azar", fontSize = 15.sp, color = Color(0xFF795F43))
-                    }
-                    Text("›", fontSize = 30.sp, color = Color(0xFFB7791F))
-                }
-            }
-            Card(
-                Modifier.fillMaxWidth().clickable {
-                    wordCategoryCandidates = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
-                        .map { it.category }.distinct().sorted()
-                    wordStartMessage = ""
-                    screen = "word-category-select"
-                },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F4E9)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA4D3B2))
-            ) {
-                Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("🗂️", fontSize = 38.sp)
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Elegir categoría", fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF286344))
-                        Text("Selecciona el tema que quieres practicar", fontSize = 15.sp, color = Color(0xFF52725F))
-                    }
-                    Text("›", fontSize = 30.sp, color = Color(0xFF27804D))
-                }
-            }
-            if (wordStartMessage.isNotBlank()) Text(wordStartMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
-        }
+        )
     } else if (screen == "word-category-select") {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(onClick = { screen = "word-options"; wordStartMessage = "" }) { Text("← Volver a Palabras") }
