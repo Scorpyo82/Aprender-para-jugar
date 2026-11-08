@@ -192,7 +192,6 @@ object StoryJsonCodec {
         require(metadata.startScene in metadata.scenes) { "La escena inicial no pertenece al cuento." }
         require(metadata.connections.keys.all { it in metadata.scenes }) { "Hay conexiones desde escenas desconocidas." }
         metadata.connections.forEach { (origin, destinations) ->
-            require(destinations.size <= 2) { "Una escena no puede tener más de dos salidas." }
             require(destinations.distinct().size == destinations.size) { "Una escena no puede conectarse dos veces con el mismo destino." }
             require(destinations.all { it == STORY_LOST_DESTINATION || it in metadata.scenes }) { "Una conexión apunta a una escena inexistente." }
             require(origin !in destinations) { "Una escena no puede conectarse consigo misma." }
@@ -217,17 +216,17 @@ object StoryJsonCodec {
             require(alternative.kind != "decision" || (alternative.requiredObject == null && !alternative.consumeRequiredObject)) { "Una alternativa por decisión no puede incluir condiciones de objeto." }
             require(!alternative.consumeRequiredObject || alternative.kind == "object") { "Solo se puede consumir un objeto en una alternativa por objeto." }
         }
-        metadata.connections.forEach { (origin, destinations) ->
-            if (destinations.size == 2) {
-                val branchConditions = destinations.map { destination ->
-                    metadata.connectionConditions.firstOrNull { it.fromScene == origin && it.toScene == destination }?.requiredObject
-                }
-                require(branchConditions.any { it != null }) { "Una bifurcación debe tener al menos una salida condicionada por un objeto." }
-                require(branchConditions.filterNotNull().distinct().size == branchConditions.filterNotNull().size) {
-                    "Las dos salidas de una bifurcación deben utilizar objetos distintos."
+        require(metadata.connectionAlternatives.distinct().size == metadata.connectionAlternatives.size) {
+            "Hay alternativas narrativas duplicadas."
+        }
+        metadata.connectionAlternatives
+            .filter { it.kind == "decision" }
+            .groupBy { it.fromScene to it.decisionOptionKey }
+            .forEach { (_, alternatives) ->
+                require(alternatives.map { it.toScene }.distinct().size == 1) {
+                    "Una misma opción de decisión no puede conducir a destinos diferentes."
                 }
             }
-        }
         require(metadata.cover == null || isSafeFileName(metadata.cover)) { "El nombre de portada no es válido." }
     }
 
