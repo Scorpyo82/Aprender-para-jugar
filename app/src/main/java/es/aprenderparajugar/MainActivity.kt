@@ -1494,65 +1494,32 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
 
     if (screen == "pin-setup") {
         BackHandler(enabled = true) { }
-        Column(
-            Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("🔐 Protege el control parental", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "Antes de continuar, crea un PIN personal de 4 cifras. Lo necesitarás para acceder a la configuración parental.",
-                fontSize = 16.sp,
-                color = Color(0xFF667085)
-            )
-            Text(
-                "Guárdalo en un lugar seguro. Si lo olvidas, tendrás que restablecer la aplicación borrando sus datos desde los ajustes de Android. Esto elimina el contenido guardado localmente; conserva copias de tus bibliotecas.",
-                fontSize = 13.sp,
-                color = Color(0xFF8A4B08)
-            )
-            Spacer(Modifier.height(18.dp))
-            OutlinedTextField(
-                value = newPinDraft,
-                onValueChange = { newPinDraft = it.filter(Char::isDigit).take(4); initialPinError = "" },
-                label = { Text("Nuevo PIN de 4 cifras") },
-                singleLine = true
-            )
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
-                value = initialPinConfirmDraft,
-                onValueChange = { initialPinConfirmDraft = it.filter(Char::isDigit).take(4); initialPinError = "" },
-                label = { Text("Confirmar PIN") },
-                singleLine = true
-            )
-            if (initialPinError.isNotBlank()) {
-                Spacer(Modifier.height(8.dp))
-                Text(initialPinError, color = Color(0xFFB3261E), fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    when {
-                        newPinDraft.length != 4 -> initialPinError = "El PIN debe tener exactamente 4 cifras."
-                        initialPinConfirmDraft.length != 4 -> initialPinError = "Confirma el PIN de 4 cifras."
-                        newPinDraft != initialPinConfirmDraft -> initialPinError = "Los PIN no coinciden."
-                        else -> {
-                            pinStored = newPinDraft
-                            preferences.edit()
-                                .putString("parent_pin", pinStored)
-                                .putBoolean("parent_pin_configured", true)
-                                .commit()
-                            newPinDraft = ""
-                            initialPinConfirmDraft = ""
-                            initialPinError = ""
-                            tourReturnTarget = if (firstLaunchNeedsSetup) "parent-setup" else "home"
-                            screen = "tour"
-                        }
+        PinSetupScreen(
+            pinDraft = newPinDraft,
+            confirmationDraft = initialPinConfirmDraft,
+            error = initialPinError,
+            onPinDraftChange = { newPinDraft = it; initialPinError = "" },
+            onConfirmationDraftChange = { initialPinConfirmDraft = it; initialPinError = "" },
+            onSave = {
+                when {
+                    newPinDraft.length != 4 -> initialPinError = "El PIN debe tener exactamente 4 cifras."
+                    initialPinConfirmDraft.length != 4 -> initialPinError = "Confirma el PIN de 4 cifras."
+                    newPinDraft != initialPinConfirmDraft -> initialPinError = "Los PIN no coinciden."
+                    else -> {
+                        pinStored = newPinDraft
+                        preferences.edit()
+                            .putString("parent_pin", pinStored)
+                            .putBoolean("parent_pin_configured", true)
+                            .commit()
+                        newPinDraft = ""
+                        initialPinConfirmDraft = ""
+                        initialPinError = ""
+                        tourReturnTarget = if (firstLaunchNeedsSetup) "parent-setup" else "home"
+                        screen = "tour"
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Guardar PIN y continuar") }
-        }
+                }
+            }
+        )
     } else if (screen == "tour") {
         WelcomeTourScreen(
             selectedMode = rewardMode,
