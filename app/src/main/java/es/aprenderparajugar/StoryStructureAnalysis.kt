@@ -21,21 +21,34 @@ internal object StoryStructureAnalysis {
         alternatives: List<StoryConnectionAlternative> = emptyList()
     ): StoryStructureDiagnostics {
         val sceneSet = scenes.toSet()
-        val hasNewAlternatives = alternatives.isNotEmpty()
-        val outgoingByScene = if (hasNewAlternatives) {
-            alternatives.groupBy { it.fromScene }.mapValues { (_, items) -> items.map { it.toScene }.distinct() }
-        } else connections
-        val adjacency = scenes.associateWith { scene ->
-            outgoingByScene[scene].orEmpty().filter { it in sceneSet }.distinct()
+        val configuredOrigins = alternatives.map { it.fromScene }.toSet()
+
+        // El motor decide por origen: las alternativas nuevas prevalecen solo
+        // en las escenas que ya las utilizan; las demás conservan el formato heredado.
+        fun destinationsFrom(origin: String): List<String> =
+            if (origin in configuredOrigins) {
+                alternatives.filter { it.fromScene == origin }.map { it.toScene }.distinct()
+            } else {
+                connections[origin].orEmpty().filter { it != STORY_LOST_DESTINATION }.distinct()
+            }
+
+        val adjacency = scenes.associateWith { origin ->
+            destinationsFrom(origin).filter { it in sceneSet }
         }
         val reachable = reachableFrom(startScene, adjacency)
         val unreachable = sceneSet - reachable
-        val finals = reachable.filterTo(linkedSetOf()) { adjacency[it].orEmpty().isEmpty() && STORY_LOST_DESTINATION !in connections[it].orEmpty() }
+        val finals = reachable.filterTo(linkedSetOf()) { scene ->
+            adjacency[scene].orEmpty().isEmpty() &&
+                STORY_LOST_DESTINATION !in connections[scene].orEmpty() &&
+                alternatives.none { it.fromScene == scene && it.toScene == STORY_LOST_DESTINATION }
+        }
 
         val unconditionalAdjacency = scenes.associateWith { origin ->
             adjacency[origin].orEmpty().filter { destination ->
-                if (hasNewAlternatives) {
-                    alternatives.any { it.fromScene == origin && it.toScene == destination && it.kind == "free" }
+                if (origin in configuredOrigins) {
+                    alternatives.any {
+                        it.fromScene == origin && it.toScene == destination && it.kind == "free"
+                    }
                 } else {
                     conditions.none {
                         it.fromScene == origin && it.toScene == destination && it.requiredObject != null
@@ -51,6 +64,15 @@ internal object StoryStructureAnalysis {
             component.any { scene -> !canReachAny(scene, finals, unconditionalAdjacency) }
         }
 
+        val orphaned = buildList {
+            alternatives.filter { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }
+                .forEach { add(it.fromScene to it.toScene) }
+            connections.forEach { (origin, destinations) ->
+                destinations.filter { it == STORY_LOST_DESTINATION }
+                    .forEach { add(origin to it) }
+            }
+        }.distinct()
+
         return StoryStructureDiagnostics(
             reachableScenes = reachable,
             unreachableScenes = unreachable,
@@ -58,14 +80,7 @@ internal object StoryStructureAnalysis {
             cycleComponents = components,
             cyclesWithoutUnconditionalExit = unsafeCycles,
             hasReachableFinal = finals.isNotEmpty(),
-            orphanedConnections = if (hasNewAlternatives) {
-                alternatives.filter { it.fromScene == STORY_LOST_ORIGIN || it.toScene == STORY_LOST_DESTINATION }
-                    .map { it.fromScene to it.toScene }
-            } else {
-                connections.flatMap { (origin, destinations) ->
-                    destinations.filter { it == STORY_LOST_DESTINATION }.map { origin to it }
-                }
-            }
+            orphanedConnections = orphaned
         )
     }
 
@@ -77,7 +92,7 @@ internal object StoryStructureAnalysis {
         while (pending.isNotEmpty()) {
             val current = pending.removeFirst()
             if (!visited.add(current)) continue
-            adjacency[current].orEmpty().forEach { if (it !in visited) pending.add(it) }
+            adjacency[current].orEmpty().forEach { if (it in adjacency && it !in visited) pending.add(it) }
         }
         return visited
     }
