@@ -56,10 +56,12 @@ internal fun StoryMissingObjectReferences(
                     onAlternativesChange(alternatives.mapIndexed { index, current ->
                         if (index == indexed.index) current.copy(requiredObject = folder) else current
                     })
+                    onConditionsChange(conditions.filterNot { it.fromScene == item.fromScene })
                 },
                 onRemove = {
                     val next = alternatives.filterIndexed { index, _ -> index != indexed.index }
                     onAlternativesChange(next)
+                    onConditionsChange(conditions.filterNot { it.fromScene == item.fromScene })
                     if (next.none { it.fromScene == item.fromScene && it.toScene == item.toScene }) {
                         onConnectionsChange(connections.mapValues { (origin, destinations) ->
                             if (origin == item.fromScene) destinations.filterNot { it == item.toScene } else destinations
