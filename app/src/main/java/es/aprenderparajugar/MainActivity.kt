@@ -5764,81 +5764,40 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 }
             }
         }
-    } else if (screen == "sequences") {
-        val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
-        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                OutlinedButton(onClick = { screen = "home" }) { Text("← Volver al inicio") }
-                Text("Secuencias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text("Elige el tipo de actividad que quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
-            }
-            if (sequencePlayMessage.startsWith("No hay ejercicios")) {
-                item {
-                    Text(sequencePlayMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
+    } else if (screen == "sequences" || screen == "sequence-difficulty") {
+        SequenceSelectionScreen(
+            isDifficultyScreen = screen == "sequence-difficulty",
+            chosenCategory = sequenceChosenCategory,
+            message = sequencePlayMessage,
+            maxCards = sequenceMaxCards,
+            availableCounts = if (screen == "sequences") {
+                listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
+                    .associateWith { eligibleSequenceExercises(it).size }
+            } else {
+                listOf("Fácil", "Normal", "Difícil")
+                    .associateWith { eligibleSequenceExercises(sequenceChosenCategory, it).size }
+            },
+            rewardLabels = mapOf(
+                "Fácil" to "${easyRewardMinutes} ${if (rewardMode.isStars) "estrellas" else "min de juego"}",
+                "Normal" to "${normalRewardMinutes} ${if (rewardMode.isStars) "estrellas" else "min de juego"}",
+                "Difícil" to "${hardRewardMinutes} ${if (rewardMode.isStars) "estrellas" else "min de juego"}"
+            ),
+            onBack = { screen = if (screen == "sequence-difficulty") "sequences" else "home" },
+            onChooseType = { type, available ->
+                sequenceChosenCategory = type
+                sequenceChosenDifficulty = ""
+                if (available) {
+                    sequencePlayMessage = ""
+                    screen = "sequence-difficulty"
+                } else {
+                    sequencePlayMessage = "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."
                 }
+            },
+            onChooseDifficulty = { level ->
+                sequenceChosenDifficulty = level
+                startSequenceExercise(sequenceChosenCategory, level)
             }
-            items(sequenceTypes) { type ->
-                val availableCount = eligibleSequenceExercises(type).size
-                val available = availableCount > 0
-                Card(
-                    Modifier.fillMaxWidth().clickable {
-                        sequenceChosenCategory = type
-                        sequenceChosenDifficulty = ""
-                        if (available) {
-                            sequencePlayMessage = ""
-                            screen = "sequence-difficulty"
-                        } else {
-                            sequencePlayMessage = "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."
-                        }
-                    },
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (available) Color(0xFFF1F8EC) else Color(0xFFF0F0F0)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, if (available) Color(0xFFA9D79A) else Color(0xFFD0D0D0))
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(when(type) { "Orden temporal" -> "⏳"; "Procesos" -> "⚙️"; "Causa y consecuencia" -> "🔗"; else -> "🔄" }, fontSize = 30.sp)
-                        Column(Modifier.weight(1f)) {
-                            Text(type, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF245C2A) else Color(0xFF777777))
-                            Text(if (available) "$availableCount ejercicios disponibles" else "No hay ejercicios que cumplan la configuración", fontSize = 13.sp, color = Color(0xFF667085))
-                        }
-                        Text(if (available) "›" else "—", fontSize = 26.sp, color = Color(0xFF667085))
-                    }
-                }
-            }
-        }
-    } else if (screen == "sequence-difficulty") {
-        LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                OutlinedButton(onClick = { screen = "sequences" }) { Text("← Volver a las actividades") }
-                Text(sequenceChosenCategory, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
-                Text("Elige la dificultad. El premio dependerá del nivel seleccionado.", fontSize = 16.sp, color = Color(0xFF667085))
-                if (sequencePlayMessage.startsWith("No hay ejercicios")) {
-                    Text(sequencePlayMessage, color = Color(0xFFB3261E), fontSize = 15.sp)
-                }
-            }
-            items(listOf("Fácil", "Normal", "Difícil")) { level ->
-                val reward = when(level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
-                val availableCount = eligibleSequenceExercises(sequenceChosenCategory, level).size
-                val available = availableCount > 0
-                Card(
-                    Modifier.fillMaxWidth().clickable {
-                        sequenceChosenDifficulty = level
-                        startSequenceExercise(sequenceChosenCategory, level)
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (available) Color.White else Color(0xFFF0F0F0)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E5EA))
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(level, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                            Text(if (available) "Premio: $reward ${if (rewardMode.isStars) "estrellas" else "min de juego"} · $availableCount ejercicios" else "Sin ejercicios que cumplan los filtros", fontSize = 14.sp, color = Color(0xFF667085))
-                        }
-                        Text(if (available) "EMPEZAR  ›" else "NO DISPONIBLE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF39713A) else Color(0xFF9A4E00))
-                    }
-                }
-            }
-        }
+        )
     } else if (screen == "sequence-game") {
         val exercise = sequencePlayingExercise
         if (exercise == null) {
@@ -6584,6 +6543,88 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 TextButton(onClick = { remoteLibraryPendingImport = null }) { Text("Más tarde") }
             }
         )
+    }
+}
+
+
+@Composable
+private fun SequenceSelectionScreen(
+    isDifficultyScreen: Boolean,
+    chosenCategory: String,
+    message: String,
+    maxCards: Int,
+    availableCounts: Map<String, Int>,
+    rewardLabels: Map<String, String>,
+    onBack: () -> Unit,
+    onChooseType: (String, Boolean) -> Unit,
+    onChooseDifficulty: (String) -> Unit
+) {
+    if (!isDifficultyScreen) {
+        val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
+        LazyColumn(
+            Modifier.fillMaxSize().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                OutlinedButton(onClick = onBack) { Text("← Volver al inicio") }
+                Text("Secuencias", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Elige el tipo de actividad que quieres practicar.", fontSize = 16.sp, color = Color(0xFF667085))
+            }
+            if (message.startsWith("No hay ejercicios")) {
+                item { Text(message, color = Color(0xFFB3261E), fontSize = 15.sp) }
+            }
+            items(sequenceTypes) { type ->
+                val availableCount = availableCounts[type] ?: 0
+                val available = availableCount > 0
+                Card(
+                    Modifier.fillMaxWidth().clickable { onChooseType(type, available) },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (available) Color(0xFFF1F8EC) else Color(0xFFF0F0F0)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (available) Color(0xFFA9D79A) else Color(0xFFD0D0D0))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(when(type) { "Orden temporal" -> "⏳"; "Procesos" -> "⚙️"; "Causa y consecuencia" -> "🔗"; else -> "🔄" }, fontSize = 30.sp)
+                        Column(Modifier.weight(1f)) {
+                            Text(type, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF245C2A) else Color(0xFF777777))
+                            Text(if (available) "$availableCount ejercicios disponibles" else "No hay ejercicios que cumplan la configuración", fontSize = 13.sp, color = Color(0xFF667085))
+                        }
+                        Text(if (available) "›" else "—", fontSize = 26.sp, color = Color(0xFF667085))
+                    }
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                OutlinedButton(onClick = onBack) { Text("← Volver a las actividades") }
+                Text(chosenCategory, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
+                Text("Elige la dificultad. El premio dependerá del nivel seleccionado.", fontSize = 16.sp, color = Color(0xFF667085))
+                if (message.startsWith("No hay ejercicios")) {
+                    Text(message, color = Color(0xFFB3261E), fontSize = 15.sp)
+                }
+            }
+            items(listOf("Fácil", "Normal", "Difícil")) { level ->
+                val availableCount = availableCounts[level] ?: 0
+                val available = availableCount > 0
+                Card(
+                    Modifier.fillMaxWidth().clickable { if (available) onChooseDifficulty(level) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (available) Color.White else Color(0xFFF0F0F0)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E5EA))
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(level, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                            Text(if (available) "Premio: ${rewardLabels[level] ?: ""} · $availableCount ejercicios" else "Sin ejercicios que cumplan los filtros", fontSize = 14.sp, color = Color(0xFF667085))
+                        }
+                        Text(if (available) "EMPEZAR  ›" else "NO DISPONIBLE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF39713A) else Color(0xFF9A4E00))
+                    }
+                }
+            }
+        }
     }
 }
 
