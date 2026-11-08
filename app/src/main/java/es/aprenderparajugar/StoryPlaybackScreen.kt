@@ -401,25 +401,28 @@ internal fun StoryPlayerScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth(0.78f)
-                                .heightIn(max = 420.dp)
+                            modifier = Modifier.fillMaxWidth(0.86f).fillMaxHeight(0.94f)
                                 .background(Color(0xEAF9FAFC), RoundedCornerShape(20.dp))
-                                .padding(horizontal = 18.dp, vertical = 14.dp),
-                            verticalArrangement = Arrangement.spacedBy(9.dp),
+                                .padding(horizontal = 18.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text("¿Qué debería hacer?", modifier = Modifier.weight(1f), color = Color(0xFF253047), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    snapshot.decisionPrompt.ifBlank { "Elige una opción" },
+                                    modifier = Modifier.weight(1f),
+                                    color = Color(0xFF253047),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
                                 TextButton(onClick = { if (!decisionSelectionInProgress) decisionDialogOpen = false }, enabled = !decisionSelectionInProgress) {
                                     Text("✕", fontSize = 20.sp, color = Color(0xFF475467))
                                 }
                             }
-                            if (snapshot.decisionPrompt.isNotBlank()) {
-                                Text(snapshot.decisionPrompt, modifier = Modifier.fillMaxWidth(), color = Color(0xFF475467), fontSize = 16.sp, textAlign = TextAlign.Center)
-                            }
                             LazyColumn(
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(7.dp)
                             ) {
                                 items(snapshot.decisionOptions, key = { it.key }) { option ->
                                     Button(
