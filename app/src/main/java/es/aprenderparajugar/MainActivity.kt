@@ -3258,128 +3258,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "stories-editor" -> {
-                        item { Text("Crear cuento", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
                         item {
-                            OutlinedTextField(value = storyEditorTitle, onValueChange = { storyEditorTitle = if (editingStoryFolder == null) NameRules.filterInput(it) else it }, label = { Text("Título del cuento") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        }
-                        item {
-                            Column {
-                                Text("Colección", fontWeight = FontWeight.SemiBold)
-                                Box {
-                                    OutlinedButton(onClick = { storyEditorCollectionMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                        Text(storyEditorCollection.ifBlank { "Seleccionar colección" })
-                                    }
-                                    DropdownMenu(expanded = storyEditorCollectionMenuExpanded, onDismissRequest = { storyEditorCollectionMenuExpanded = false }) {
-                                        storyCollections.forEach { name ->
-                                            DropdownMenuItem(text = { Text(name) }, onClick = { storyEditorCollection = name; storyEditorCollectionMenuExpanded = false })
-                                        }
-                                    }
-                                }
-                                if (storyCollections.isEmpty()) Text("Todavía no hay colecciones de cuentos.", fontSize = 12.sp, color = Color(0xFF667085))
-                            }
-                        }
-                        item {
-                            OutlinedButton(onClick = {
-                                preferences.edit().putBoolean("content_picker_active", true).apply()
-                                storyCoverPicker.launch(arrayOf("image/*"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text(if (storyEditorCover == null) "＋ Añadir portada" else "Cambiar portada") }
-                            val coverFile = if (storyEditorCover != null && editingStoryFolder != null && editingStoryCollectionFolder != null)
-                                File(File(File(StoryRepository.rootDirectory(context), editingStoryCollectionFolder!!), editingStoryFolder!!), storyEditorCover!!)
-                            else null
-                            StoryImagePreview(coverFile, "Vista previa de portada")
-                        }
-                        item { Spacer(Modifier.height(8.dp)); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
-                        items(storyEditorScenes.size) { index ->
-                            val sceneName = storyEditorScenes[index]
-                            val sceneFolder = runCatching { StoryRepository.sceneFolderName(sceneName) }.getOrNull()
-                            val currentStoredStory = storedStories.firstOrNull {
-                                it.folderName == editingStoryFolder && it.collection == editingStoryCollectionFolder
-                            }
-                            val sceneSummary = if (sceneName == storyEditorSelectedScene) {
-                                storyEditorSummary
-                            } else if (sceneFolder != null && currentStoredStory != null) {
-                                runCatching { StoryRepository.readScene(currentStoredStory, sceneFolder).metadata.illustrationSummary }.getOrNull().orEmpty()
-                            } else {
-                                ""
-                            }
-                            Card(Modifier.fillMaxWidth().clickable {
-                                storyEditorSelectedScene = sceneName
-                                val folder = sceneFolder
-                                val stored = currentStoredStory
-                                val savedScene = if (folder != null && stored != null) runCatching { StoryRepository.readScene(stored, folder).metadata }.getOrNull() else null
-                                storyEditorSummary = savedScene?.illustrationSummary.orEmpty()
-                                storyEditorSceneText = savedScene?.text.orEmpty()
-                                storyEditorState.loadDecisionForScene(sceneName, savedScene)
-                                storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(sceneName, savedScene?.illustration) }
-                                storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(sceneName, savedScene?.ambientAudio) }
-                                storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(sceneName, savedScene?.narrationAudio) }
-                                storyEditorObjectTiming = if (savedScene?.awardTiming == "onEnter") "Al entrar" else "Al salir"
-                                storyEditorAwardedObjectByScene = storyEditorAwardedObjectByScene.toMutableMap().apply { put(sceneName, savedScene?.awardedObject) }
-                                storedStoryObjects = ObjectRepository.list(context)
-                                storyEditorKeepAmbientByScene = storyEditorKeepAmbientByScene.toMutableMap().apply {
-                                    put(sceneName, savedScene?.keepPreviousAmbient ?: false)
-                                }
-                                parentSection = "stories-scene-editor"
-                            }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text("📖", fontSize = 22.sp)
-                                    Spacer(Modifier.width(10.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(sceneName, fontWeight = FontWeight.SemiBold)
-                                        Text(
-                                            sceneSummary.ifBlank { "Sin resumen de ilustración" },
-                                            fontSize = 12.sp,
-                                            color = if (sceneSummary.isBlank()) Color(0xFF98A2B3) else Color(0xFF667085),
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    OutlinedButton(onClick = { storyScenePendingDeletion = sceneName }) { Text("Eliminar") }
-                                    Text("›", fontSize = 24.sp, color = Color(0xFF87451F))
-                                }
-                            }
-                        }
-                        item {
-                            OutlinedButton(onClick = { storyEditorScenes = storyEditorScenes + "Escena ${storyEditorScenes.size + 1}" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir escena") }
-                        }
-                        if (storyScenePendingDeletion != null) {
-                            item {
-                                val sceneToDelete = storyScenePendingDeletion!!
-                                AlertDialog(
-                                    onDismissRequest = { storyScenePendingDeletion = null },
-                                    title = { Text("Eliminar escena") },
-                                    text = { Text("¿Quieres eliminar definitivamente «$sceneToDelete»? Se borrarán su ilustración, sus audios y el resto de archivos propios. Las escenas que apuntaban a ella conservarán una salida HUÉRFANA para que puedas repararla en la estructura narrativa.") },
-                                    confirmButton = {
-                                        Button(onClick = {
-                                            if (storyEditorState.removeScene(sceneToDelete)) {
-                                                storyEditorMessage = "Escena eliminada del borrador. Guarda el cuento para borrar definitivamente sus archivos."
-                                            }
-                                            storyScenePendingDeletion = null
-                                        }) { Text("Eliminar definitivamente") }
-                                    },
-                                    dismissButton = { OutlinedButton(onClick = { storyScenePendingDeletion = null }) { Text("Cancelar") } }
-                                )
-                            }
-                        }
-                        item {
-                            OutlinedButton(
-                                onClick = { parentSection = "stories-structure" },
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("⑂ Editar estructura narrativa") }
-                            Text("Configura las conexiones entre escenas, las bifurcaciones y sus condiciones por objeto.", fontSize = 12.sp, color = Color(0xFF667085))
-                        }
-                        item {
-                            Button(onClick = {
-                                if (persistStoryDraft() != null) parentSection = "stories-library"
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar cuento") }
-                        }
-                        if (storyEditorMessage.isNotBlank()) item {
-                            Text(storyEditorMessage, color = if (storyEditorMessage == "Cuento guardado.") Color(0xFF24733B) else Color(0xFFB3261E))
-                        }
-                        item {
-                            OutlinedButton(onClick = { parentSection = "stories-library" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
+                            StoryEditorScreen(
+                                state = storyEditorState,
+                                collections = storyCollections,
+                                storedStoryObjects = storedStoryObjects,
+                                onPickCover = {
+                                    preferences.edit().putBoolean("content_picker_active", true).apply()
+                                    storyCoverPicker.launch(arrayOf("image/*"))
+                                },
+                                onOpenScene = { scene -> parentSection = "stories-scene-editor" },
+                                onOpenStructure = { parentSection = "stories-structure" },
+                                onBackToLibrary = { parentSection = "stories-library" }
+                            )
                         }
                     }
                     "stories-structure" -> {
