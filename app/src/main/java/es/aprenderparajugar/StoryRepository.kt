@@ -16,7 +16,8 @@ data class StoryMetadata(
     val startScene: String,
     val scenes: List<String>,
     val connections: Map<String, List<String>>,
-    val connectionConditions: List<StoryConnectionCondition> = emptyList()
+    val connectionConditions: List<StoryConnectionCondition> = emptyList(),
+    val connectionAlternatives: List<StoryConnectionAlternative> = emptyList()
 )
 
 /** Condición configurada en una conexión; el compositor solo almacena estos datos. */
@@ -26,6 +27,19 @@ data class StoryConnectionCondition(
     val requiredObject: String? = null,
     val consumeRequiredObject: Boolean = false
 )
+
+/** Alternativa de acceso a un destino; varias alternativas se evalúan con OR. */
+data class StoryConnectionAlternative(
+    val fromScene: String,
+    val toScene: String,
+    val kind: String,
+    val requiredObject: String? = null,
+    val decisionOptionKey: String? = null,
+    val consumeRequiredObject: Boolean = false
+)
+
+/** La clave permanece estable aunque cambie el texto o el orden visible. */
+data class StoryDecisionOption(val key: String, val text: String)
 
 /** Contenido independiente de una escena. Las referencias a objetos son nombres de carpeta. */
 data class StorySceneMetadata(
@@ -40,7 +54,10 @@ data class StorySceneMetadata(
     val awardTiming: String = "onExit",
     val requiredObject: String? = null,
     val awardedObjects: List<String> = emptyList(),
-    val unlockedObjects: List<String> = emptyList()
+    val unlockedObjects: List<String> = emptyList(),
+    val decisionPrompt: String = "",
+    val decisionOptions: List<StoryDecisionOption> = emptyList(),
+    val nextDecisionOptionNumber: Int = 1
 )
 
 data class StoredStory(
@@ -72,6 +89,30 @@ object StoryJsonCodec {
                 .put("requiredObject", condition.requiredObject ?: JSONObject.NULL)
                 .put("consumeRequiredObject", condition.consumeRequiredObject))
         }
+        val alternativesToWrite = metadata.connectionAlternatives.ifEmpty {
+            metadata.connections.flatMap { (origin, destinations) ->
+                destinations.filter { it != STORY_LOST_DESTINATION }.map { destination ->
+                    val condition = metadata.connectionConditions.firstOrNull { it.fromScene == origin && it.toScene == destination }
+                    StoryConnectionAlternative(
+                        fromScene = origin,
+                        toScene = destination,
+                        kind = if (condition?.requiredObject != null) "object" else "free",
+                        requiredObject = condition?.requiredObject,
+                        consumeRequiredObject = condition?.consumeRequiredObject == true
+                    )
+                }
+            }
+        }
+        val alternativesJson = JSONArray()
+        alternativesToWrite.forEach { alternative ->
+            alternativesJson.put(JSONObject()
+                .put("fromScene", alternative.fromScene)
+                .put("toScene", alternative.toScene)
+                .put("kind", alternative.kind)
+                .put("requiredObject", alternative.requiredObject ?: JSONObject.NULL)
+                .put("decisionOptionKey", alternative.decisionOptionKey ?: JSONObject.NULL)
+                .put("consumeRequiredObject", alternative.consumeRequiredObject))
+        }
         return JSONObject()
             .put("title", metadata.title.trim())
             .put("collection", metadata.collection)
@@ -80,6 +121,7 @@ object StoryJsonCodec {
             .put("scenes", JSONArray(metadata.scenes))
             .put("connections", connectionsJson)
             .put("connectionConditions", conditionsJson)
+            .put("connectionAlternatives", alternativesJson)
     }
 
     fun decode(json: JSONObject): StoryMetadata {
@@ -101,6 +143,33 @@ object StoryJsonCodec {
                 consumeRequiredObject = item.optBoolean("consumeRequiredObject", false)
             )
         }
+        val rawAlternatives = json.optJSONArray("connectionAlternatives")
+        val alternatives = if (rawAlternatives != null) {
+            (0 until rawAlternatives.length()).mapNotNull { index ->
+                val item = rawAlternatives.optJSONObject(index) ?: return@mapNotNull null
+                StoryConnectionAlternative(
+                    fromScene = item.optString("fromScene"),
+                    toScene = item.optString("toScene"),
+                    kind = item.optString("kind", "free"),
+                    requiredObject = item.optString("requiredObject").takeIf { it.isNotBlank() && it != "null" },
+                    decisionOptionKey = item.optString("decisionOptionKey").takeIf { it.isNotBlank() && it != "null" },
+                    consumeRequiredObject = item.optBoolean("consumeRequiredObject", false)
+                )
+            }
+        } else {
+            connections.flatMap { (origin, destinations) ->
+                destinations.filter { it != STORY_LOST_DESTINATION }.map { destination ->
+                    val condition = conditions.firstOrNull { it.fromScene == origin && it.toScene == destination }
+                    StoryConnectionAlternative(
+                        fromScene = origin,
+                        toScene = destination,
+                        kind = if (condition?.requiredObject != null) "object" else "free",
+                        requiredObject = condition?.requiredObject,
+                        consumeRequiredObject = condition?.consumeRequiredObject == true
+                    )
+                }
+            }
+        }
         return StoryMetadata(
             title = json.optString("title").trim(),
             collection = json.optString("collection"),
@@ -108,7 +177,8 @@ object StoryJsonCodec {
             startScene = json.optString("startScene"),
             scenes = scenes,
             connections = connections,
-            connectionConditions = conditions
+            connectionConditions = conditions,
+            connectionAlternatives = alternatives
         ).also(::validateStoryMetadata)
     }
 
@@ -135,6 +205,17 @@ object StoryJsonCodec {
             require(condition.toScene != STORY_LOST_DESTINATION && (condition.fromScene to condition.toScene) in edges) { "Hay una condición asociada a una conexión inexistente." }
             require(condition.requiredObject == null || isSafeSegment(condition.requiredObject)) { "La referencia al objeto requerido no es válida." }
             require(condition.requiredObject != null || !condition.consumeRequiredObject) { "No se puede consumir un objeto si no se ha seleccionado ninguno." }
+        }
+        metadata.connectionAlternatives.forEach { alternative ->
+            require(alternative.toScene != STORY_LOST_DESTINATION && (alternative.fromScene to alternative.toScene) in edges) { "Hay una alternativa asociada a una conexión inexistente." }
+            require(alternative.kind in setOf("free", "object", "decision")) { "El tipo de alternativa narrativa no es válido." }
+            require(alternative.requiredObject == null || isSafeSegment(alternative.requiredObject)) { "La referencia al objeto requerido no es válida." }
+            require((alternative.kind == "object") == (alternative.requiredObject != null)) { "La alternativa por objeto debe indicar exactamente un objeto." }
+            require((alternative.kind == "decision") == (alternative.decisionOptionKey != null)) { "La alternativa por decisión debe indicar exactamente una opción." }
+            require(alternative.kind != "free" || (alternative.requiredObject == null && alternative.decisionOptionKey == null)) { "Una alternativa libre no puede incluir condiciones." }
+            require(alternative.kind != "object" || alternative.decisionOptionKey == null) { "Una alternativa por objeto no puede incluir una opción de decisión." }
+            require(alternative.kind != "decision" || (alternative.requiredObject == null && !alternative.consumeRequiredObject)) { "Una alternativa por decisión no puede incluir condiciones de objeto." }
+            require(!alternative.consumeRequiredObject || alternative.kind == "object") { "Solo se puede consumir un objeto en una alternativa por objeto." }
         }
         metadata.connections.forEach { (origin, destinations) ->
             if (destinations.size == 2) {
@@ -175,6 +256,11 @@ object StorySceneJsonCodec {
             .put("requiredObject", metadata.requiredObject ?: JSONObject.NULL)
             .put("awardedObjects", JSONArray(metadata.awardedObjects.distinct()))
             .put("unlockedObjects", JSONArray(metadata.unlockedObjects.distinct()))
+            .put("decisionPrompt", metadata.decisionPrompt)
+            .put("decisionOptions", JSONArray().apply {
+                metadata.decisionOptions.forEach { option -> put(JSONObject().put("key", option.key).put("text", option.text)) }
+            })
+            .put("nextDecisionOptionNumber", metadata.nextDecisionOptionNumber)
     }
 
     fun decode(json: JSONObject): StorySceneMetadata =
@@ -190,7 +276,10 @@ object StorySceneJsonCodec {
             awardTiming = json.optString("awardTiming", "onExit"),
             requiredObject = json.optString("requiredObject").takeNullable(),
             awardedObjects = json.optJSONArray("awardedObjects").toStringList(),
-            unlockedObjects = json.optJSONArray("unlockedObjects").toStringList()
+            unlockedObjects = json.optJSONArray("unlockedObjects").toStringList(),
+            decisionPrompt = json.optString("decisionPrompt"),
+            decisionOptions = json.optJSONArray("decisionOptions").toDecisionOptions(),
+            nextDecisionOptionNumber = json.optInt("nextDecisionOptionNumber", 1)
         ).also(::validate)
 
     private fun validate(metadata: StorySceneMetadata) {
@@ -203,10 +292,25 @@ object StorySceneJsonCodec {
         (listOfNotNull(metadata.awardedObject, metadata.requiredObject) + metadata.awardedObjects + metadata.unlockedObjects).forEach {
             require(StoryJsonCodec.isSafeSegment(it)) { "La referencia a un objeto no es válida." }
         }
+        require(metadata.nextDecisionOptionNumber >= 1) { "El contador de opciones de decisión no es válido." }
+        require(metadata.decisionOptions.map { it.key }.distinct().size == metadata.decisionOptions.size) { "Hay referencias internas de opciones duplicadas." }
+        metadata.decisionOptions.forEach { option ->
+            require(option.key.matches(Regex("[a-zA-Z0-9_-]+"))) { "La referencia interna de una opción no es válida." }
+            require(option.text.isNotBlank()) { "Las opciones de decisión no pueden estar vacías." }
+        }
+        require(metadata.decisionOptions.none { option ->
+            option.key.startsWith("opcion_") && option.key.removePrefix("opcion_").toIntOrNull()?.let { it >= metadata.nextDecisionOptionNumber } == true
+        }) { "El contador de opciones debe ser superior a las referencias ya utilizadas." }
     }
 
     private fun String.takeNullable(): String? = takeIf { isNotBlank() && it != "null" }
     private fun JSONArray?.toStringList(): List<String> = this?.let { array -> (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) } } ?: emptyList()
+    private fun JSONArray?.toDecisionOptions(): List<StoryDecisionOption> = this?.let { array ->
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            StoryDecisionOption(item.optString("key"), item.optString("text"))
+        }
+    } ?: emptyList()
 }
 
 /**

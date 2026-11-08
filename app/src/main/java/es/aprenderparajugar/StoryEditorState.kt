@@ -165,7 +165,10 @@ internal class StoryEditorState(private val context: Context) {
                         awardedObject = if (awardedObjectsByScene.value.containsKey(selectedScene.value)) null else existing?.awardedObject,
                         awardTiming = if (objectTiming.value == "Al entrar") "onEnter" else "onExit",
                         awardedObjects = awardedObjectsByScene.value[selectedScene.value] ?: (listOfNotNull(existing?.awardedObject) + existing?.awardedObjects.orEmpty()).distinct(),
-                        unlockedObjects = unlockedObjectsByScene.value[selectedScene.value] ?: existing?.unlockedObjects.orEmpty()
+                        unlockedObjects = unlockedObjectsByScene.value[selectedScene.value] ?: existing?.unlockedObjects.orEmpty(),
+                        decisionPrompt = existing?.decisionPrompt.orEmpty(),
+                        decisionOptions = existing?.decisionOptions.orEmpty(),
+                        nextDecisionOptionNumber = existing?.nextDecisionOptionNumber ?: 1
                     )
                 } else existing ?: StorySceneMetadata(title = scenes.value[index])
                 StoryRepository.saveScene(stored, sceneFolder, sceneMetadata)
