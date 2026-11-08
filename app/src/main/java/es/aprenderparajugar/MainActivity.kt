@@ -5852,12 +5852,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     remainderSeconds = balanceRemainderSeconds
                 )
             item {
-                Image(
-                    painter = painterResource(id = R.drawable.home_header_fox),
-                    contentDescription = "¡Aprender para jugar! Aprende, descubre y diviértete",
-                    modifier = Modifier.fillMaxWidth().aspectRatio(2f),
-                    contentScale = ContentScale.Fit
-                )
+                HomeFoxHeader()
             }
             item { Text("Elige cómo aprender", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)) }
             item {
