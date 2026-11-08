@@ -19,7 +19,6 @@ import java.io.File
 internal fun StoryEditorScreen(
     state: StoryEditorState,
     collections: List<String>,
-    storedStoryObjects: List<StoredObject>,
     onPickCover: () -> Unit,
     onOpenScene: (String) -> Unit,
     onOpenStructure: () -> Unit,
@@ -60,12 +59,12 @@ internal fun StoryEditorScreen(
                                         Text(collection.ifBlank { "Seleccionar colección" })
                                     }
                                     DropdownMenu(expanded = collectionMenuExpanded, onDismissRequest = { collectionMenuExpanded = false }) {
-                                        storyCollections.forEach { name ->
+                                        collections.forEach { name ->
                                             DropdownMenuItem(text = { Text(name) }, onClick = { collection = name; collectionMenuExpanded = false })
                                         }
                                     }
                                 }
-                                if (storyCollections.isEmpty()) Text("Todavía no hay colecciones de cuentos.", fontSize = 12.sp, color = Color(0xFF667085))
+                                if (collections.isEmpty()) Text("Todavía no hay colecciones de cuentos.", fontSize = 12.sp, color = Color(0xFF667085))
                             }
                         }
             Column {
@@ -104,7 +103,6 @@ internal fun StoryEditorScreen(
                                 narrationAudio = narrationAudio.toMutableMap().apply { put(sceneName, savedScene?.narrationAudio) }
                                 objectTiming = if (savedScene?.awardTiming == "onEnter") "Al entrar" else "Al salir"
                                 awardedObjectByScene = awardedObjectByScene.toMutableMap().apply { put(sceneName, savedScene?.awardedObject) }
-                                storedStoryObjects = ObjectRepository.list(context)
                                 keepAmbientByScene = keepAmbientByScene.toMutableMap().apply {
                                     put(sceneName, savedScene?.keepPreviousAmbient ?: false)
                                 }
