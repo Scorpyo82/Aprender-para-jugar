@@ -637,6 +637,9 @@ private fun AprenderApp() {
     var storyScenePendingTest by remember { mutableStateOf<StoredStoryScene?>(null) }
     var storyAmbientSourceCandidates by remember { mutableStateOf<List<StoredStoryScene>>(emptyList()) }
     var storyEditorSceneText by storyEditorState.sceneText
+    var storyDecisionPromptByScene by storyEditorState.decisionPromptByScene
+    var storyDecisionOptionsByScene by storyEditorState.decisionOptionsByScene
+    var storyNextDecisionOptionNumberByScene by storyEditorState.nextDecisionOptionNumberByScene
     var storyEditorObjectTiming by storyEditorState.objectTiming
     var storyEditorAwardedObjectByScene by storyEditorState.awardedObjectByScene
     var storyEditorAwardedObjectsByScene by storyEditorState.awardedObjectsByScene
@@ -3194,6 +3197,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
                                 storyEditorAmbientAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.ambientAudio }.getOrNull() }
                                 storyEditorNarrationAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.narrationAudio }.getOrNull() }
+                                storyDecisionPromptByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.decisionPrompt }.getOrDefault("") }
+                                storyDecisionOptionsByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.decisionOptions }.getOrDefault(emptyList()) }
+                                storyNextDecisionOptionNumberByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.nextDecisionOptionNumber }.getOrDefault(1) }
                                 storyEditorAwardedObjectByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObject }.getOrNull() }
                                 storyEditorAwardedObjectsByScene = stored.metadata.scenes.associate { scene ->
                                     scene to runCatching {
@@ -3239,6 +3245,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorIllustrations = emptyMap()
                                 storyEditorAmbientAudio = emptyMap()
                                 storyEditorNarrationAudio = emptyMap()
+                                storyDecisionPromptByScene = emptyMap()
+                                storyDecisionOptionsByScene = emptyMap()
+                                storyNextDecisionOptionNumberByScene = emptyMap()
                                 storyEditorAwardedObjectByScene = emptyMap()
                                 storyEditorAwardedObjectsByScene = emptyMap()
                                 storyEditorUnlockedObjectsByScene = emptyMap()
@@ -3308,6 +3317,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 val savedScene = if (folder != null && stored != null) runCatching { StoryRepository.readScene(stored, folder).metadata }.getOrNull() else null
                                 storyEditorSummary = savedScene?.illustrationSummary.orEmpty()
                                 storyEditorSceneText = savedScene?.text.orEmpty()
+                                storyDecisionPromptByScene = storyDecisionPromptByScene.toMutableMap().apply { put(sceneName, savedScene?.decisionPrompt.orEmpty()) }
+                                storyDecisionOptionsByScene = storyDecisionOptionsByScene.toMutableMap().apply { put(sceneName, savedScene?.decisionOptions.orEmpty()) }
+                                storyNextDecisionOptionNumberByScene = storyNextDecisionOptionNumberByScene.toMutableMap().apply { put(sceneName, savedScene?.nextDecisionOptionNumber ?: 1) }
                                 storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(sceneName, savedScene?.illustration) }
                                 storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(sceneName, savedScene?.ambientAudio) }
                                 storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(sceneName, savedScene?.narrationAudio) }
