@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -43,7 +44,7 @@ internal fun StoreUnlockNotification(
             Image(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = stored.metadata.name,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(48.dp).blur(2.dp),
                 contentScale = ContentScale.Fit
             )
         } else {
