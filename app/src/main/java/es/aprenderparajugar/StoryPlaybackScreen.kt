@@ -448,69 +448,33 @@ internal fun StoryPlayerScreen(
     }
 
     if (backpackOpen) {
-        AlertDialog(
-            onDismissRequest = { backpackOpen = false },
-            title = { Text("Mochila de Zorro", fontFamily = fontFamily) },
-            text = {
-                if (snapshot.inventory.isEmpty()) {
-                    Text("La mochila está vacía.", fontFamily = fontFamily)
+        val configuredOrigins = story.metadata.connectionAlternatives.map { it.fromScene }.toSet()
+        val requiredObjectFolders = (
+            story.metadata.connectionAlternatives
+                .filter { it.kind == "object" }
+                .mapNotNull { it.requiredObject } +
+                story.metadata.connectionConditions
+                    .filterNot { it.fromScene in configuredOrigins }
+                    .mapNotNull { it.requiredObject }
+            ).toSet()
+        val contextualInventory = snapshot.inventory.filter {
+            !it.metadata.collectible && it.folderName in requiredObjectFolders
+        }
+        StoryBackpackDialog(
+            objects = contextualInventory,
+            fontFamily = fontFamily,
+            onUseObject = { item ->
+                if (engine.canUseObject(item.folderName)) {
+                    snapshot = engine.chooseObject(item.folderName)
+                    true
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(snapshot.inventory, key = { it.folderName }) { item ->
-                            val objectImage = remember(item.directory.absolutePath, item.metadata.image) {
-                                File(item.directory, item.metadata.image).takeIf { it.isFile }
-                                    ?.let { BitmapFactory.decodeFile(it.absolutePath) }
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    snapshot = engine.chooseObject(item.folderName)
-                                    backpackOpen = false
-                                },
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                    horizontal = 12.dp,
-                                    vertical = 8.dp
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier.size(64.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (objectImage != null) {
-                                            Image(
-                                                bitmap = objectImage.asImageBitmap(),
-                                                contentDescription = item.metadata.name,
-                                                modifier = Modifier.size(60.dp),
-                                                contentScale = ContentScale.Fit
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = item.metadata.name,
-                                        modifier = Modifier.weight(1f),
-                                        fontFamily = fontFamily,
-                                        textAlign = TextAlign.Start,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    false
                 }
             },
-            confirmButton = { TextButton(onClick = { backpackOpen = false }) { Text("Cerrar") } }
+            onDismiss = { backpackOpen = false }
         )
     }
-    }
+   }
 }
 
 
