@@ -420,6 +420,16 @@ internal fun StoryPlayerScreen(
                                     Text("✕", fontSize = 20.sp, color = Color(0xFF475467))
                                 }
                             }
+                            if (snapshot.decisionOptions.size > 3) {
+                                Text(
+                                    "↕  Desliza para ver más opciones",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Color(0xFF59677D),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                             LazyColumn(
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(7.dp)
