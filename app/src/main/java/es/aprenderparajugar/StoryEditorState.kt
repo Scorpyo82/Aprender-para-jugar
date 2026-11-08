@@ -36,6 +36,7 @@ internal class StoryEditorState(private val context: Context) {
     val collectionMenuExpanded: MutableState<Boolean> = mutableStateOf(false)
     val connections: MutableState<Map<String, List<String>>> = mutableStateOf(emptyMap())
     val connectionConditions: MutableState<List<StoryConnectionCondition>> = mutableStateOf(emptyList())
+    val connectionAlternatives: MutableState<List<StoryConnectionAlternative>> = mutableStateOf(emptyList())
     val startScene: MutableState<String> = mutableStateOf("Escena 1")
 
     /** Carga el grafo persistido usando los nombres visibles de las escenas en el editor. */
@@ -49,6 +50,11 @@ internal class StoryEditorState(private val context: Context) {
             val from = visibleByFolder[condition.fromScene] ?: return@mapNotNull null
             val to = visibleByFolder[condition.toScene] ?: return@mapNotNull null
             condition.copy(fromScene = from, toScene = to)
+        }
+        connectionAlternatives.value = metadata.connectionAlternatives.mapNotNull { alternative ->
+            val from = visibleByFolder[alternative.fromScene] ?: return@mapNotNull null
+            val to = visibleByFolder[alternative.toScene] ?: return@mapNotNull null
+            alternative.copy(fromScene = from, toScene = to)
         }
     }
 
@@ -66,7 +72,7 @@ internal class StoryEditorState(private val context: Context) {
         val valid = sceneNames.toSet()
         val next = connections.value
             .filterKeys { it in valid }
-            .mapValues { (_, destinations) -> destinations.filter { it == STORY_LOST_DESTINATION || it in valid }.distinct().take(2) }
+            .mapValues { (_, destinations) -> destinations.filter { it == STORY_LOST_DESTINATION || it in valid }.distinct() }
             .toMutableMap()
         sceneNames.forEach { next.putIfAbsent(it, emptyList()) }
         sceneNames.zipWithNext().forEach { (previous, current) ->
@@ -139,6 +145,11 @@ internal class StoryEditorState(private val context: Context) {
                 val from = folderByVisible[condition.fromScene] ?: return@mapNotNull null
                 val to = folderByVisible[condition.toScene] ?: return@mapNotNull null
                 condition.copy(fromScene = from, toScene = to)
+            }
+            val persistedAlternatives = connectionAlternatives.value.mapNotNull { alternative ->
+                val from = folderByVisible[alternative.fromScene] ?: return@mapNotNull null
+                val to = folderByVisible[alternative.toScene] ?: return@mapNotNull null
+                alternative.copy(fromScene = from, toScene = to)
             }
             val metadata = StoryMetadata(
                 title = title.value.trim(),
