@@ -33,7 +33,7 @@ internal fun StoryMissingObjectReferences(
 ) {
     val availableFolders = availableObjects.map { it.folderName }.toSet()
     val missingAlternatives = alternatives.withIndex().filter { (_, item) ->
-        item.kind == "object" && item.requiredObject !in availableFolders
+        item.kind == "object" && (item.requiredObject == null || item.requiredObject !in availableFolders)
     }
     val configuredOrigins = alternatives.map { it.fromScene }.toSet()
     val missingConditions = conditions.withIndex().filter { (_, item) ->
@@ -130,7 +130,7 @@ private fun MissingObjectReferenceRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(onClick = onRemove, modifier = Modifier.fillMaxWidth()) {
-                    Text("Eliminar alternativa y su salida")
+                    Text("Eliminar esta referencia")
                 }
             }
         }
