@@ -1649,15 +1649,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     )
                 }
                 item {
-                    Card(Modifier.fillMaxWidth().clickable {
-                        tourReturnTarget = "parent-menu"
-                        screen = "tour"
-                    }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDF8))) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("📘", fontSize = 30.sp)
-                            Column { Text("Conoce Aprender para jugar", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Actividades, cuentos, recompensas y cómo personalizarlos", color = Color(0xFF667085)) }
+                    ParentMenuTourCard(
+                        onOpenTour = {
+                            tourReturnTarget = "parent-menu"
+                            screen = "tour"
                         }
-                    }
+                    )
                 }
                 item {
                     Card(Modifier.fillMaxWidth().clickable { parentSection = "game-modes" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
