@@ -1220,38 +1220,33 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         when (screen) {
             "help" -> { screen = "home" }
             "tour" -> finishWelcomeTour()
-            "parent" -> when (parentSection) {
-                "word-library", "word-categories" -> {
-                    if (parentSection == "word-library" && wordLibraryPage == "edit") { wordLibraryPage = "list"; wordLibraryMessage = "" }
-                    else parentSection = "words-settings"
+            "parent" -> {
+                when (parentSection) {
+                    "word-library" -> {
+                        if (wordLibraryPage == "edit") {
+                            wordLibraryPage = "list"
+                            wordLibraryMessage = ""
+                        } else {
+                            parentSection = parentBackSection(parentSection, transferRemoteLibraryName != null) ?: "words-settings"
+                        }
+                    }
+                    "library-export", "library-import", "library-delete" -> {
+                        transferPackage?.let { LibraryPackageManager.discard(it) }
+                        transferPackage = null
+                        deleteConfirmArmed = false
+                        parentSection = parentBackSection(parentSection, transferRemoteLibraryName != null) ?: "menu"
+                        transferRemoteLibraryName = null
+                    }
+                    else -> {
+                        val targetSection = parentBackSection(parentSection, transferRemoteLibraryName != null)
+                        if (targetSection == null) {
+                            screen = "home"
+                            parentSection = "menu"
+                        } else {
+                            parentSection = targetSection
+                        }
+                    }
                 }
-                "words", "categories" -> parentSection = "cards-settings"
-                "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> parentSection = "game-modes"
-                "stories-content-settings", "stories-objects" -> parentSection = "stories-settings"
-                "stories-library", "stories-collections" -> parentSection = "stories-content-settings"
-                "stories-editor" -> parentSection = "stories-library"
-                "stories-structure" -> parentSection = "stories-editor"
-                "stories-scene-editor" -> parentSection = "stories-editor"
-                "stories-object-create", "stories-object-collection", "stories-object-inventory" -> parentSection = "stories-objects"
-                "active-games", "sound-settings", "rewards", "security", "device-setup", "about", "basic-library", "library-transfer", "statistics-menu", "typography" -> parentSection = "menu"
-                "music", "stories-audio" -> parentSection = "sound-settings"
-                "library-export", "library-import", "library-delete" -> {
-                    transferPackage?.let { LibraryPackageManager.discard(it) }
-                    transferPackage = null
-                    deleteConfirmArmed = false
-                    parentSection = if (parentSection == "library-import" && transferRemoteLibraryName != null) "basic-library" else "library-transfer"
-                    transferRemoteLibraryName = null
-                }
-                "learning-stats", "usage-stats" -> parentSection = "statistics-menu"
-                "game-modes" -> parentSection = "menu"
-                "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> parentSection = "sequences-settings"
-                "sequence-library", "sequence-categories" -> parentSection = "sequences-settings"
-                "sequence-library-temporal", "sequence-categories-temporal" -> parentSection = "sequence-type-temporal"
-                "sequence-editor-temporal" -> parentSection = "sequence-library"
-                "sequence-library-procesos", "sequence-categories-procesos" -> parentSection = "sequence-type-procesos"
-                "sequence-library-causa", "sequence-categories-causa" -> parentSection = "sequence-type-causa"
-                "sequence-library-ciclos", "sequence-categories-ciclos" -> parentSection = "sequence-type-ciclos"
-                else -> { screen = "home"; parentSection = "menu" }
             }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
             "stories" -> { screen = "home" }
