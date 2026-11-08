@@ -32,7 +32,6 @@ internal class StoryPlaybackEngine(
     private var currentSceneFolder: String = story.metadata.startScene
     private var started = false
     private var finished = false
-    private val pendingStoreUnlocks = mutableListOf<StoredObject>()
 
     fun start(): Snapshot {
         require(story.metadata.connections.values.none { STORY_LOST_DESTINATION in it } &&
@@ -223,24 +222,13 @@ internal class StoryPlaybackEngine(
         return null
     }
 
-    /** Devuelve una sola vez los objetos que pasan de bloqueados a desbloqueados. */
-    fun consumeNewlyUnlockedObjects(): List<StoredObject> =
-        pendingStoreUnlocks.toList().also { pendingStoreUnlocks.clear() }
-
     private fun unlockAndQueueStoreObjects(folderNames: Collection<String>) {
         if (folderNames.isEmpty()) return
         val previouslyUnlocked = ObjectUnlockRepository.list(context)
         val updated = ObjectUnlockRepository.unlock(context, folderNames)
         val newlyUnlocked = updated - previouslyUnlocked
         if (newlyUnlocked.isEmpty()) return
-        val objectsByFolder = ObjectRepository.list(context).associateBy { it.folderName }
-        newlyUnlocked.mapNotNull(objectsByFolder::get)
-            .filterNot { it.metadata.collectible }
-            .forEach { stored ->
-                if (pendingStoreUnlocks.none { it.folderName == stored.folderName }) {
-                    pendingStoreUnlocks += stored
-                }
-            }
+        NotificationQueueRepository.enqueueStoreUnlocks(context, newlyUnlocked)
     }
 
     private fun award(sceneFolder: String, timing: String) {
