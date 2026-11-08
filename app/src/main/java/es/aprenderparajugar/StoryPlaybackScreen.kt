@@ -28,6 +28,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -247,8 +252,8 @@ internal fun StoryPlayerScreen(
     }
 
     val audioPreferences = remember(context) { context.getSharedPreferences("aprender_para_jugar", android.content.Context.MODE_PRIVATE) }
-    LaunchedEffect(pendingStoreUnlocks.firstOrNull(), celebrationObject) {
-        if (pendingStoreUnlocks.isNotEmpty() && celebrationObject == null) {
+    LaunchedEffect(pendingStoreUnlocks.firstOrNull(), celebrationObject, decisionDialogOpen, backpackOpen) {
+        if (pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen) {
             val tone = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 65) }.getOrNull()
             tone?.startTone(ToneGenerator.TONE_PROP_ACK, 260)
             kotlinx.coroutines.delay(3200)
@@ -326,10 +331,13 @@ internal fun StoryPlayerScreen(
                     }
                 }
 
-                if (pendingStoreUnlocks.isNotEmpty() && celebrationObject == null) {
-                    Box(Modifier.align(Alignment.TopEnd).padding(12.dp)) {
-                        StoreUnlockNotification(pendingStoreUnlocks.first(), fontFamily)
-                    }
+                AnimatedVisibility(
+                    visible = pendingStoreUnlocks.isNotEmpty() && celebrationObject == null && !decisionDialogOpen && !backpackOpen,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+                    enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { -it / 3 },
+                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { -it / 4 }
+                ) {
+                    pendingStoreUnlocks.firstOrNull()?.let { StoreUnlockNotification(it, fontFamily) }
                 }
 
                 OutlinedButton(
@@ -481,6 +489,7 @@ internal fun StoryPlayerScreen(
                                                 val next = runCatching { engine.chooseDecisionOption(option.key) }.getOrNull()
                                                 if (next != null) {
                                                     snapshot = next
+                                                    collectStoreUnlocks()
                                                     decisionDialogOpen = false
                                                 }
                                                 decisionSelectionInProgress = false
