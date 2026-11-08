@@ -35,6 +35,8 @@ internal fun StoryStructureEditor(
     conditions: List<StoryConnectionCondition>,
     alternatives: List<StoryConnectionAlternative>,
     availableObjects: List<StoredObject>,
+    decisionOptionsByScene: Map<String, List<StoryDecisionOption>>,
+    decisionPromptsByScene: Map<String, String>,
     onConnectionsChange: (Map<String, List<String>>) -> Unit,
     onConditionsChange: (List<StoryConnectionCondition>) -> Unit,
     onAlternativesChange: (List<StoryConnectionAlternative>) -> Unit
@@ -49,7 +51,7 @@ internal fun StoryStructureEditor(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Estructura y caminos", fontWeight = FontWeight.Bold)
         Text(
-            "Cada escena puede tener tantos destinos como necesite. Dentro de un mismo destino puedes añadir varias alternativas: basta con cumplir una de ellas (O). Las alternativas de objeto y las libres se evalúan de forma independiente.",
+            "Cada escena puede tener tantos destinos como necesite. Dentro de un mismo destino puedes añadir varias alternativas: basta con cumplir una de ellas (O). Las alternativas pueden ser libres, depender de un objeto o de una opción de decisión.",
             color = Color(0xFF667085)
         )
         scenes.forEach { origin ->
@@ -64,6 +66,9 @@ internal fun StoryStructureEditor(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(origin, fontWeight = FontWeight.Bold)
+                    decisionPromptsByScene[origin].orEmpty().takeIf { it.isNotBlank() }?.let { prompt ->
+                        Text("Pregunta: $prompt", color = Color(0xFF475467))
+                    }
                     Text(
                         sceneSummaries[origin].orEmpty().ifBlank { "Sin resumen de ilustración" },
                         color = if (sceneSummaries[origin].isNullOrBlank()) Color(0xFF98A2B3) else Color(0xFF667085)
@@ -184,10 +189,25 @@ internal fun StoryStructureEditor(
                                                         Text("Consumir el objeto al utilizarlo")
                                                     }
                                                 }
-                                                "decision" -> Text(
-                                                    "Opción de decisión: ${alternative.decisionOptionKey ?: "sin referencia"}",
-                                                    color = Color(0xFF667085)
-                                                )
+                                                "decision" -> {
+                                                    val options = decisionOptionsByScene[origin].orEmpty()
+                                                    val selected = options.firstOrNull { it.key == alternative.decisionOptionKey }
+                                                    var decisionMenuExpanded by remember(origin, destination, indexed.index, alternative.decisionOptionKey, options) { mutableStateOf(false) }
+                                                    OutlinedButton(onClick = { decisionMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                                        Text(selected?.text ?: "⚠ Opción eliminada o sin referencia: ${alternative.decisionOptionKey ?: "sin ID"}")
+                                                    }
+                                                    DropdownMenu(expanded = decisionMenuExpanded, onDismissRequest = { decisionMenuExpanded = false }) {
+                                                        options.filter { option ->
+                                                            alternatives.none { other -> other.fromScene == origin && other.kind == "decision" && other.decisionOptionKey == option.key && other.toScene != destination }
+                                                        }.forEach { option ->
+                                                            DropdownMenuItem(text = { Text(option.text) }, onClick = {
+                                                                updateAlternatives(alternatives.mapIndexed { index, item -> if (index == indexed.index) item.copy(decisionOptionKey = option.key) else item })
+                                                                decisionMenuExpanded = false
+                                                            })
+                                                        }
+                                                    }
+                                                    if (selected == null) Text("Esta referencia debe reasignarse a una opción existente o eliminarse. No se ha borrado automáticamente.", color = Color(0xFFB3261E))
+                                                }
                                                 else -> Text("Libre: no requiere objeto ni decisión", color = Color(0xFF667085))
                                             }
                                         }
@@ -205,6 +225,15 @@ internal fun StoryStructureEditor(
                                             updateAlternatives(alternatives + StoryConnectionAlternative(origin, destination, "free"))
                                             addAlternativeExpanded = false
                                         })
+                                        DropdownMenuItem(
+                                            text = { Text("Depende de una decisión") },
+                                            enabled = decisionOptionsByScene[origin].orEmpty().any { option -> alternatives.none { it.fromScene == origin && it.kind == "decision" && it.decisionOptionKey == option.key && it.toScene != destination } },
+                                            onClick = {
+                                                val option = decisionOptionsByScene[origin].orEmpty().first { candidate -> alternatives.none { it.fromScene == origin && it.kind == "decision" && it.decisionOptionKey == candidate.key && it.toScene != destination } }
+                                                updateAlternatives(alternatives + StoryConnectionAlternative(origin, destination, "decision", decisionOptionKey = option.key))
+                                                addAlternativeExpanded = false
+                                            }
+                                        )
                                         DropdownMenuItem(
                                             text = { Text("Requiere un objeto") },
                                             enabled = availableObjects.isNotEmpty(),
