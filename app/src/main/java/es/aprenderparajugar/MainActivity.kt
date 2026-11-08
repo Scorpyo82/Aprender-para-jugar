@@ -3102,10 +3102,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "stories-library" -> {
-                        item { Text("Biblioteca de cuentos", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Cuentos guardados en este dispositivo.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        items(storedStories) { stored ->
-                            Card(Modifier.fillMaxWidth().clickable {
+                        StoryLibraryScreen(
+                            stories = storedStories,
+                            collectionName = { collection ->
+                                storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == collection }
+                                    ?: collection.replace('_', ' ')
+                            },
+                            onStorySelected = { stored ->
                                 storyEditorState.loadStructure(stored.metadata)
                                 storyEditorTitle = stored.metadata.title
                                 storyEditorCover = stored.metadata.cover
@@ -3129,29 +3132,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorSelectedScene = ""
                                 storyEditorMessage = ""
                                 parentSection = "stories-editor"
-                            }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))) {
-                                Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    val coverThumb = remember(stored.directory.absolutePath, stored.metadata.cover) {
-                                        stored.metadata.cover?.let { File(stored.directory, it) }?.takeIf { it.isFile }
-                                            ?.let { runCatching { BitmapFactory.decodeFile(it.absolutePath) }.getOrNull() }
-                                    }
-                                    if (coverThumb != null) {
-                                        Image(bitmap = coverThumb.asImageBitmap(), contentDescription = "Portada del cuento",
-                                            modifier = Modifier.width(104.dp).aspectRatio(16f / 9f), contentScale = ContentScale.Fit)
-                                    } else {
-                                        Box(Modifier.width(104.dp).aspectRatio(16f / 9f).background(Color(0xFFFFF3E8), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                                            Text("📖", fontSize = 28.sp)
-                                        }
-                                    }
-                                    Column(Modifier.weight(1f)) {
-                                        Text(stored.metadata.title, fontWeight = FontWeight.Bold)
-                                        Text(storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085))
-                                    }
-                                }
-                            }
-                        }
-                        item {
-                            Button(onClick = {
+                            },
+                            onCreateStory = {
                                 storyEditorState.resetStructure(listOf("Escena 1"))
                                 storyEditorTitle = ""
                                 storyEditorCover = null
@@ -3172,8 +3154,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 editingStoryCollectionFolder = null
                                 storyEditorMessage = ""
                                 parentSection = "stories-editor"
-                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear nuevo cuento") }
-                        }
+                            }
+                        )
                     }
                     "stories-editor" -> {
                         item {
