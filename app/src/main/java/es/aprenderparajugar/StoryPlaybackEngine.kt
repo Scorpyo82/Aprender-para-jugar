@@ -4,8 +4,8 @@ import android.content.Context
 import java.io.File
 
 /**
- * Motor de recorrido narrativo. No depende de Compose ni de la interfaz:
- * el orden se obtiene exclusivamente de startScene y del grafo de conexiones.
+ * Motor de recorrido narrativo. Evalúa alternativas de acceso por destino:
+ * varias alternativas pueden conducir al mismo destino (OR).
  */
 internal class StoryPlaybackEngine(
     private val context: Context,
@@ -14,7 +14,9 @@ internal class StoryPlaybackEngine(
     data class Transition(
         val destination: String,
         val requiredObject: String?,
-        val consumeRequiredObject: Boolean
+        val consumeRequiredObject: Boolean,
+        val kind: String = if (requiredObject == null) "free" else "object",
+        val decisionOptionKey: String? = null
     )
 
     data class Snapshot(
@@ -22,7 +24,9 @@ internal class StoryPlaybackEngine(
         val inventory: List<StoredObject>,
         val transitions: List<Transition>,
         val canAdvance: Boolean,
-        val isFinished: Boolean
+        val isFinished: Boolean,
+        val decisionPrompt: String = "",
+        val decisionOptions: List<StoryDecisionOption> = emptyList()
     )
 
     private var currentSceneFolder: String = story.metadata.startScene
@@ -45,20 +49,33 @@ internal class StoryPlaybackEngine(
         return snapshot()
     }
 
-    /** Avanza solo por una salida libre. Nunca elige automáticamente una salida condicionada. */
+    /** Avanza únicamente por una alternativa libre y no ambigua. */
     fun advance(): Snapshot? {
         check(started && !finished) { "El cuento no está en reproducción." }
-        val free = transitions().filter { it.requiredObject == null }
+        val free = transitions().filter { it.kind == "free" }
         if (free.isEmpty()) return snapshot()
-        require(free.size == 1) { "El recorrido tiene más de una salida libre." }
-        return moveTo(free.single())
+        require(free.map { it.destination }.distinct().size == 1) {
+            "El recorrido tiene más de una salida libre. Debe elegirse una opción."
+        }
+        return moveTo(free.first())
     }
 
-    /** Selecciona la salida cuyo objeto requerido coincide con el objeto de la mochila. */
+    /** Selecciona una alternativa por objeto. Una alternativa OR válida basta para habilitar el destino. */
     fun chooseObject(folderName: String): Snapshot {
         check(started && !finished) { "El cuento no está en reproducción." }
         val selected = transitions().firstOrNull {
-            it.requiredObject == folderName && InventoryRepository.contains(context, folderName)
+            it.kind == "object" &&
+                it.requiredObject == folderName &&
+                InventoryRepository.contains(context, folderName)
+        } ?: return snapshot()
+        return moveTo(selected)
+    }
+
+    /** Selecciona el destino asociado a la opción textual elegida por el niño. */
+    fun chooseDecisionOption(optionKey: String): Snapshot {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        val selected = transitions().firstOrNull {
+            it.kind == "decision" && it.decisionOptionKey == optionKey
         } ?: return snapshot()
         return moveTo(selected)
     }
@@ -85,17 +102,41 @@ internal class StoryPlaybackEngine(
         return snapshot()
     }
 
-    private fun transitions(): List<Transition> =
-        story.metadata.connections[currentSceneFolder].orEmpty().map { destination ->
-            val condition = story.metadata.connectionConditions.firstOrNull {
-                it.fromScene == currentSceneFolder && it.toScene == destination
+    /**
+     * Si el manifiesto contiene alternativas nuevas, son la fuente de verdad.
+     * Los cuentos antiguos se traducen en memoria desde connections y
+     * connectionConditions, sin exigir una migración previa del archivo.
+     */
+    private fun transitions(): List<Transition> {
+        val origin = currentSceneFolder
+        val configured = story.metadata.connectionAlternatives.filter { it.fromScene == origin }
+        if (configured.isNotEmpty()) {
+            return configured.map { alternative ->
+                Transition(
+                    destination = alternative.toScene,
+                    requiredObject = alternative.requiredObject,
+                    consumeRequiredObject = alternative.consumeRequiredObject,
+                    kind = alternative.kind,
+                    decisionOptionKey = alternative.decisionOptionKey
+                )
             }
-            Transition(
-                destination = destination,
-                requiredObject = condition?.requiredObject,
-                consumeRequiredObject = condition?.consumeRequiredObject == true
-            )
         }
+        return story.metadata.connections[origin].orEmpty()
+            .filter { it != STORY_LOST_DESTINATION }
+            .flatMap { destination ->
+                val condition = story.metadata.connectionConditions.firstOrNull {
+                    it.fromScene == origin && it.toScene == destination
+                }
+                listOf(
+                    Transition(
+                        destination = destination,
+                        requiredObject = condition?.requiredObject,
+                        consumeRequiredObject = condition?.consumeRequiredObject == true,
+                        kind = if (condition?.requiredObject != null) "object" else "free"
+                    )
+                )
+            }
+    }
 
     private fun snapshot(): Snapshot {
         val scene = StoryRepository.readScene(story, currentSceneFolder)
@@ -103,12 +144,18 @@ internal class StoryPlaybackEngine(
         val inventoryNames = InventoryRepository.list(context)
         val objectsByFolder = ObjectRepository.list(context).associateBy { it.folderName }
         val inventory = inventoryNames.mapNotNull(objectsByFolder::get)
+        val decisionKeys = outgoing
+            .filter { it.kind == "decision" }
+            .mapNotNull { it.decisionOptionKey }
+            .toSet()
         return Snapshot(
             scene = scene,
             inventory = inventory,
             transitions = outgoing,
-            canAdvance = outgoing.any { it.requiredObject == null },
-            isFinished = outgoing.isEmpty()
+            canAdvance = outgoing.any { it.kind == "free" },
+            isFinished = outgoing.isEmpty(),
+            decisionPrompt = scene.metadata.decisionPrompt,
+            decisionOptions = scene.metadata.decisionOptions.filter { it.key in decisionKeys }
         )
     }
 
