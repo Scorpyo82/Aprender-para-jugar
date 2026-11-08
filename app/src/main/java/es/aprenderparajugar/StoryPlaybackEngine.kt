@@ -79,14 +79,21 @@ internal class StoryPlaybackEngine(
         return moveTo(free.first())
     }
 
+    /** Comprueba si el objeto permite salir de la escena actual sin modificar el inventario. */
+    fun canUseObject(folderName: String): Boolean {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        return transitions().any {
+            it.kind == "object" && it.requiredObject == folderName
+        } && InventoryRepository.contains(context, folderName)
+    }
+
     /** Selecciona una alternativa por objeto. Una alternativa OR válida basta para habilitar el destino. */
     fun chooseObject(folderName: String): Snapshot {
         check(started && !finished) { "El cuento no está en reproducción." }
-        val selected = transitions().firstOrNull {
-            it.kind == "object" &&
-                it.requiredObject == folderName &&
-                InventoryRepository.contains(context, folderName)
-        } ?: return snapshot()
+        if (!canUseObject(folderName)) return snapshot()
+        val selected = transitions().first {
+            it.kind == "object" && it.requiredObject == folderName
+        }
         return moveTo(selected)
     }
 
