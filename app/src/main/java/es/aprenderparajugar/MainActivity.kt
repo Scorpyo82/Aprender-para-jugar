@@ -5834,17 +5834,15 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "parent-pin" }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text("⚙️", fontSize = 18.sp) }
-                    Spacer(Modifier.width(8.dp))
-                    OutlinedButton(onClick = { soundEnabled = !soundEnabled; preferences.edit().putBoolean("sound_enabled", soundEnabled).apply() }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text(if (soundEnabled) "🔊" else "🔇", fontSize = 18.sp) }
-                    Spacer(Modifier.width(8.dp))
-                    OutlinedButton(onClick = { screen = "help" }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), shape = RoundedCornerShape(16.dp)) { Text("❔ Ayuda", fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
-                }
+                HomeTopActions(
+                    soundEnabled = soundEnabled,
+                    onOpenSettings = { pinEntry = ""; pinError = false; screen = "parent-pin" },
+                    onToggleSound = {
+                        soundEnabled = !soundEnabled
+                        preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
+                    },
+                    onOpenHelp = { screen = "help" }
+                )
             }
             item {
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = if (rewardMode.isStars) Color(0xFFDCEBFF) else Color(0xFFFFD968)), border = androidx.compose.foundation.BorderStroke(2.dp, if (rewardMode.isStars) Color(0xFF78A9E6) else Color(0xFFE8B95D)), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
