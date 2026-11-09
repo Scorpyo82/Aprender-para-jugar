@@ -1,6 +1,5 @@
 package es.aprenderparajugar
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,55 +20,30 @@ import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun StoryObjectsMenuScreen(
-    onCreateObjects: () -> Unit,
-    onOpenCollection: () -> Unit,
+    onOpenLibrary: () -> Unit,
+    onOpenCollections: () -> Unit,
+    onOpenStore: () -> Unit,
     onOpenInventory: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Objetos", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        StoryObjectsMenuCard(
-            icon = "＋",
-            title = "Creación de objetos",
-            description = "Crear y editar objetos reutilizables en los cuentos",
-            onClick = onCreateObjects
-        )
-        StoryObjectsMenuCard(
-            icon = "📚",
-            title = "Colección de objetos",
-            description = "Consultar y administrar la biblioteca común de objetos",
-            onClick = onOpenCollection
-        )
-        StoryObjectsMenuCard(
-            icon = "🎒",
-            title = "Inventario actual",
-            description = "Consultar y gestionar los objetos que posee el niño",
-            onClick = onOpenInventory
-        )
+        StoryObjectsMenuCard("📚", "Librería de objetos", "Crear, consultar, filtrar y editar objetos", onOpenLibrary)
+        StoryObjectsMenuCard("🗂️", "Colecciones", "Crear colecciones y organizar los objetos", onOpenCollections)
+        StoryObjectsMenuCard("🛒", "Tienda", "Gestionar objetos a la venta, bloqueos e inventario", onOpenStore)
+        StoryObjectsMenuCard("🎒", "Inventario del niño", "Consultar y retirar los objetos que posee", onOpenInventory)
     }
 }
 
 @Composable
-private fun StoryObjectsMenuCard(
-    icon: String,
-    title: String,
-    description: String,
-    onClick: () -> Unit
-) {
+private fun StoryObjectsMenuCard(icon: String, title: String, description: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(icon, fontSize = 30.sp, color = Color(0xFF87451F))
-            Column(modifier = Modifier.weight(1f)) {
+            Column(Modifier.weight(1f)) {
                 Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(description, fontSize = 14.sp, color = Color(0xFF667085))
             }
