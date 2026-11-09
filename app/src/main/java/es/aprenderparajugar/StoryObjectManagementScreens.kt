@@ -61,7 +61,7 @@ internal fun StoryObjectCollectionManagementScreen(
                         Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             AndroidView(
                                 factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
-                                update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) },
+                                update = { view -> runCatching { view.setImageURI(Uri.fromFile(File(stored.directory, stored.metadata.image))) } },
                                 modifier = Modifier.size(54.dp)
                             )
                             Column(Modifier.weight(1f)) { Text(stored.metadata.name, fontWeight = FontWeight.SemiBold) }
