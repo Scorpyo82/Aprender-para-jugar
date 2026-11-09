@@ -3279,8 +3279,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 onCancelDelete = { storyObjectCollectionsState.cancelDelete() },
                                 onMoveObject = { stored, targetCollection ->
                                     runCatching {
-                                        val image = File(stored.directory, stored.metadata.image).readBytes()
-                                        ObjectRepository.save(context, targetCollection, stored.folderName, stored.metadata, image)
+                                        ObjectRepository.moveToCollection(context, stored, targetCollection)
                                         storedStoryObjects = ObjectRepository.list(context)
                                         storyObjectCollectionMessage = "${stored.metadata.name} reasignado a «$targetCollection»."
                                     }.onFailure { storyObjectCollectionMessage = it.message ?: "No se pudo reasignar el objeto." }
