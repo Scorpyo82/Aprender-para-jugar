@@ -94,6 +94,9 @@ internal class StoryObjectEditorState {
                 .replace(Regex("[^\\p{L}\\p{N}_-]+"), "_")
                 .trim('_')
             ObjectRepository.save(context, collection, folderName, ObjectMetadata(cleanName, imageName, availableInStore.value, if (availableInStore.value) storePriceMinutes.value.toInt() else 0, collectible.value, requiresUnlock.value && availableInStore.value), imageBytes)
+            if (!availableInStore.value || !requiresUnlock.value) {
+                runCatching { ObjectUnlockRepository.remove(context, folderName) }
+            }
             reset()
             message.value = "Objeto guardado correctamente."
             ObjectRepository.list(context)
