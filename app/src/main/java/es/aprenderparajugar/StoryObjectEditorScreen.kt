@@ -126,6 +126,6 @@ internal fun StoryObjectEditorScreen(
         OutlinedButton(onClick = onTakePhoto, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
         Button(onClick = onSave, enabled = canSave, modifier = Modifier.fillMaxWidth()) { Text("Guardar objeto") }
         if (message.isNotBlank()) Text(message, color = if (message.contains("correctamente")) Color(0xFF24733B) else Color(0xFFB3261E))
-        OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a Objetos") }
+        OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
     }
 }
