@@ -2,6 +2,7 @@ package es.aprenderparajugar
 
 import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import org.json.JSONArray
 
 /**
@@ -13,7 +14,16 @@ internal object NotificationQueueRepository {
     private const val PREFERENCES = "aprender_para_jugar"
     private const val QUEUE_KEY = "pending_app_notifications"
     private val pending = mutableStateListOf<String>()
+    private val paused = mutableStateOf(false)
     private var initialized = false
+
+    val isPaused: Boolean
+        get() = paused.value
+
+    @Synchronized
+    fun setPaused(value: Boolean) {
+        paused.value = value
+    }
 
     val pendingFolderNames: List<String>
         get() = pending
