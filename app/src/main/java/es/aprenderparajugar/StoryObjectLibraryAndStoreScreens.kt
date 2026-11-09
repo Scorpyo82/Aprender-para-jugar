@@ -119,7 +119,17 @@ internal fun StoryObjectStoreManagementScreen(
                         )
                         Column(Modifier.weight(1f)) {
                             Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
-                            Text(if (owned) "Adquirido · En inventario" else if (locked) "Bloqueado" else "Disponible para comprar", color = if (locked) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 13.sp)
+                            Text(
+                                when {
+                                    owned && locked -> "En inventario · Bloqueado para compra"
+                                    owned && stored.metadata.requiresUnlock -> "En inventario · Desbloqueado"
+                                    owned -> "En inventario · Disponible en tienda"
+                                    locked -> "Bloqueado"
+                                    else -> "Disponible para comprar"
+                                },
+                                color = if (locked) Color(0xFFB3261E) else Color(0xFF24733B),
+                                fontSize = 13.sp
+                            )
                             Text("Precio: ${stored.metadata.storePriceMinutes} min/estrellas", color = Color(0xFF667085), fontSize = 12.sp)
                         }
                         OutlinedButton(onClick = { onEdit(stored) }) { Text("Editar") }
