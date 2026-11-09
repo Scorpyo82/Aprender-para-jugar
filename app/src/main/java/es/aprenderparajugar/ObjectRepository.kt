@@ -191,6 +191,25 @@ object ObjectRepository {
         }
     }
 
+    /** Reasigna un objeto a otra colección conservando su identidad y referencias locales. */
+    fun moveToCollection(context: Context, stored: StoredObject, collection: String): StoredObject {
+        val safeCollection = safePathSegment(collection, "La colección")
+        val root = rootDirectory(context).canonicalFile
+        val source = stored.directory.canonicalFile
+        require(source.toPath().startsWith(root.toPath()) && source.isDirectory) {
+            "La ubicación actual del objeto no es válida."
+        }
+        val targetCollection = ensureDirectory(File(root, safeCollection)).canonicalFile
+        require(targetCollection.toPath().startsWith(root.toPath())) {
+            "La colección de destino no es válida."
+        }
+        val target = File(targetCollection, stored.folderName).canonicalFile
+        if (source.parentFile.canonicalFile == targetCollection) return read(source)
+        require(!target.exists()) { "Ya existe un objeto con el mismo identificador en la colección de destino." }
+        check(source.renameTo(target)) { "No se pudo reasignar el objeto a la colección seleccionada." }
+        return read(target)
+    }
+
     private fun findFolderName(context: Context, folderName: String): File? {
         val root = rootDirectory(context)
         root.listFiles()
