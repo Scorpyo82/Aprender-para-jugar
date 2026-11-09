@@ -138,6 +138,9 @@ internal fun StoryPlayerScreen(
     var decisionSelectionInProgress by remember { mutableStateOf(false) }
     val decisionOptionsListState = remember(snapshot.scene.folderName) { LazyListState() }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
+    DisposableEffect(Unit) {
+        onDispose { NotificationQueueRepository.setPaused(false) }
+    }
     var narrationFinished by remember { mutableStateOf(false) }
     var narrationIsPlaying by remember { mutableStateOf(false) }
     var ambientVolume by remember { mutableStateOf(1f) }
@@ -381,11 +384,13 @@ internal fun StoryPlayerScreen(
                     if (snapshot.isFinished) {
                         Button(
                             onClick = {
+                                NotificationQueueRepository.setPaused(true)
                                 val collectible = engine.claimCurrentSceneExitCollectible()
 
                                 if (collectible != null) {
                                     celebrationObject = collectible
                                 } else {
+                                    NotificationQueueRepository.setPaused(false)
                                     engine.finish()
                                     safelyStopAndRelease(ambientPlayer); ambientPlayer = null
                                     safelyStopAndRelease(narrationPlayer); narrationPlayer = null
@@ -397,13 +402,16 @@ internal fun StoryPlayerScreen(
                     } else if (snapshot.canAdvance || snapshot.decisionOptions.isNotEmpty()) {
                         Button(
                             onClick = {
+                                NotificationQueueRepository.setPaused(true)
                                 val collectible = engine.claimCurrentSceneExitCollectible()
 
                                 if (collectible != null) celebrationObject = collectible
-                                else if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
-                                else engine.advance()?.let {
-                                    snapshot = it
-
+                                else {
+                                    NotificationQueueRepository.setPaused(false)
+                                    if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
+                                    else engine.advance()?.let {
+                                        snapshot = it
+                                    }
                                 }
                             },
                             shape = RoundedCornerShape(24.dp)
@@ -522,7 +530,10 @@ internal fun StoryPlayerScreen(
     }
 
     celebrationObject?.let { awarded ->
-        CollectibleCelebrationDialog(awarded, fontFamily) { celebrationObject = null }
+        CollectibleCelebrationDialog(awarded, fontFamily) {
+            celebrationObject = null
+            NotificationQueueRepository.setPaused(false)
+        }
     }
 
 
