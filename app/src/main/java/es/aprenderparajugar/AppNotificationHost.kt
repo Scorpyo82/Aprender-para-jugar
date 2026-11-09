@@ -26,7 +26,8 @@ import kotlinx.coroutines.delay
 internal fun AppNotificationHost(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val pending = NotificationQueueRepository.pendingFolderNames
-    val folderName = pending.firstOrNull()
+    val paused = NotificationQueueRepository.isPaused
+    val folderName = pending.firstOrNull().takeUnless { paused }
     val stored = folderName?.let { folder ->
         ObjectRepository.list(context).firstOrNull { it.folderName == folder }
     }
@@ -49,6 +50,7 @@ internal fun AppNotificationHost(modifier: Modifier = Modifier) {
     }
 
     if (stored != null) {
+        val isOwned = InventoryRepository.contains(context, stored.folderName)
         val alpha by animateFloatAsState(
             targetValue = 1f,
             animationSpec = tween(220),
@@ -59,7 +61,7 @@ internal fun AppNotificationHost(modifier: Modifier = Modifier) {
             contentAlignment = Alignment.TopEnd
         ) {
             Box(Modifier.graphicsLayer { this.alpha = alpha }) {
-                StoreUnlockNotification(stored, FontFamily.Default)
+                StoreUnlockNotification(stored, FontFamily.Default, isOwned)
             }
         }
     }
