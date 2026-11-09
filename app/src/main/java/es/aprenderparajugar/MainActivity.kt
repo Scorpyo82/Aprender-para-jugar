@@ -615,6 +615,9 @@ private fun AprenderApp() {
     var storyObjectSelectedCollection by storyObjectEditorState.selectedCollection
     var storyObjectCollectionMessage by storyObjectCollectionsState.message
     var storyObjectCollectionToDelete by storyObjectCollectionsState.collectionToDelete
+    var objectLibraryCollectionFilter by remember { mutableStateOf(ALL_OBJECT_COLLECTIONS) }
+    var objectStoreMessage by remember { mutableStateOf("") }
+    var objectEditorReturnSection by remember { mutableStateOf("stories-object-library") }
     val storyCollectionsState = remember(preferences) { StoryCollectionsState(context, preferences) }
     var storyCollections by storyCollectionsState.collections
     var storyCollectionDraft by storyCollectionsState.draft
@@ -3119,20 +3122,77 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "stories-objects" -> {
                         item {
                             StoryObjectsMenuScreen(
-                                onCreateObjects = {
-                                    storyObjectEditorState.reset()
-                                    parentSection = "stories-object-create"
-                                },
-                                onOpenCollection = {
+                                onOpenLibrary = {
                                     storedStoryObjects = ObjectRepository.list(context)
-                                    storyObjectInventoryState.refresh(context)
+                                    objectLibraryCollectionFilter = ALL_OBJECT_COLLECTIONS
+                                    parentSection = "stories-object-library"
+                                },
+                                onOpenCollections = {
+                                    storedStoryObjects = ObjectRepository.list(context)
                                     storyObjectCollectionMessage = ""
                                     parentSection = "stories-object-collection"
+                                },
+                                onOpenStore = {
+                                    storedStoryObjects = ObjectRepository.list(context)
+                                    storyObjectInventoryState.refresh(context)
+                                    objectStoreMessage = ""
+                                    parentSection = "stories-object-store"
                                 },
                                 onOpenInventory = {
                                     storedStoryObjects = ObjectRepository.list(context)
                                     storyObjectInventoryState.refresh(context)
                                     parentSection = "stories-object-inventory"
+                                }
+                            )
+                        }
+                    }
+                    "stories-object-library" -> {
+                        item {
+                            StoryObjectLibraryScreen(
+                                objects = storedStoryObjects,
+                                collections = storyObjectCollections,
+                                selectedCollection = objectLibraryCollectionFilter,
+                                onCollectionSelected = { objectLibraryCollectionFilter = it },
+                                onCreate = {
+                                    storyObjectEditorState.reset()
+                                    objectEditorReturnSection = "stories-object-library"
+                                    parentSection = "stories-object-create"
+                                },
+                                onEdit = { stored ->
+                                    storyObjectEditorState.beginEdit(stored)
+                                    storyObjectInventoryState.refresh(context)
+                                    objectEditorReturnSection = "stories-object-library"
+                                    parentSection = "stories-object-create"
+                                }
+                            )
+                        }
+                    }
+                    "stories-object-store" -> {
+                        item {
+                            StoryObjectStoreManagementScreen(
+                                objects = storedStoryObjects,
+                                inventoryFolders = storedInventoryFolders,
+                                unlockedFolders = ObjectUnlockRepository.list(context),
+                                message = objectStoreMessage,
+                                onToggleInventory = { stored ->
+                                    val wasOwned = stored.folderName in storedInventoryFolders
+                                    val error = storyObjectInventoryState.toggle(context, stored.folderName)
+                                    objectStoreMessage = error ?: if (wasOwned) "${stored.metadata.name} retirado del inventario." else "${stored.metadata.name} añadido al inventario."
+                                },
+                                onToggleUnlock = { stored ->
+                                    val wasUnlocked = stored.folderName in ObjectUnlockRepository.list(context)
+                                    runCatching {
+                                        if (wasUnlocked) ObjectUnlockRepository.remove(context, stored.folderName)
+                                        else ObjectUnlockRepository.unlock(context, listOf(stored.folderName))
+                                    }.onSuccess {
+                                        objectStoreMessage = if (wasUnlocked) "${stored.metadata.name} bloqueado de nuevo." else "${stored.metadata.name} desbloqueado para la tienda."
+                                    }.onFailure { objectStoreMessage = it.message ?: "No se pudo cambiar el estado del objeto." }
+                                },
+                                onEdit = { stored ->
+                                    storyObjectEditorState.beginEdit(stored)
+                                    storyObjectInventoryState.refresh(context)
+                                    objectEditorReturnSection = "stories-object-store"
+                                    parentSection = "stories-object-create"
                                 }
                             )
                         }
@@ -3185,7 +3245,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 onSave = {
                                     storyObjectEditorState.save(context)?.let { savedObjects ->
                                         storedStoryObjects = savedObjects
-                                        parentSection = "stories-object-collection"
+                                        storyObjectInventoryState.refresh(context)
+                                        parentSection = objectEditorReturnSection
                                     }
                                 },
                                 canSave = storyObjectNameDraft.isNotBlank() &&
@@ -3194,7 +3255,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     (!storyObjectAvailableInStore || (storyObjectStorePriceMinutes.toIntOrNull() ?: 0) > 0),
                                 onCancel = {
                                     storyObjectEditorState.reset()
-                                    parentSection = "stories-objects"
+                                    parentSection = objectEditorReturnSection
                                 }
                             )
                         }
@@ -3207,24 +3268,18 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 message = storyObjectCollectionMessage,
                                 collectionToDelete = storyObjectCollectionToDelete,
                                 objects = storedStoryObjects,
-                                inventoryFolders = storedInventoryFolders,
                                 onDraftChange = { storyObjectCollectionDraft = NameRules.filterInput(it) },
                                 onAddCollection = { storyObjectCollectionsState.addCollection() },
                                 onRequestDelete = { storyObjectCollectionsState.requestDelete(it) },
                                 onDeleteCollection = { storyObjectCollectionsState.deleteCollection(it) },
                                 onCancelDelete = { storyObjectCollectionsState.cancelDelete() },
-                                onEditObject = { stored ->
-                                    storyObjectEditorState.beginEdit(stored)
-                                    storyObjectInventoryState.refresh(context)
-                                    parentSection = "stories-object-create"
-                                },
-                                onToggleInventory = { stored, isInInventory ->
-                                    val error = storyObjectInventoryState.toggle(context, stored.folderName)
-                                    storyObjectCollectionMessage = error ?: if (isInInventory) {
-                                        "${stored.metadata.name} retirado del inventario."
-                                    } else {
-                                        "${stored.metadata.name} añadido al inventario."
-                                    }
+                                onMoveObject = { stored, targetCollection ->
+                                    runCatching {
+                                        val image = File(stored.directory, stored.metadata.image).readBytes()
+                                        ObjectRepository.save(context, targetCollection, stored.folderName, stored.metadata, image)
+                                        storedStoryObjects = ObjectRepository.list(context)
+                                        storyObjectCollectionMessage = "${stored.metadata.name} reasignado a «$targetCollection»."
+                                    }.onFailure { storyObjectCollectionMessage = it.message ?: "No se pudo reasignar el objeto." }
                                 }
                             )
                         }
