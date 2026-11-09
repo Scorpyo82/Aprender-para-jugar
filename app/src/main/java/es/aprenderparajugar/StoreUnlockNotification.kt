@@ -27,7 +27,8 @@ import java.io.File
 @Composable
 internal fun StoreUnlockNotification(
     stored: StoredObject,
-    fontFamily: FontFamily
+    fontFamily: FontFamily,
+    isOwned: Boolean
 ) {
     val bitmap = remember(stored.directory.absolutePath, stored.metadata.image) {
         File(stored.directory, stored.metadata.image).takeIf { it.isFile }
@@ -44,7 +45,9 @@ internal fun StoreUnlockNotification(
             Image(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = stored.metadata.name,
-                modifier = Modifier.size(48.dp).blur(2.dp),
+                modifier = Modifier.size(48.dp).then(
+                    if (stored.metadata.collectible && !isOwned) Modifier.blur(2.dp) else Modifier
+                ),
                 contentScale = ContentScale.Fit
             )
         } else {
