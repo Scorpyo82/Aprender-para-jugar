@@ -1229,6 +1229,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             "tour" -> finishWelcomeTour()
             "parent" -> {
                 when (parentSection) {
+                    "stories-object-create" -> {
+                        storyObjectEditorState.reset()
+                        parentSection = objectEditorReturnSection
+                    }
                     "word-library" -> {
                         if (wordLibraryPage == "edit") {
                             wordLibraryPage = "list"
