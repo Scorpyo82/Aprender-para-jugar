@@ -244,3 +244,13 @@ internal fun isNotificationPermissionReady(context: android.content.Context): Bo
         context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     return runtimeGranted && NotificationManagerCompat.from(context).areNotificationsEnabled()
 }
+
+internal fun isPlayTimeAccessibilityEnabled(context: android.content.Context): Boolean {
+    val expected = android.content.ComponentName(context, PlayTimeAccessibilityService::class.java)
+    val manager = context.getSystemService(android.content.Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager ?: return false
+    return manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        .any { info -> info.resolveInfo.serviceInfo.packageName == expected.packageName && info.resolveInfo.serviceInfo.name == expected.className }
+}
+
+internal fun areMandatoryDeviceSetupPermissionsReady(context: android.content.Context): Boolean =
+    isPlayTimeAccessibilityEnabled(context) && isNotificationPermissionReady(context)
