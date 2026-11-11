@@ -471,12 +471,8 @@ private fun importSequencePackage(context: Context, source: Uri): ImportedSequen
     return ImportedSequenceContent(categories, disabled, exercises)
 }
 
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val expected = android.content.ComponentName(context, PlayTimeAccessibilityService::class.java)
-    val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager ?: return false
-    return manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-        .any { info -> info.resolveInfo.serviceInfo.packageName == expected.packageName && info.resolveInfo.serviceInfo.name == expected.className }
-}
+private fun isAccessibilityServiceEnabled(context: Context): Boolean =
+    isPlayTimeAccessibilityEnabled(context)
 
 private fun currentDayKey(): String {
     val calendar = Calendar.getInstance()
