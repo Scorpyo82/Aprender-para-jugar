@@ -1269,6 +1269,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
                     }
                     pendingTimeModeActivation = false
+                    permissionRecoveryNotice = false
                     preferences.edit()
                         .putBoolean("pending_time_mode_activation", false)
                         .putBoolean("device_setup_in_progress", false)
