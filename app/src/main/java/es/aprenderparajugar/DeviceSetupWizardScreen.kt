@@ -119,7 +119,7 @@ internal fun DeviceSetupWizardScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(20.dp),
+        modifier = Modifier.fillMaxWidth().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Preparar la protección", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
