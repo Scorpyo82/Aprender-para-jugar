@@ -558,6 +558,7 @@ private fun AprenderApp() {
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
     var rewardMode by remember { mutableStateOf(RewardMode.fromPreferences(preferences)) }
     var pendingTimeModeActivation by remember { mutableStateOf(preferences.getBoolean("pending_time_mode_activation", !preferences.getBoolean("first_launch_setup_seen", false) && !RewardMode.fromPreferences(preferences).isStars)) }
+    var permissionRecoveryNotice by remember { mutableStateOf(false) }
     var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
@@ -984,6 +985,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             !areMandatoryDeviceSetupPermissionsReady(context)
         ) {
             pendingTimeModeActivation = true
+            permissionRecoveryNotice = true
             rewardMode = RewardMode.STARS
             preferences.edit()
                 .putString(RewardMode.PREFERENCE_KEY, "stars")
@@ -1670,6 +1672,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             setupAccessibilityEnabled = isPlayTimeAccessibilityEnabled(context)
                             if (areMandatoryDeviceSetupPermissionsReady(context)) {
                                 pendingTimeModeActivation = false
+                                permissionRecoveryNotice = false
                                 preferences.edit()
                                     .putBoolean("pending_time_mode_activation", false)
                                     .putString(RewardMode.PREFERENCE_KEY, "time")
@@ -4324,6 +4327,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "device-setup-wizard" -> item {
                         DeviceSetupWizardScreen(
                             accessibilityEnabled = setupAccessibilityEnabled || isPlayTimeAccessibilityEnabled(context),
+                            showPermissionRecoveryNotice = permissionRecoveryNotice,
                             onComplete = {
                                 val ready = areMandatoryDeviceSetupPermissionsReady(context)
                                 if (ready) {
@@ -4332,6 +4336,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
                                     }
                                     pendingTimeModeActivation = false
+                                    permissionRecoveryNotice = false
                                     preferences.edit()
                                         .putBoolean("pending_time_mode_activation", false)
                                         .putBoolean("device_setup_in_progress", false)
