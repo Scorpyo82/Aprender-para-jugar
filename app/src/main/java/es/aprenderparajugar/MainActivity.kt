@@ -1260,7 +1260,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             "tour" -> finishWelcomeTour()
             "parent" -> {
                 if (parentSection == "device-setup-wizard") {
-                    if (pendingTimeModeActivation) {
+                    // Leaving the wizard must never leave Time mode active without
+                    // every mandatory prerequisite, even if the pending flag was lost.
+                    if (pendingTimeModeActivation || !areMandatoryDeviceSetupPermissionsReady(context)) {
                         rewardMode = RewardMode.STARS
                         preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
                     }
@@ -4340,7 +4342,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                             },
                             onCancel = {
-                                if (pendingTimeModeActivation) {
+                                // Revalidate on cancellation: never preserve Time mode
+                                // if a required permission was revoked while the app was away.
+                                if (pendingTimeModeActivation || !areMandatoryDeviceSetupPermissionsReady(context)) {
                                     rewardMode = RewardMode.STARS
                                     preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
                                 }
