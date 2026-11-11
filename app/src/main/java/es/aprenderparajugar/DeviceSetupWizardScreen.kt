@@ -203,6 +203,16 @@ internal fun DeviceSetupWizardScreen(
                                 Text("Abrir ajustes de notificaciones")
                             }
                         }
+                        OutlinedButton(onClick = {
+                            try {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                )
+                            } catch (_: Exception) { }
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Abrir ajustes de notificaciones")
+                        }
                         OutlinedButton(onClick = { refreshPermissions() }, modifier = Modifier.fillMaxWidth()) {
                             Text("Comprobar de nuevo")
                         }
