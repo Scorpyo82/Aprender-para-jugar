@@ -855,6 +855,24 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var batterySettingsDone by remember { mutableStateOf(preferences.getBoolean("battery_setup_done", false)) }
     var xiaomiWindowPermissionDone by remember { mutableStateOf(preferences.getBoolean("xiaomi_window_permission_done", false)) }
     val lifecycleOwner = remember(context) { context as? ComponentActivity }
+    androidx.compose.runtime.LaunchedEffect(appInForeground, screen, rewardMode) {
+        // Revalidate the mandatory prerequisites when the app returns to the foreground.
+        // A revoked permission must never leave Time mode operational.
+        if (appInForeground && screen == "home" && !rewardMode.isStars &&
+            !areMandatoryDeviceSetupPermissionsReady(context)
+        ) {
+            pendingTimeModeActivation = true
+            rewardMode = RewardMode.STARS
+            preferences.edit()
+                .putString(RewardMode.PREFERENCE_KEY, "stars")
+                .putBoolean("pending_time_mode_activation", true)
+                .putBoolean("device_setup_in_progress", true)
+                .putBoolean("parent_area_active", true)
+                .apply()
+            screen = "parent"
+            parentSection = "device-setup-wizard"
+        }
+    }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
