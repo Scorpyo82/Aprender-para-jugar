@@ -1229,7 +1229,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             "help" -> { screen = "home" }
             "tour" -> finishWelcomeTour()
             "parent" -> {
-                when (parentSection) {
+                if (parentSection == "device-setup-wizard") {
+                    pendingTimeModeActivation = false
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", false)
+                        .putBoolean("device_setup_in_progress", false)
+                        .apply()
+                    parentSection = "menu"
+                } else when (parentSection) {
                     "stories-object-create" -> {
                         storyObjectEditorState.reset()
                         parentSection = objectEditorReturnSection
