@@ -180,10 +180,11 @@ internal fun DeviceSetupWizardScreen(
                     DeviceSetupStep.NOTIFICATIONS -> {
                         Text("2. Permitir notificaciones", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Las notificaciones muestran el tiempo restante, los avisos de los últimos minutos y cuándo se ha agotado el tiempo.")
-                        Text(
-                            if (notificationPermissionGranted) "Notificaciones verificadas."
-                            else "Todavía no podemos mostrar las notificaciones necesarias para el modo Tiempo."
-                        )
+                        if (!notificationPermissionGranted) {
+                            Text("El modo Tiempo está pausado porque las notificaciones están desactivadas. Tu saldo y configuración se conservan; al volver a permitirlas podremos reactivarlo.")
+                        } else {
+                            Text("Notificaciones verificadas.")
+                        }
                         if (Build.VERSION.SDK_INT >= 33 &&
                             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
                         ) {
