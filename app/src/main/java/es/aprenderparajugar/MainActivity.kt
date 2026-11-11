@@ -835,16 +835,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
         )
     }
-    androidx.compose.runtime.LaunchedEffect(rewardMode, screen) {
-        // Do not request notification permission before the family has chosen a mode.
-        // Stars never needs notifications for device-time protection.
-        if (!rewardMode.isStars && (screen == "parent" || screen == "home") &&
-            preferences.getBoolean("welcome_tour_seen", false) &&
-            Build.VERSION.SDK_INT >= 33 &&
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            (context as? ComponentActivity)?.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7001)
-        }
-    }
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
     var soundEnabled by remember { mutableStateOf(if (firstLaunchNeedsSetup) false else preferences.getBoolean("sound_enabled", true)) }
     androidx.compose.runtime.LaunchedEffect(screen) {
@@ -1211,13 +1201,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         preferences.edit().putBoolean("welcome_tour_seen", true).apply()
         when (tourReturnTarget) {
             "parent-setup" -> {
-                setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
-                // The accessibility service is the permission Android exposes reliably
-                // and the essential prerequisite for Time mode. The other setup steps are
-                // OEM-specific/manual recommendations and must not block mode selection.
-                val deviceSetupComplete = setupAccessibilityEnabled
+                setupAccessibilityEnabled = isPlayTimeAccessibilityEnabled(context)
                 screen = "parent"
-                parentSection = if (rewardMode.isStars || deviceSetupComplete) "menu" else "device-setup"
+                if (!rewardMode.isStars && !areMandatoryDeviceSetupPermissionsReady(context)) {
+                    pendingTimeModeActivation = true
+                    rewardMode = RewardMode.STARS
+                    preferences.edit()
+                        .putString(RewardMode.PREFERENCE_KEY, "stars")
+                        .putBoolean("pending_time_mode_activation", true)
+                        .putBoolean("device_setup_in_progress", true)
+                        .putBoolean("parent_area_active", true)
+                        .apply()
+                    parentSection = "device-setup-wizard"
+                } else {
+                    pendingTimeModeActivation = false
+                    preferences.edit().putBoolean("pending_time_mode_activation", false).apply()
+                    parentSection = "menu"
+                }
             }
             "parent-menu" -> { screen = "parent"; parentSection = "menu" }
             else -> screen = "home"
@@ -1532,7 +1532,25 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             selectedMode = rewardMode,
             onModeSelected = { selected ->
                 rewardMode = selected
-                preferences.edit().putString(RewardMode.PREFERENCE_KEY, if (selected.isStars) "stars" else "time").apply()
+                if (selected.isStars) {
+                    pendingTimeModeActivation = false
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", false)
+                        .putString(RewardMode.PREFERENCE_KEY, "stars")
+                        .apply()
+                } else if (areMandatoryDeviceSetupPermissionsReady(context)) {
+                    pendingTimeModeActivation = false
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", false)
+                        .putString(RewardMode.PREFERENCE_KEY, "time")
+                        .apply()
+                } else {
+                    pendingTimeModeActivation = true
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", true)
+                        .putString(RewardMode.PREFERENCE_KEY, "stars")
+                        .apply()
+                }
                 if (selected.isStars) {
                     val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
                     if (activeDeadline > 0L) {
