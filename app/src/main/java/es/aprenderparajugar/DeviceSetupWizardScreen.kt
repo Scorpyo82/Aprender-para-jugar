@@ -246,9 +246,26 @@ internal fun isNotificationPermissionReady(context: android.content.Context): Bo
 
 internal fun isPlayTimeAccessibilityEnabled(context: android.content.Context): Boolean {
     val expected = android.content.ComponentName(context, PlayTimeAccessibilityService::class.java)
+    val enabledServices = android.provider.Settings.Secure.getString(
+        context.contentResolver,
+        android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ).orEmpty()
+    val splitter = android.text.TextUtils.SimpleStringSplitter(':')
+    splitter.setString(enabledServices)
+    while (splitter.hasNext()) {
+        val component = android.content.ComponentName.unflattenFromString(splitter.next())
+        if (component?.packageName == expected.packageName && component.className == expected.className) {
+            return true
+        }
+    }
+    // Fallback for manufacturers that expose the enabled service through AccessibilityManager
+    // but do not populate ENABLED_ACCESSIBILITY_SERVICES as expected.
     val manager = context.getSystemService(android.content.Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager ?: return false
     return manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-        .any { info -> info.resolveInfo.serviceInfo.packageName == expected.packageName && info.resolveInfo.serviceInfo.name == expected.className }
+        .any { info ->
+            info.resolveInfo.serviceInfo.packageName == expected.packageName &&
+                info.resolveInfo.serviceInfo.name == expected.className
+        }
 }
 
 internal fun areMandatoryDeviceSetupPermissionsReady(context: android.content.Context): Boolean =
