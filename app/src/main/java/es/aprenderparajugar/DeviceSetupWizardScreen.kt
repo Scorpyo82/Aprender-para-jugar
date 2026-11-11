@@ -191,17 +191,6 @@ internal fun DeviceSetupWizardScreen(
                                 onClick = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
                                 modifier = Modifier.fillMaxWidth()
                             ) { Text("Permitir notificaciones") }
-                        } else {
-                            Button(onClick = {
-                                try {
-                                    context.startActivity(
-                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                    )
-                                } catch (_: Exception) { }
-                            }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Abrir ajustes de notificaciones")
-                            }
                         }
                         OutlinedButton(onClick = {
                             try {
