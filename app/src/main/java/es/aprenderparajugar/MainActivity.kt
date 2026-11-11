@@ -561,6 +561,7 @@ private fun AprenderApp() {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
     var rewardMode by remember { mutableStateOf(RewardMode.fromPreferences(preferences)) }
+    var pendingTimeModeActivation by remember { mutableStateOf(preferences.getBoolean("pending_time_mode_activation", false)) }
     var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
@@ -1605,12 +1606,28 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     RewardModeSelectorCard(
                         rewardMode = rewardMode,
                         onSelectTime = {
-                            rewardMode = RewardMode.TIME
-                            preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
-                            setupAccessibilityEnabled = isAccessibilityServiceEnabled(context)
-                            parentSection = if (setupAccessibilityEnabled) "menu" else "device-setup"
+                            setupAccessibilityEnabled = isPlayTimeAccessibilityEnabled(context)
+                            if (areMandatoryDeviceSetupPermissionsReady(context)) {
+                                pendingTimeModeActivation = false
+                                preferences.edit()
+                                    .putBoolean("pending_time_mode_activation", false)
+                                    .putString(RewardMode.PREFERENCE_KEY, "time")
+                                    .apply()
+                                rewardMode = RewardMode.TIME
+                                parentSection = "menu"
+                            } else {
+                                pendingTimeModeActivation = true
+                                preferences.edit()
+                                    .putBoolean("pending_time_mode_activation", true)
+                                    .putBoolean("device_setup_in_progress", true)
+                                    .putBoolean("parent_area_active", true)
+                                    .apply()
+                                parentSection = "device-setup-wizard"
+                            }
                         },
                         onSelectStars = {
+                            pendingTimeModeActivation = false
+                            preferences.edit().putBoolean("pending_time_mode_activation", false).apply()
                             rewardMode = RewardMode.STARS
                             val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
                             if (activeDeadline > 0L) {
@@ -1693,14 +1710,20 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 item {
                     ParentMenuNavigationCard(
                         "⚙️",
-                        "Configuración de permisos",
-                        if (rewardMode.isStars) "Puedes prepararlos para utilizar el modo Tiempo" else "Permisos y servicio de accesibilidad"
+                        "Asistente de permisos",
+                        if (rewardMode.isStars) "Prepara el dispositivo para activar el modo Tiempo" else "Comprueba y configura la protección del tiempo"
                     ) {
-                        parentSection = "device-setup"
+                        pendingTimeModeActivation = false
+                        preferences.edit()
+                            .putBoolean("pending_time_mode_activation", false)
+                            .putBoolean("device_setup_in_progress", true)
+                            .putBoolean("parent_area_active", true)
+                            .apply()
+                        parentSection = "device-setup-wizard"
                     }
                 }
             } else {
-                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "music" || parentSection == "stories-audio") "← Volver a Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection == "stories-settings") "← Volver a los modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Volver a Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Volver a Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Volver a Objetos" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Volver al catálogo" else "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
+                item { OutlinedButton(onClick = { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "device-setup-wizard", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "music" || parentSection == "stories-audio") "← Volver a Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Volver a los modos de juego" else if (parentSection == "stories-settings") "← Volver a los modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Volver a Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Volver a Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Volver a Objetos" else if (parentSection.startsWith("sequence-type-")) "← Volver a Secuencias" else if (parentSection == "sequence-editor-temporal") "← Volver a la biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Volver a Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Volver al tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Volver a Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Volver a Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Volver al catálogo" else "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Volver al menú de control") } }
                 when (parentSection) {
                     "sound-settings" -> {
                         item { Text("Ajustes de sonido", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -4236,6 +4259,32 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         Text("Licencia declarada por el autor: Creative Commons Zero (CC0 1.0).", fontSize = 13.sp, color = Color(0xFF667085))
                         OutlinedButton(onClick = { uriHandler.openUri("https://open.spotify.com/artist/3FnwImaOicMeRPERcj6ueb?si=LBbyDbPYRyyO1Z6ium2P0w") }, modifier = Modifier.fillMaxWidth()) { Text("Escuchar al autor en Spotify") }
                         OutlinedButton(onClick = { uriHandler.openUri("https://www.instagram.com/ezequieldavidurbano/") }, modifier = Modifier.fillMaxWidth()) { Text("Instagram del autor") }
+                    }
+                    "device-setup-wizard" -> item {
+                        DeviceSetupWizardScreen(
+                            accessibilityEnabled = isPlayTimeAccessibilityEnabled(context),
+                            onComplete = {
+                                val ready = areMandatoryDeviceSetupPermissionsReady(context)
+                                if (ready && pendingTimeModeActivation) {
+                                    rewardMode = RewardMode.TIME
+                                    preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
+                                }
+                                pendingTimeModeActivation = false
+                                preferences.edit()
+                                    .putBoolean("pending_time_mode_activation", false)
+                                    .putBoolean("device_setup_in_progress", false)
+                                    .apply()
+                                parentSection = "menu"
+                            },
+                            onCancel = {
+                                pendingTimeModeActivation = false
+                                preferences.edit()
+                                    .putBoolean("pending_time_mode_activation", false)
+                                    .putBoolean("device_setup_in_progress", false)
+                                    .apply()
+                                parentSection = "menu"
+                            }
+                        )
                     }
                     "device-setup" -> item {
                         Text("Asistente de configuración", fontSize = 21.sp, fontWeight = FontWeight.Bold)
