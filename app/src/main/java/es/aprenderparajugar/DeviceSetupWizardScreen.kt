@@ -153,7 +153,7 @@ internal fun DeviceSetupWizardScreen(
                     }
                     DeviceSetupStep.ACCESSIBILITY -> {
                         Text("1. Activar Accesibilidad", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text("Busca «Aprender para jugar» en la lista de servicios instalados e intenta activar el interruptor. Android puede mostrar una advertencia: léela y confirma si estás de acuerdo.")
+                        Text("Busca «Aplicaciones descargadas» dentro de la sección «General» y entra. Allí encontrarás «Aprender para jugar»: selecciónalo e intenta activar el interruptor. En otros móviles, la lista de servicios instalados puede aparecer directamente. Android puede mostrar una advertencia: léela y confirma si estás de acuerdo.")
                         Text(
                             if (accessibilityEnabled) "Permiso verificado." else "Cuando vuelvas, comprobaremos automáticamente si se ha activado."
                         )
