@@ -51,6 +51,7 @@ private enum class DeviceSetupStep {
 @Composable
 internal fun DeviceSetupWizardScreen(
     accessibilityEnabled: Boolean,
+    showPermissionRecoveryNotice: Boolean = false,
     onComplete: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -123,6 +124,20 @@ internal fun DeviceSetupWizardScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Preparar la protección", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+        if (showPermissionRecoveryNotice) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(
+                    "La protección se ha pausado porque se ha desactivado un permiso obligatorio. El modo Tiempo no se reanudará hasta recuperar los permisos. Tu saldo y progreso se conservan.",
+                    modifier = Modifier.padding(14.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
         Text(
             "Te guiaremos paso a paso. La configuración solo terminará cuando podamos comprobar los permisos obligatorios.",
             color = MaterialTheme.colorScheme.onSurfaceVariant
