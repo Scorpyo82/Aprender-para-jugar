@@ -989,6 +989,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
         }
     }
+    androidx.compose.runtime.LaunchedEffect(screen, parentSection) {
+        if (screen == "parent" && parentSection == "device-setup-wizard") {
+            preferences.edit()
+                .putBoolean("device_setup_in_progress", true)
+                .putBoolean("parent_area_active", true)
+                .apply()
+        }
+    }
     var linkedExerciseFont by remember { mutableStateOf(preferences.getBoolean("linked_exercise_font_v1", true)) }
     val exerciseFontFamily = if (linkedExerciseFont) FontFamily(Font(R.font.playwrite_es)) else FontFamily.Default
     var transferExportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
