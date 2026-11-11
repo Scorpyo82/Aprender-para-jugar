@@ -561,7 +561,7 @@ private fun AprenderApp() {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val preferences = remember { context.getSharedPreferences("aprender_para_jugar", Context.MODE_PRIVATE) }
     var rewardMode by remember { mutableStateOf(RewardMode.fromPreferences(preferences)) }
-    var pendingTimeModeActivation by remember { mutableStateOf(preferences.getBoolean("pending_time_mode_activation", false)) }
+    var pendingTimeModeActivation by remember { mutableStateOf(preferences.getBoolean("pending_time_mode_activation", !preferences.getBoolean("first_launch_setup_seen", false) && !RewardMode.fromPreferences(preferences).isStars)) }
     var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
@@ -980,7 +980,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var feedback by cardsGameState.feedback
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
-    var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup && !rewardMode.isStars) "device-setup" else "menu") }
+    var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup && !rewardMode.isStars) "device-setup-wizard" else "menu") }
     var linkedExerciseFont by remember { mutableStateOf(preferences.getBoolean("linked_exercise_font_v1", true)) }
     val exerciseFontFamily = if (linkedExerciseFont) FontFamily(Font(R.font.playwrite_es)) else FontFamily.Default
     var transferExportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
@@ -4280,19 +4280,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "device-setup-wizard" -> item {
                         DeviceSetupWizardScreen(
-                            accessibilityEnabled = isPlayTimeAccessibilityEnabled(context),
+                            accessibilityEnabled = setupAccessibilityEnabled || isPlayTimeAccessibilityEnabled(context),
                             onComplete = {
                                 val ready = areMandatoryDeviceSetupPermissionsReady(context)
-                                if (ready && pendingTimeModeActivation) {
-                                    rewardMode = RewardMode.TIME
-                                    preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
+                                if (ready) {
+                                    if (pendingTimeModeActivation) {
+                                        rewardMode = RewardMode.TIME
+                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
+                                    }
+                                    pendingTimeModeActivation = false
+                                    preferences.edit()
+                                        .putBoolean("pending_time_mode_activation", false)
+                                        .putBoolean("device_setup_in_progress", false)
+                                        .apply()
+                                    parentSection = "menu"
+                                } else {
+                                    setupAccessibilityEnabled = isPlayTimeAccessibilityEnabled(context)
                                 }
-                                pendingTimeModeActivation = false
-                                preferences.edit()
-                                    .putBoolean("pending_time_mode_activation", false)
-                                    .putBoolean("device_setup_in_progress", false)
-                                    .apply()
-                                parentSection = "menu"
                             },
                             onCancel = {
                                 pendingTimeModeActivation = false
