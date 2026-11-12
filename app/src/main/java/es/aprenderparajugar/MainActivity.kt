@@ -979,6 +979,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var feedback by cardsGameState.feedback
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
+    var parentSessionAuthenticated by remember { mutableStateOf(false) }
+    var permissionRecoveryEntryPending by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf("menu") }
     androidx.compose.runtime.LaunchedEffect(appInForeground, screen, rewardMode) {
         // Detect revoked prerequisites, pause Time mode and inform the parent.
@@ -1004,6 +1006,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         if (pendingTimeModeActivation && screen != "tour" && screen != "pin-setup") {
             rewardMode = RewardMode.STARS
             preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(screen) {
+        if (screen == "home") {
+            parentSessionAuthenticated = false
+            preferences.edit().putBoolean("parent_session_authenticated", false).putBoolean("parent_area_active", false).apply()
+        } else if (screen == "parent" && !parentSessionAuthenticated && !firstLaunchNeedsSetup) {
+            screen = "parent-pin"
         }
     }
     androidx.compose.runtime.LaunchedEffect(screen, parentSection) {
@@ -1650,8 +1660,18 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             onPinChange = { pinEntry = it.filter(Char::isDigit).take(4); pinError = false },
             onConfirm = {
                 if (pinEntry == pinStored) {
+                    parentSessionAuthenticated = true
+                    preferences.edit().putBoolean("parent_session_authenticated", true).putBoolean("parent_area_active", true).apply()
                     screen = "parent"
-                    parentSection = "menu"
+                    if (permissionRecoveryEntryPending) {
+                        pendingTimeModeActivation = true
+                        permissionRecoveryNotice = true
+                        preferences.edit().putBoolean("pending_time_mode_activation", true).putBoolean("device_setup_in_progress", true).apply()
+                        parentSection = "device-setup-wizard"
+                        permissionRecoveryEntryPending = false
+                    } else {
+                        parentSection = "menu"
+                    }
                     pinEntry = ""
                     pinError = false
                 } else {
@@ -4332,6 +4352,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         DeviceSetupWizardScreen(
                             accessibilityEnabled = setupAccessibilityEnabled || isPlayTimeAccessibilityEnabled(context),
                             showPermissionRecoveryNotice = permissionRecoveryNotice,
+                            showTimeActivationButton = pendingTimeModeActivation,
                             showExitWithoutActivation = pendingTimeModeActivation,
                             onComplete = {
                                 val ready = areMandatoryDeviceSetupPermissionsReady(context)
@@ -5416,15 +5437,11 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             confirmButton = {
                 TextButton(onClick = {
                     showPermissionRecoveryDialog = false
-                    permissionRecoveryNotice = true
-                    pendingTimeModeActivation = true
-                    preferences.edit()
-                        .putBoolean("pending_time_mode_activation", true)
-                        .putBoolean("device_setup_in_progress", true)
-                        .putBoolean("parent_area_active", true)
-                        .apply()
-                    screen = "parent"
+                    permissionRecoveryEntryPending = true
+                    pinEntry = ""
+                    pinError = false
                     parentSection = "device-setup-wizard"
+                    screen = "parent-pin"
                 }) { Text("Configurar permisos") }
             },
             dismissButton = {
