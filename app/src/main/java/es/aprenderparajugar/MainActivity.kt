@@ -3289,6 +3289,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 },
                                 onDelete = { stored ->
                                     runCatching {
+                                        val latestCheck = ObjectStoryReferenceChecker.check(context, stored.folderName)
+                                        check(latestCheck.canDelete) {
+                                            when {
+                                                latestCheck.storyTitles.isNotEmpty() ->
+                                                    "El objeto ahora está siendo utilizado por: ${latestCheck.storyTitles.joinToString(", ")}. No se ha eliminado."
+                                                else ->
+                                                    "No se ha podido comprobar toda la biblioteca de cuentos. No se ha eliminado el objeto."
+                                            }
+                                        }
                                         ObjectRepository.delete(context, stored)
                                         InventoryRepository.remove(context, stored.folderName)
                                         ObjectUnlockRepository.remove(context, stored.folderName)
