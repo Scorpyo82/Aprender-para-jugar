@@ -52,6 +52,7 @@ private enum class DeviceSetupStep {
 internal fun DeviceSetupWizardScreen(
     accessibilityEnabled: Boolean,
     showPermissionRecoveryNotice: Boolean = false,
+    showExitWithoutActivation: Boolean = false,
     onComplete: () -> Unit,
     onCancel: (permissionsComplete: Boolean) -> Unit
 ) {
@@ -234,21 +235,13 @@ internal fun DeviceSetupWizardScreen(
         }
 
         Spacer(Modifier.height(2.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onCancel(step == DeviceSetupStep.COMPLETE) }, modifier = Modifier.weight(1f)) {
-                Text("Salir sin activar")
+        if (step != DeviceSetupStep.COMPLETE) {
+            OutlinedButton(onClick = { onCancel(false) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Salir")
             }
-            if (step != DeviceSetupStep.INTRO && step != DeviceSetupStep.COMPLETE) {
-                OutlinedButton(
-                    onClick = {
-                        step = when (step) {
-                            DeviceSetupStep.RESTRICTED_SETTINGS -> DeviceSetupStep.ACCESSIBILITY
-                            DeviceSetupStep.NOTIFICATIONS -> DeviceSetupStep.ACCESSIBILITY
-                            else -> DeviceSetupStep.INTRO
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                ) { Text("Volver") }
+        } else if (showExitWithoutActivation) {
+            OutlinedButton(onClick = { onCancel(true) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Salir sin activar")
             }
         }
     }
