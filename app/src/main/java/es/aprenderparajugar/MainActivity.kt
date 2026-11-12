@@ -1664,9 +1664,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     preferences.edit().putBoolean("parent_session_authenticated", true).putBoolean("parent_area_active", true).apply()
                     screen = "parent"
                     if (permissionRecoveryEntryPending) {
-                        pendingTimeModeActivation = true
+                        pendingTimeModeActivation = false
                         permissionRecoveryNotice = true
-                        preferences.edit().putBoolean("pending_time_mode_activation", true).putBoolean("device_setup_in_progress", true).apply()
+                        preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", true).apply()
                         parentSection = "device-setup-wizard"
                         permissionRecoveryEntryPending = false
                     } else {
