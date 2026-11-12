@@ -4332,6 +4332,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         DeviceSetupWizardScreen(
                             accessibilityEnabled = setupAccessibilityEnabled || isPlayTimeAccessibilityEnabled(context),
                             showPermissionRecoveryNotice = permissionRecoveryNotice,
+                            showExitWithoutActivation = pendingTimeModeActivation,
                             onComplete = {
                                 val ready = areMandatoryDeviceSetupPermissionsReady(context)
                                 if (ready) {
@@ -5412,7 +5413,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     if (!isNotificationPermissionReady(context)) add("Notificaciones")
                 }
                 val missingText = missingPermissions.joinToString(" y ")
-                Text("La aplicación ha detectado que falta este permiso: $missingText. El modo Tiempo se ha desactivado para mantener la protección y el saldo se conserva. Puedes recuperar el permiso ahora o hacerlo más tarde.")
+                Text("«Aprender para jugar» ha pasado a modo Estrellas de forma automática. Esto puede deberse a la pérdida o renovación de permisos ($missingText). Puedes intentar corregir los permisos o continuar en modo Estrellas, sin control de tiempo fuera de la aplicación.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -5429,7 +5430,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 }) { Text("Configurar permisos") }
             },
             dismissButton = {
-                TextButton(onClick = { showPermissionRecoveryDialog = false }) { Text("Más tarde") }
+                TextButton(onClick = { showPermissionRecoveryDialog = false }) { Text("Continuar en modo Estrellas") }
             }
         )
     }
