@@ -559,6 +559,8 @@ private fun AprenderApp() {
     var rewardMode by remember { mutableStateOf(RewardMode.fromPreferences(preferences)) }
     var pendingTimeModeActivation by remember { mutableStateOf(preferences.getBoolean("pending_time_mode_activation", !preferences.getBoolean("first_launch_setup_seen", false) && !RewardMode.fromPreferences(preferences).isStars)) }
     var permissionRecoveryNotice by remember { mutableStateOf(false) }
+    var showPermissionRecoveryDialog by remember { mutableStateOf(false) }
+    var showTimeModeNotActivatedDialog by remember { mutableStateOf(false) }
     var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
     var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
@@ -979,22 +981,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var pinError by remember { mutableStateOf(false) }
     var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup && !rewardMode.isStars) "device-setup-wizard" else "menu") }
     androidx.compose.runtime.LaunchedEffect(appInForeground, screen, rewardMode) {
-        // Revalidate the mandatory prerequisites when the app returns to the foreground.
-        // A revoked permission must never leave Time mode operational.
+        // Detect revoked prerequisites, pause Time mode and inform the parent.
+        // Never open the permission wizard automatically: the parent chooses when to continue.
         if (appInForeground && screen == "home" && !rewardMode.isStars &&
             !areMandatoryDeviceSetupPermissionsReady(context)
         ) {
-            pendingTimeModeActivation = true
+            pendingTimeModeActivation = false
             permissionRecoveryNotice = true
+            showPermissionRecoveryDialog = true
             rewardMode = RewardMode.STARS
             preferences.edit()
                 .putString(RewardMode.PREFERENCE_KEY, "stars")
-                .putBoolean("pending_time_mode_activation", true)
-                .putBoolean("device_setup_in_progress", true)
-                .putBoolean("parent_area_active", true)
+                .putBoolean("pending_time_mode_activation", false)
+                .putBoolean("device_setup_in_progress", false)
+                .putBoolean("parent_area_active", false)
                 .apply()
-            screen = "parent"
-            parentSection = "device-setup-wizard"
         }
     }
     androidx.compose.runtime.LaunchedEffect(pendingTimeModeActivation, screen) {
@@ -1264,10 +1265,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 if (parentSection == "device-setup-wizard") {
                     // Leaving the wizard must never leave Time mode active without
                     // every mandatory prerequisite, even if the pending flag was lost.
-                    if (pendingTimeModeActivation || !areMandatoryDeviceSetupPermissionsReady(context)) {
+                    val setupWasRequested = pendingTimeModeActivation
+                    if (setupWasRequested || !areMandatoryDeviceSetupPermissionsReady(context)) {
                         rewardMode = RewardMode.STARS
                         preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
                     }
+                    if (setupWasRequested) showTimeModeNotActivatedDialog = true
                     pendingTimeModeActivation = false
                     permissionRecoveryNotice = false
                     preferences.edit()
@@ -4350,10 +4353,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onCancel = {
                                 // Revalidate on cancellation: never preserve Time mode
                                 // if a required permission was revoked while the app was away.
-                                if (pendingTimeModeActivation || !areMandatoryDeviceSetupPermissionsReady(context)) {
+                                val setupWasRequested = pendingTimeModeActivation
+                                if (setupWasRequested || !areMandatoryDeviceSetupPermissionsReady(context)) {
                                     rewardMode = RewardMode.STARS
                                     preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
                                 }
+                                if (setupWasRequested) showTimeModeNotActivatedDialog = true
                                 pendingTimeModeActivation = false
                                 preferences.edit()
                                     .putBoolean("pending_time_mode_activation", false)
@@ -5391,6 +5396,44 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 Text("Configuración parental pendiente: PIN, categorías y biblioteca de palabras se añadirán en una siguiente fase.")
             }
         }
+    }
+    if (showPermissionRecoveryDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionRecoveryDialog = false },
+            title = { Text("Protección pausada") },
+            text = {
+                Text("La aplicación ha detectado que falta un permiso obligatorio. El modo Tiempo se ha desactivado para mantener la protección y el saldo se conserva. Para volver a utilizarlo, debes recuperar los permisos y completar el asistente.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionRecoveryDialog = false
+                    permissionRecoveryNotice = true
+                    pendingTimeModeActivation = true
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", true)
+                        .putBoolean("device_setup_in_progress", true)
+                        .putBoolean("parent_area_active", true)
+                        .apply()
+                    screen = "parent"
+                    parentSection = "device-setup-wizard"
+                }) { Text("Configurar permisos") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionRecoveryDialog = false }) { Text("Más tarde") }
+            }
+        )
+    }
+    if (showTimeModeNotActivatedDialog) {
+        AlertDialog(
+            onDismissRequest = { showTimeModeNotActivatedDialog = false },
+            title = { Text("Modo Tiempo no activado") },
+            text = {
+                Text("No se ha activado el modo Tiempo porque has salido del asistente antes de completar y verificar todos los permisos. Puedes volver a intentarlo cuando quieras desde la configuración parental.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showTimeModeNotActivatedDialog = false }) { Text("Entendido") }
+            }
+        )
     }
     if (remoteLibraryPendingImport != null) {
         val pendingPackage = remoteLibraryPendingImport!!
