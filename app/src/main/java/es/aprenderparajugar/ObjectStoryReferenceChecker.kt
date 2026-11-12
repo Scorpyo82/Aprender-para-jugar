@@ -18,36 +18,50 @@ internal object ObjectStoryReferenceChecker {
         val titles = linkedSetOf<String>()
         val errors = mutableListOf<String>()
         val root = StoryRepository.rootDirectory(context)
+        val collections = root.listFiles()
+        if (collections == null) {
+            return ObjectStoryReferenceCheck(emptyList(), listOf("No se pudo leer la biblioteca de cuentos."))
+        }
 
-        root.listFiles()
-            ?.filter { it.isDirectory && !it.name.startsWith(".") }
-            ?.forEach { collection ->
-                collection.listFiles()
-                    ?.filter { it.isDirectory && !it.name.startsWith(".") }
-                    ?.forEach { directory ->
-                        val story = runCatching { StoryRepository.read(directory) }
-                            .onFailure { errors += directory.name }
-                            .getOrNull() ?: return@forEach
-
-                        val manifestReferences = story.metadata.connectionConditions.any {
-                            it.requiredObject == objectFolder
-                        } || story.metadata.connectionAlternatives.any {
-                            it.requiredObject == objectFolder
-                        }
-
-                        val sceneReferences = story.metadata.scenes.any { sceneFolder ->
-                            val scene = runCatching { StoryRepository.readScene(story, sceneFolder).metadata }
-                                .onFailure { errors += "${story.metadata.title} / $sceneFolder" }
-                                .getOrNull() ?: return@any true
-                            scene.awardedObject == objectFolder ||
-                                scene.requiredObject == objectFolder ||
-                                objectFolder in scene.awardedObjects ||
-                                objectFolder in scene.unlockedObjects
-                        }
-
-                        if (manifestReferences || sceneReferences) titles += story.metadata.title
-                    }
+        for (collection in collections.filter { it.isDirectory && !it.name.startsWith(".") }) {
+            val directories = collection.listFiles()
+            if (directories == null) {
+                errors += collection.name
+                continue
             }
+
+            for (directory in directories.filter { it.isDirectory && !it.name.startsWith(".") }) {
+                val story = runCatching { StoryRepository.read(directory) }.getOrNull()
+                if (story == null) {
+                    errors += directory.name
+                    continue
+                }
+
+                val manifestReferences =
+                    story.metadata.connectionConditions.any { it.requiredObject == objectFolder } ||
+                    story.metadata.connectionAlternatives.any { it.requiredObject == objectFolder }
+
+                var sceneReferences = false
+                for (sceneFolder in story.metadata.scenes) {
+                    val scene = runCatching { StoryRepository.readScene(story, sceneFolder).metadata }.getOrNull()
+                    if (scene == null) {
+                        errors += "${story.metadata.title} / $sceneFolder"
+                        sceneReferences = true
+                        continue
+                    }
+                    if (
+                        scene.awardedObject == objectFolder ||
+                        scene.requiredObject == objectFolder ||
+                        objectFolder in scene.awardedObjects ||
+                        objectFolder in scene.unlockedObjects
+                    ) {
+                        sceneReferences = true
+                    }
+                }
+
+                if (manifestReferences || sceneReferences) titles += story.metadata.title
+            }
+        }
 
         return ObjectStoryReferenceCheck(titles.toList(), errors.distinct())
     }
