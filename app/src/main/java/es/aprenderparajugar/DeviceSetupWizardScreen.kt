@@ -52,6 +52,7 @@ private enum class DeviceSetupStep {
 internal fun DeviceSetupWizardScreen(
     accessibilityEnabled: Boolean,
     showPermissionRecoveryNotice: Boolean = false,
+    showTimeActivationButton: Boolean = true,
     showExitWithoutActivation: Boolean = false,
     onComplete: () -> Unit,
     onCancel: (permissionsComplete: Boolean) -> Unit
@@ -226,8 +227,12 @@ internal fun DeviceSetupWizardScreen(
                     DeviceSetupStep.COMPLETE -> {
                         Text("¡Protección preparada!", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Accesibilidad y notificaciones están activadas. Ya puedes finalizar la configuración.")
-                        Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
-                            Text("Activar modo Tiempo y finalizar")
+                        if (showTimeActivationButton) {
+                            Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
+                                Text("Activar modo Tiempo y finalizar")
+                            }
+                        } else {
+                            Text("Los permisos están verificados. Puedes volver al menú de control parental.")
                         }
                     }
                 }
@@ -242,6 +247,10 @@ internal fun DeviceSetupWizardScreen(
         } else if (showExitWithoutActivation) {
             OutlinedButton(onClick = { onCancel(true) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Salir sin activar")
+            }
+        } else {
+            OutlinedButton(onClick = { onCancel(true) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Salir de configuración")
             }
         }
     }
