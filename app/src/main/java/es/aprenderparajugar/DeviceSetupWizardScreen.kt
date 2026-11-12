@@ -248,10 +248,6 @@ internal fun DeviceSetupWizardScreen(
             OutlinedButton(onClick = { onCancel(true) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Salir sin activar")
             }
-        } else {
-            OutlinedButton(onClick = { onCancel(true) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Salir de configuración")
-            }
         }
     }
 }
