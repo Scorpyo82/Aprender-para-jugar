@@ -3283,6 +3283,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     storyObjectInventoryState.refresh(context)
                                     objectEditorReturnSection = "stories-object-library"
                                     parentSection = "stories-object-create"
+                                },
+                                onCheckDelete = { stored ->
+                                    ObjectStoryReferenceChecker.check(context, stored.folderName)
+                                },
+                                onDelete = { stored ->
+                                    runCatching {
+                                        ObjectRepository.delete(context, stored)
+                                        InventoryRepository.remove(context, stored.folderName)
+                                        ObjectUnlockRepository.remove(context, stored.folderName)
+                                        storedStoryObjects = ObjectRepository.list(context)
+                                        storyObjectInventoryState.refresh(context)
+                                        "«${stored.metadata.name}» se ha eliminado de la biblioteca."
+                                    }.getOrElse { error ->
+                                        "No se ha podido eliminar el objeto: ${error.message ?: "error desconocido"}"
+                                    }
                                 }
                             )
                         }
