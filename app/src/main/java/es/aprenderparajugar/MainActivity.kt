@@ -979,7 +979,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var feedback by cardsGameState.feedback
     var pinEntry by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
-    var parentSection by remember { mutableStateOf(if (firstLaunchNeedsSetup && !rewardMode.isStars) "device-setup-wizard" else "menu") }
+    var parentSection by remember { mutableStateOf("menu") }
     androidx.compose.runtime.LaunchedEffect(appInForeground, screen, rewardMode) {
         // Detect revoked prerequisites, pause Time mode and inform the parent.
         // Never open the permission wizard automatically: the parent chooses when to continue.
@@ -4350,15 +4350,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     setupAccessibilityEnabled = isPlayTimeAccessibilityEnabled(context)
                                 }
                             },
-                            onCancel = {
-                                // Revalidate on cancellation: never preserve Time mode
-                                // if a required permission was revoked while the app was away.
+                            onCancel = { permissionsComplete ->
+                                // Exiting from the final confirmation screen is an intentional
+                                // choice not to activate Time; permissions are already ready.
                                 val setupWasRequested = pendingTimeModeActivation
-                                if (setupWasRequested || !areMandatoryDeviceSetupPermissionsReady(context)) {
+                                if (!permissionsComplete &&
+                                    (setupWasRequested || !areMandatoryDeviceSetupPermissionsReady(context))
+                                ) {
                                     rewardMode = RewardMode.STARS
                                     preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply()
                                 }
-                                if (setupWasRequested) showTimeModeNotActivatedDialog = true
+                                if (setupWasRequested && !permissionsComplete) {
+                                    showTimeModeNotActivatedDialog = true
+                                }
                                 pendingTimeModeActivation = false
                                 permissionRecoveryNotice = false
                                 preferences.edit()
