@@ -1684,78 +1684,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (parentSection != "menu") {
-                item { TextButton(onClick = { if (parentSection == "device-setup-wizard") { if (pendingTimeModeActivation) { rewardMode = RewardMode.STARS; preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply() }; pendingTimeModeActivation = false; preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", false).apply(); parentSection = "menu" } else { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "device-setup-wizard", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } } }) { Text(if (parentSection == "game-modes") "← Volver al menú de control" else if (parentSection == "music" || parentSection == "stories-audio") "← Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Modos de juego" else if (parentSection == "stories-settings") "← Modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Objetos" else if (parentSection.startsWith("sequence-type-")) "← Secuencias" else if (parentSection == "sequence-editor-temporal") "← Biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Volver al catálogo" else "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Menú de control") } }
+                item { TextButton(onClick = { if (parentSection == "device-setup-wizard") { if (pendingTimeModeActivation) { rewardMode = RewardMode.STARS; preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply() }; pendingTimeModeActivation = false; preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", false).apply(); parentSection = "menu" } else { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "device-setup-wizard", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } } }) { Text(if (parentSection == "game-modes") "← Control parental" else if (parentSection == "music" || parentSection == "stories-audio") "← Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Modos de juego" else if (parentSection == "stories-settings") "← Modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Objetos" else if (parentSection.startsWith("sequence-type-")) "← Secuencias" else if (parentSection == "sequence-editor-temporal") "← Biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Volver al catálogo" else "← Volver a gestionar bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Volver a estadísticas" else "← Menú de control") } }
             }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        if (parentSection == "menu") "Control parental" else when (parentSection) {
-                            "game-modes" -> "Configurar actividades"; "active-games" -> "Actividades activas"
-                            "cards-settings" -> "Tarjetas"; "sequences-settings" -> "Secuencias"; "words-settings" -> "Palabras"
-                            "stories-settings" -> "Cuentos"; "stories-content-settings" -> "Gestión de cuentos"
-                            "stories-library" -> "Biblioteca de cuentos"; "stories-collections" -> "Colecciones de cuentos"
-                            "stories-objects" -> "Gestión de objetos"; "stories-object-create" -> "Editor de objetos"
-                            "stories-object-library" -> "Librería de objetos"; "stories-object-store" -> "Tienda"
-                            "stories-object-collection" -> "Colecciones de objetos"; "stories-object-inventory" -> "Inventario del niño"
-                            "words" -> "Biblioteca de tarjetas"; "categories" -> "Categorías"; "rewards" -> "Recompensas y límites"
-                            "sound-settings" -> "Ajustes de sonido"; "music" -> "Música de fondo"; "stories-audio" -> "Audio de cuentos"
-                            "typography" -> "Tipografía de los ejercicios"; "security" -> "Cambiar PIN"
-                            "device-setup" -> "Configuración del dispositivo"; "device-setup-wizard" -> "Asistente de permisos"
-                            "about" -> "Acerca de esta app"; "basic-library" -> "Descargar contenido online"
-                            "library-transfer" -> "Importar y exportar bibliotecas"; "library-export" -> "Exportar bibliotecas"
-                            "library-import" -> "Importar bibliotecas"; "library-delete" -> "Eliminar biblioteca"
-                            "statistics-menu" -> "Estadísticas"; "learning-stats" -> "Estadísticas de aprendizaje"
-                            "usage-stats" -> "Estadísticas de uso"; else -> "Configuración"
-                        },
-                        fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344)
-                    )
-                    if (parentSection != "menu") {
-                        Text(
-                            when (parentSection) {
-                                "game-modes" -> "Elige una modalidad para configurar"
-                                "active-games" -> "Activa o desactiva las modalidades disponibles para el periodo de pruebas"
-                                "cards-settings" -> "Opciones específicas del modo Tarjetas"
-                                "sequences-settings" -> "Opciones del modo Secuencias"
-                                "words-settings" -> "Opciones del modo Palabras"
-                                "stories-settings" -> "Organiza los cuentos y sus recursos"
-                                "stories-content-settings" -> "Administra las historias y sus colecciones"
-                                "stories-library" -> "Crea, edita y organiza cuentos ilustrados"
-                                "stories-collections" -> "Organiza cuentos en colecciones, sagas y universos narrativos"
-                                "stories-objects" -> "Administra los objetos y el inventario"
-                                "stories-object-create" -> "Crea o edita los datos de un objeto"
-                                "stories-object-library" -> "Crea, consulta, filtra y edita los objetos"
-                                "stories-object-store" -> "Gestiona la disponibilidad, los bloqueos y la pertenencia al inventario"
-                                "stories-object-collection" -> "Crea colecciones y reasigna objetos"
-                                "stories-object-inventory" -> "Consulta y retira los objetos que posee el niño"
-                                "words" -> "Gestiona las tarjetas y sus imágenes"
-                                "categories" -> "Organiza el vocabulario"
-                                "rewards" -> "Configura Minutos/Estrellas, recompensas y límites"
-                                "sound-settings" -> "Configura el sonido general y el audio de los cuentos"
-                                "music" -> "Configura la música de fondo"
-                                "stories-audio" -> "Ajusta el volumen ambiental durante las narraciones"
-                                "typography" -> "Elige la letra que se utilizará en los ejercicios"
-                                "security" -> "Protege el acceso y administra el saldo"
-                                "device-setup" -> "Permisos y accesos necesarios para la protección"
-                                "device-setup-wizard" -> "Configuración guiada de los permisos obligatorios"
-                                "about" -> "Información, propósito y créditos"
-                                "basic-library" -> "Explora, descarga y actualiza paquetes de contenido desde Internet"
-                                "library-transfer" -> "Elige si quieres importar o exportar bibliotecas"
-                                "library-export" -> "Selecciona qué categorías y estadísticas quieres guardar"
-                                "library-import" -> "Revisa el contenido del paquete antes de importarlo"
-                                "library-delete" -> "Elimina de forma permanente una o varias bibliotecas"
-                                "statistics-menu" -> "Consulta el aprendizaje y el uso de las modalidades"
-                                "learning-stats" -> "Observaciones orientativas basadas en los intentos registrados"
-                                "usage-stats" -> "Partidas completadas por modalidad, tipo y dificultad"
-                                else -> ""
-                            },
-                            fontSize = 15.sp, color = Color(0xFF667085)
-                        )
-                    } else {
+            if (parentSection == "menu") {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Control parental", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344))
                         Text("Configura el contenido y las opciones de la aplicación.", fontSize = 15.sp, color = Color(0xFF667085))
                     }
                 }
-            }
-            if (parentSection == "menu") {
+            }            if (parentSection == "menu") {
                 item {
                     RewardModeSelectorCard(
                         rewardMode = rewardMode,
