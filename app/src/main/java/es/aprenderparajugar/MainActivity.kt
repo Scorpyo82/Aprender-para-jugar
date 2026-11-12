@@ -4360,6 +4360,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                                 if (setupWasRequested) showTimeModeNotActivatedDialog = true
                                 pendingTimeModeActivation = false
+                                permissionRecoveryNotice = false
                                 preferences.edit()
                                     .putBoolean("pending_time_mode_activation", false)
                                     .putBoolean("device_setup_in_progress", false)
@@ -5402,7 +5403,12 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             onDismissRequest = { showPermissionRecoveryDialog = false },
             title = { Text("Protección pausada") },
             text = {
-                Text("La aplicación ha detectado que falta un permiso obligatorio. El modo Tiempo se ha desactivado para mantener la protección y el saldo se conserva. Para volver a utilizarlo, debes recuperar los permisos y completar el asistente.")
+                val missingPermissions = buildList {
+                    if (!isPlayTimeAccessibilityEnabled(context)) add("Accesibilidad")
+                    if (!isNotificationPermissionReady(context)) add("Notificaciones")
+                }
+                val missingText = missingPermissions.joinToString(" y ")
+                Text("La aplicación ha detectado que falta este permiso: $missingText. El modo Tiempo se ha desactivado para mantener la protección y el saldo se conserva. Puedes recuperar el permiso ahora o hacerlo más tarde.")
             },
             confirmButton = {
                 TextButton(onClick = {
