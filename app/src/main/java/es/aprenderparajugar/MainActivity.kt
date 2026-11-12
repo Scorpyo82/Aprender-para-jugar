@@ -1333,7 +1333,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "sequence-result" -> { screen = "home" }
             "pin-setup" -> Unit
-            "parent-pin", "exit-pin" -> { screen = "home"; pinEntry = ""; pinError = false }
+            "parent-pin", "exit-pin" -> { screen = "home"; permissionRecoveryEntryPending = false; pinEntry = ""; pinError = false }
             "exercise" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
             "result" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
             else -> { screen = "home"; parentSection = "menu" }
@@ -1678,7 +1678,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     pinError = true
                 }
             },
-            onCancel = { screen = "home"; pinEntry = ""; pinError = false },
+            onCancel = { screen = "home"; permissionRecoveryEntryPending = false; pinEntry = ""; pinError = false },
             cancelLabel = "Volver al inicio"
         )
     } else if (screen == "parent") {
