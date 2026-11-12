@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -15,6 +16,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,11 +38,17 @@ internal fun StoryObjectLibraryScreen(
     selectedCollection: String,
     onCollectionSelected: (String) -> Unit,
     onCreate: () -> Unit,
-    onEdit: (StoredObject) -> Unit
+    onEdit: (StoredObject) -> Unit,
+    onCheckDelete: (StoredObject) -> ObjectStoryReferenceCheck,
+    onDelete: (StoredObject) -> String
 ) {
+    var pendingDelete by remember { mutableStateOf<StoredObject?>(null) }
+    var deleteCheck by remember { mutableStateOf<ObjectStoryReferenceCheck?>(null) }
+    var deleteMessage by remember { mutableStateOf("") }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Librería de objetos", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear objeto") }
+        if (deleteMessage.isNotBlank()) Text(deleteMessage, color = Color(0xFF667085), fontSize = 13.sp)
         var expanded by remember { mutableStateOf(false) }
         Column {
             Text("Filtrar por colección", fontWeight = FontWeight.SemiBold)
@@ -79,11 +87,59 @@ internal fun StoryObjectLibraryScreen(
                             Text(stored.metadata.name, fontWeight = FontWeight.SemiBold)
                             Text(collections.firstOrNull { ObjectRepository.collectionFolderName(it) == stored.collection } ?: stored.collection, fontSize = 12.sp, color = Color(0xFF667085))
                         }
-                        OutlinedButton(onClick = { onEdit(stored) }) { Text("Editar") }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            OutlinedButton(onClick = { onEdit(stored) }) { Text("Editar") }
+                            OutlinedButton(onClick = {
+                                pendingDelete = stored
+                                deleteCheck = onCheckDelete(stored)
+                            }) { Text("Eliminar") }
+                        }
                     }
                 }
             }
         }
+    }
+
+    val selectedForDeletion = pendingDelete
+    val check = deleteCheck
+    if (selectedForDeletion != null && check != null) {
+        val blocked = !check.canDelete
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null; deleteCheck = null },
+            title = {
+                Text(if (blocked) "No se puede eliminar este objeto" else "Confirmar eliminación")
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Objeto: ${selectedForDeletion.metadata.name}")
+                    if (check.storyTitles.isNotEmpty()) {
+                        Text("Este objeto está utilizado en los siguientes cuentos:")
+                        check.storyTitles.forEach { Text("• $it") }
+                        Text("Edita esos cuentos y elimina todas las referencias al objeto antes de volver a intentarlo.")
+                    }
+                    if (check.scanErrors.isNotEmpty()) {
+                        Text("No se ha podido comprobar por completo la biblioteca de cuentos. Por seguridad, no se permitirá eliminar el objeto.")
+                    }
+                    if (!blocked) {
+                        Text("Se eliminará definitivamente de la biblioteca. Esta acción no se puede deshacer.")
+                    }
+                }
+            },
+            confirmButton = {
+                if (!blocked) {
+                    TextButton(onClick = {
+                        deleteMessage = onDelete(selectedForDeletion)
+                        pendingDelete = null
+                        deleteCheck = null
+                    }) { Text("Eliminar definitivamente") }
+                } else {
+                    TextButton(onClick = { pendingDelete = null; deleteCheck = null }) { Text("Entendido") }
+                }
+            },
+            dismissButton = {
+                if (!blocked) TextButton(onClick = { pendingDelete = null; deleteCheck = null }) { Text("Cancelar") }
+            }
+        )
     }
 }
 
