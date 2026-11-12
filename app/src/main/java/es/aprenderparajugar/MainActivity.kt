@@ -4336,10 +4336,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onComplete = {
                                 val ready = areMandatoryDeviceSetupPermissionsReady(context)
                                 if (ready) {
-                                    if (pendingTimeModeActivation) {
-                                        rewardMode = RewardMode.TIME
-                                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
-                                    }
+                                    rewardMode = RewardMode.TIME
+                                    preferences.edit().putString(RewardMode.PREFERENCE_KEY, "time").apply()
                                     pendingTimeModeActivation = false
                                     permissionRecoveryNotice = false
                                     preferences.edit()
