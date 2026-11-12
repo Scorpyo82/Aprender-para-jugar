@@ -5404,7 +5404,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
     if (showPermissionRecoveryDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionRecoveryDialog = false },
-            title = { Text("Protección pausada") },
+            title = { Text("Se ha detectado un cambio en los permisos") },
             text = {
                 val missingPermissions = buildList {
                     if (!isPlayTimeAccessibilityEnabled(context)) add("Accesibilidad")
