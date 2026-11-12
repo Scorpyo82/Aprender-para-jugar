@@ -53,7 +53,7 @@ internal fun DeviceSetupWizardScreen(
     accessibilityEnabled: Boolean,
     showPermissionRecoveryNotice: Boolean = false,
     onComplete: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: (permissionsComplete: Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -226,7 +226,7 @@ internal fun DeviceSetupWizardScreen(
                         Text("¡Protección preparada!", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Accesibilidad y notificaciones están activadas. Ya puedes finalizar la configuración.")
                         Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
-                            Text("Finalizar")
+                            Text("Activar modo Tiempo y finalizar")
                         }
                     }
                 }
@@ -235,8 +235,8 @@ internal fun DeviceSetupWizardScreen(
 
         Spacer(Modifier.height(2.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                Text("Salir")
+            OutlinedButton(onClick = { onCancel(step == DeviceSetupStep.COMPLETE) }, modifier = Modifier.weight(1f)) {
+                Text("Salir sin activar")
             }
             if (step != DeviceSetupStep.INTRO && step != DeviceSetupStep.COMPLETE) {
                 OutlinedButton(
