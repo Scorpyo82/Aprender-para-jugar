@@ -125,7 +125,7 @@ internal fun DeviceSetupWizardScreen(
         modifier = Modifier.fillMaxWidth().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Preparar la protección", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Configurar permisos de la aplicación", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
         if (showPermissionRecoveryNotice) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -141,7 +141,7 @@ internal fun DeviceSetupWizardScreen(
             }
         }
         Text(
-            "Te guiaremos paso a paso. La configuración solo terminará cuando podamos comprobar los permisos obligatorios.",
+            "Te guiaremos paso a paso para configurar los permisos necesarios para controlar el tiempo de juego.",
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
@@ -225,7 +225,7 @@ internal fun DeviceSetupWizardScreen(
                         }
                     }
                     DeviceSetupStep.COMPLETE -> {
-                        Text("¡Protección preparada!", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("¡Permisos configurados correctamente!", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Accesibilidad y notificaciones están activadas. Ya puedes finalizar la configuración.")
                         if (showTimeActivationButton) {
                             Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
