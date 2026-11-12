@@ -191,6 +191,21 @@ object ObjectRepository {
         }
     }
 
+    /** Elimina físicamente un objeto. La comprobación de referencias narrativas se realiza antes desde la interfaz. */
+    fun delete(context: Context, stored: StoredObject) {
+        val root = rootDirectory(context).canonicalFile
+        val target = stored.directory.canonicalFile
+        require(target.toPath().startsWith(root.toPath()) && target.parentFile?.parentFile == root) {
+            "La ubicación del objeto no es válida."
+        }
+        require(target.name == stored.folderName && target.isDirectory) {
+            "El objeto ya no está disponible en su ubicación original."
+        }
+        check(target.walkBottomUp().all { it.delete() || !it.exists() }) {
+            "No se pudo eliminar todo el contenido del objeto."
+        }
+    }
+
     /** Reasigna un objeto a otra colección conservando su identidad y referencias locales. */
     fun moveToCollection(context: Context, stored: StoredObject, collection: String): StoredObject {
         val safeCollection = safePathSegment(collection, "La colección")
