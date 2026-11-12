@@ -5438,7 +5438,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             onDismissRequest = { showTimeModeNotActivatedDialog = false },
             title = { Text("Modo Tiempo no activado") },
             text = {
-                Text("No se ha activado el modo Tiempo porque has salido del asistente antes de completar y verificar todos los permisos. Puedes volver a intentarlo cuando quieras desde la configuración parental.")
+                Text("No se ha activado el modo Tiempo porque has cancelado el asistente antes de completar la configuración. Puedes volver a intentarlo cuando quieras desde la configuración parental.")
             },
             confirmButton = {
                 TextButton(onClick = { showTimeModeNotActivatedDialog = false }) { Text("Entendido") }
