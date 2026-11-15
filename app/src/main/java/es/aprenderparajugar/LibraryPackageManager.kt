@@ -306,9 +306,9 @@ internal object LibraryPackageManager {
                     } else emptyMap()
                     val declaredCounts = category.optJSONObject("sequenceTypeCounts")
                     if (modality == ContentStorage.Modality.SECUENCIAS && declaredCounts != null) {
-                        val actual = JSONObject()
-                        sequenceCounts.forEach { (type, count) -> actual.put(type.jsonValue, count) }
-                        require(actual.toString() == declaredCounts.toString()) {
+                        val countsMatch = declaredCounts.length() == sequenceCounts.size &&
+                            sequenceCounts.all { (type, count) -> declaredCounts.optInt(type.jsonValue, -1) == count }
+                        require(countsMatch) {
                             "El recuento por tipo de la categoría $name no coincide con sus ejercicios."
                         }
                     }
