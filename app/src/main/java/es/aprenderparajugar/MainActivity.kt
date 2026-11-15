@@ -1213,7 +1213,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 transferPackage?.let { LibraryPackageManager.discard(it) }
                 val inspected = LibraryPackageManager.inspect(context, uri)
                 transferPackage = inspected
-                transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
+                transferImportCategories = inspected.modalities.associate { info ->
+                    info.modality to info.categories.flatMap { category ->
+                        if (info.modality == ContentStorage.Modality.SECUENCIAS) {
+                            category.sequenceTypeCounts.keys.map { type -> LibraryPackageManager.sequenceSelectionKey(category.directory, type) }
+                        } else listOf(category.directory)
+                    }.toSet()
+                }
                 transferImportStories = inspected.stories.map { it.key }.toSet()
                 transferImportObjects = emptySet()
                 transferObjectConflictDecisions = emptyMap()
@@ -2153,22 +2159,62 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 if (categoriesForModality.isEmpty()) {
                                     Text("No hay categorías con ejercicios guardados.", fontSize = 13.sp, color = Color(0xFF667085))
                                 } else {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = categoriesForModality.all { it.directory in transferExportCategories[modality].orEmpty() },
-                                            onCheckedChange = { checked -> transferExportCategories = transferExportCategories.toMutableMap().also { it[modality] = if (checked) categoriesForModality.map { category -> category.directory }.toSet() else emptySet() } }
-                                        )
-                                        Text("Seleccionar todas las categorías")
-                                    }
-                                    categoriesForModality.forEach { category ->
+                                    if (modality == ContentStorage.Modality.SECUENCIAS) {
+                                        val allKeys = categoriesForModality.flatMap { category ->
+                                            category.sequenceTypeCounts.keys.map { type -> LibraryPackageManager.sequenceSelectionKey(category.directory, type) }
+                                        }.toSet()
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Checkbox(
-                                                checked = category.directory in transferExportCategories[modality].orEmpty(),
-                                                onCheckedChange = { checked -> transferExportCategories = transferExportCategories.toMutableMap().also { map -> map[modality] = map[modality].orEmpty().toMutableSet().also { set -> if (checked) set.add(category.directory) else set.remove(category.directory) } } }
+                                                checked = allKeys.isNotEmpty() && allKeys.all { it in transferExportCategories[modality].orEmpty() },
+                                                onCheckedChange = { checked ->
+                                                    transferExportCategories = transferExportCategories.toMutableMap().also { it[modality] = if (checked) allKeys else emptySet() }
+                                                }
                                             )
-                                            Column {
-                                                Text(category.name)
-                                                Text("${category.exerciseCount} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                            Text("Seleccionar todos los tipos y categorías")
+                                        }
+                                        categoriesForModality.forEach { category ->
+                                            Text(category.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
+                                            SequenceType.entries.forEach { type ->
+                                                val count = category.sequenceTypeCounts[type] ?: 0
+                                                if (count > 0) {
+                                                    val key = LibraryPackageManager.sequenceSelectionKey(category.directory, type)
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Checkbox(
+                                                            checked = key in transferExportCategories[modality].orEmpty(),
+                                                            onCheckedChange = { checked ->
+                                                                transferExportCategories = transferExportCategories.toMutableMap().also { map ->
+                                                                    map[modality] = map[modality].orEmpty().toMutableSet().also { set ->
+                                                                        if (checked) set.add(key) else set.remove(key)
+                                                                    }
+                                                                }
+                                                            }
+                                                        )
+                                                        Column {
+                                                            Text(type.displayName)
+                                                            Text("$count ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = categoriesForModality.all { it.directory in transferExportCategories[modality].orEmpty() },
+                                                onCheckedChange = { checked -> transferExportCategories = transferExportCategories.toMutableMap().also { it[modality] = if (checked) categoriesForModality.map { category -> category.directory }.toSet() else emptySet() } }
+                                            )
+                                            Text("Seleccionar todas las categorías")
+                                        }
+                                        categoriesForModality.forEach { category ->
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = category.directory in transferExportCategories[modality].orEmpty(),
+                                                    onCheckedChange = { checked -> transferExportCategories = transferExportCategories.toMutableMap().also { map -> map[modality] = map[modality].orEmpty().toMutableSet().also { set -> if (checked) set.add(category.directory) else set.remove(category.directory) } } }
+                                                )
+                                                Column {
+                                                    Text(category.name)
+                                                    Text("${category.exerciseCount} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                                }
                                             }
                                         }
                                     }
@@ -2700,14 +2746,40 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 item {
                                     Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                     modalityInfo.categories.forEach { category ->
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                checked = category.directory in transferImportCategories[modality].orEmpty(),
-                                                onCheckedChange = { checked -> transferImportCategories = transferImportCategories.toMutableMap().also { map -> map[modality] = map[modality].orEmpty().toMutableSet().also { set -> if (checked) set.add(category.directory) else set.remove(category.directory) } } }
-                                            )
-                                            Column {
-                                                Text(category.name)
-                                                Text("${category.exerciseCount} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                        if (modality == ContentStorage.Modality.SECUENCIAS) {
+                                            Text(category.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
+                                            SequenceType.entries.forEach { type ->
+                                                val count = category.sequenceTypeCounts[type] ?: 0
+                                                if (count > 0) {
+                                                    val key = LibraryPackageManager.sequenceSelectionKey(category.directory, type)
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Checkbox(
+                                                            checked = key in transferImportCategories[modality].orEmpty(),
+                                                            onCheckedChange = { checked ->
+                                                                transferImportCategories = transferImportCategories.toMutableMap().also { map ->
+                                                                    map[modality] = map[modality].orEmpty().toMutableSet().also { set ->
+                                                                        if (checked) set.add(key) else set.remove(key)
+                                                                    }
+                                                                }
+                                                            }
+                                                        )
+                                                        Column {
+                                                            Text(type.displayName)
+                                                            Text("$count ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = category.directory in transferImportCategories[modality].orEmpty(),
+                                                    onCheckedChange = { checked -> transferImportCategories = transferImportCategories.toMutableMap().also { map -> map[modality] = map[modality].orEmpty().toMutableSet().also { set -> if (checked) set.add(category.directory) else set.remove(category.directory) } } }
+                                                )
+                                                Column {
+                                                    Text(category.name)
+                                                    Text("${category.exerciseCount} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                                }
                                             }
                                         }
                                     }
@@ -5507,7 +5579,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             }
                             transferPackage?.let { LibraryPackageManager.discard(it) }
                             transferPackage = inspected
-                            transferImportCategories = inspected.modalities.associate { info -> info.modality to info.categories.map { it.directory }.toSet() }
+                            transferImportCategories = inspected.modalities.associate { info ->
+                    info.modality to info.categories.flatMap { category ->
+                        if (info.modality == ContentStorage.Modality.SECUENCIAS) {
+                            category.sequenceTypeCounts.keys.map { type -> LibraryPackageManager.sequenceSelectionKey(category.directory, type) }
+                        } else listOf(category.directory)
+                    }.toSet()
+                }
                             transferImportStories = inspected.stories.map { it.key }.toSet()
                             transferImportObjects = emptySet()
                             transferObjectConflictDecisions = emptyMap()
