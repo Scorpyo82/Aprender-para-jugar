@@ -17,7 +17,39 @@ internal object LibraryPackageManager {
     private const val EXERCISE_FILE = "ejercicio.json"
     private const val STATISTICS_FILE = "statistics.json"
 
-    data class CategoryInfo(val directory: String, val name: String, val exerciseCount: Int)
+    data class CategoryInfo(
+        val directory: String,
+        val name: String,
+        val exerciseCount: Int,
+        val sequenceTypeCounts: Map<SequenceType, Int> = emptyMap()
+    )
+
+    // Las categorías físicas siguen siendo modalidad/categoría. En Secuencias,
+    // cada selección se identifica por categoría + tipo, sin alterar las rutas.
+    fun sequenceSelectionKey(directory: String, type: SequenceType): String =
+        "$directory::${type.jsonValue}"
+
+    private fun selectedCategoryDirectories(
+        modality: ContentStorage.Modality,
+        selection: Set<String>
+    ): Set<String> = if (modality == ContentStorage.Modality.SECUENCIAS) {
+        selection.map { it.substringBefore("::") }.toSet()
+    } else selection
+
+    private fun isExerciseSelected(
+        modality: ContentStorage.Modality,
+        categoryDirectory: String,
+        content: Any,
+        selection: Set<String>
+    ): Boolean {
+        if (modality != ContentStorage.Modality.SECUENCIAS) return categoryDirectory in selection
+        val selectedForCategory = selection.filter { it.substringBefore("::") == categoryDirectory }
+        if (selectedForCategory.isEmpty()) return false
+        // Compatibilidad con selecciones antiguas que solo contenían el directorio.
+        if (categoryDirectory in selection) return true
+        val sequence = content as? SequenceExerciseContent ?: return false
+        return selectedForCategory.any { it.substringAfter("::", "") == sequence.type.jsonValue }
+    }
     data class ModalityInfo(
         val modality: ContentStorage.Modality,
         val categories: List<CategoryInfo>,
@@ -52,7 +84,14 @@ internal object LibraryPackageManager {
         val root = ContentStorage.modalityDirectory(context, modality)
         return root.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }?.mapNotNull { dir ->
             val exercises = ExerciseRepository.list(context, modality).filter { it.directory.parentFile?.canonicalFile == dir.canonicalFile }
-            if (exercises.isEmpty()) null else CategoryInfo(dir.name, exercises.first().metadata.category, exercises.size)
+            if (exercises.isEmpty()) null else CategoryInfo(
+                dir.name,
+                exercises.first().metadata.category,
+                exercises.size,
+                if (modality == ContentStorage.Modality.SECUENCIAS) {
+                    exercises.groupingBy { (it.content as SequenceExerciseContent).type }.eachCount()
+                } else emptyMap()
+            )
         }?.sortedBy { it.name.lowercase() } ?: emptyList()
     }
 
@@ -74,21 +113,32 @@ internal object LibraryPackageManager {
             val modalitiesJson = JSONArray()
             ContentStorage.Modality.entries.forEach { modality ->
                 val selected = selectedCategories[modality].orEmpty()
-                if (selected.isNotEmpty()) {
+                val selectedDirectories = selectedCategoryDirectories(modality, selected)
+                if (selectedDirectories.isNotEmpty()) {
                     val categoriesJson = JSONArray()
-                    selected.sorted().forEach { categoryDirectoryName ->
+                    selectedDirectories.sorted().forEach { categoryDirectoryName ->
                         val categoryDir = File(ContentStorage.modalityDirectory(context, modality), categoryDirectoryName).canonicalFile
                         val root = ContentStorage.modalityDirectory(context, modality).canonicalFile
                         require(categoryDir.parentFile == root && categoryDir.isDirectory) { "La categoría seleccionada ya no está disponible." }
-                        val validExercises = ExerciseRepository.list(context, modality).filter { it.directory.parentFile?.canonicalFile == categoryDir }
-                        require(validExercises.isNotEmpty()) { "La categoría ${categoryDir.name} no contiene ejercicios válidos." }
+                        val allExercises = ExerciseRepository.list(context, modality).filter { it.directory.parentFile?.canonicalFile == categoryDir }
+                        val validExercises = allExercises.filter { exercise ->
+                            isExerciseSelected(modality, categoryDir.name, exercise.content, selected)
+                        }
+                        require(validExercises.isNotEmpty()) { "La categoría ${categoryDir.name} no contiene ejercicios válidos para la selección." }
                         validExercises.forEach { exercise ->
                             val relative = "${modality.directoryName}/${categoryDir.name}/${exercise.directory.name}"
                             addDirectory(zip, exercise.directory, relative, learningStatisticsModalities.contains(modality))
                         }
-                        categoriesJson.put(JSONObject().put("directory", categoryDir.name)
+                        val categoryManifest = JSONObject().put("directory", categoryDir.name)
                             .put("name", validExercises.first().metadata.category)
-                            .put("exerciseCount", validExercises.size))
+                            .put("exerciseCount", validExercises.size)
+                        if (modality == ContentStorage.Modality.SECUENCIAS) {
+                            val counts = JSONObject()
+                            validExercises.groupingBy { (it.content as SequenceExerciseContent).type.jsonValue }
+                                .eachCount().forEach { (type, count) -> counts.put(type, count) }
+                            categoryManifest.put("sequenceTypeCounts", counts)
+                        }
+                        categoriesJson.put(categoryManifest)
                     }
                     val includeLearning = learningStatisticsModalities.contains(modality)
                     val includeUsage = usageStatisticsModalities.contains(modality)
@@ -251,7 +301,18 @@ internal object LibraryPackageManager {
                             require(json.optInt("schemaVersion", -1) == 1) { "Las estadísticas de ${stored.metadata.title} no son compatibles." }
                         }
                     }
-                    CategoryInfo(directory, name, exerciseDirs.size)
+                    val sequenceCounts = if (modality == ContentStorage.Modality.SECUENCIAS) {
+                        exerciseDirs.groupingBy { (ExerciseRepository.read(it).content as SequenceExerciseContent).type }.eachCount()
+                    } else emptyMap()
+                    val declaredCounts = category.optJSONObject("sequenceTypeCounts")
+                    if (modality == ContentStorage.Modality.SECUENCIAS && declaredCounts != null) {
+                        val actual = JSONObject()
+                        sequenceCounts.forEach { (type, count) -> actual.put(type.jsonValue, count) }
+                        require(actual.toString() == declaredCounts.toString()) {
+                            "El recuento por tipo de la categoría $name no coincide con sus ejercicios."
+                        }
+                    }
+                    CategoryInfo(directory, name, exerciseDirs.size, sequenceCounts)
                 }
                 val includesUsage = item.optBoolean("includesUsageStatistics")
                 val usageFile = File(staging, "${modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}")
@@ -477,11 +538,13 @@ internal object LibraryPackageManager {
         packageInfo.modalities.forEach { modalityInfo ->
             val modality = modalityInfo.modality
             val localExercises = ExerciseRepository.list(context, modality)
-            modalityInfo.categories.filter { it.directory in selectedCategories[modality].orEmpty() }.forEach { category ->
+            val selected = selectedCategories[modality].orEmpty()
+            modalityInfo.categories.filter { it.directory in selectedCategoryDirectories(modality, selected) }.forEach { category ->
                 val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
                 val targetCategory = File(ContentStorage.modalityDirectory(context, modality), category.directory)
                 sourceCategory.listFiles()?.filter { it.isDirectory }?.forEach { incomingDirectory ->
                     val incoming = ExerciseRepository.read(incomingDirectory)
+                    if (!isExerciseSelected(modality, category.directory, incoming.content, selected)) return@forEach
                     val matching = localExercises.firstOrNull {
                         it.metadata.category.equals(incoming.metadata.category, true) &&
                             it.metadata.title.equals(incoming.metadata.title, true)
@@ -661,7 +724,7 @@ internal object LibraryPackageManager {
             packageInfo.modalities.forEach { modalityInfo ->
                 val modality = modalityInfo.modality
                 val selected = selectedCategories[modality].orEmpty()
-                modalityInfo.categories.filter { it.directory in selected }.forEach { category ->
+                modalityInfo.categories.filter { it.directory in selectedCategoryDirectories(modality, selected) }.forEach { category ->
                     val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
                     val targetCategory = File(ContentStorage.modalityDirectory(context, modality), category.directory)
                     val categoryExisted = targetCategory.isDirectory
@@ -669,6 +732,7 @@ internal object LibraryPackageManager {
                     if (!categoryExisted) rollbackTargets.add(targetCategory to null)
                     sourceCategory.listFiles()?.filter { it.isDirectory }?.forEach { incoming ->
                         val incomingStored = ExerciseRepository.read(incoming)
+                        if (!isExerciseSelected(modality, category.directory, incomingStored.content, selected)) return@forEach
                         val existing = ExerciseRepository.list(context, modality).firstOrNull {
                             it.metadata.category.equals(category.name, true) &&
                                 it.metadata.title.equals(incomingStored.metadata.title, true)
