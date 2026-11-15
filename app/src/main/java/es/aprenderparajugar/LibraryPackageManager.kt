@@ -17,17 +17,22 @@ internal object LibraryPackageManager {
     private const val EXERCISE_FILE = "ejercicio.json"
     private const val STATISTICS_FILE = "statistics.json"
 
+    data class SequenceExerciseInfo(val directory: String, val title: String, val type: SequenceType)
     data class CategoryInfo(
         val directory: String,
         val name: String,
         val exerciseCount: Int,
-        val sequenceTypeCounts: Map<SequenceType, Int> = emptyMap()
+        val sequenceTypeCounts: Map<SequenceType, Int> = emptyMap(),
+        val sequenceExercises: List<SequenceExerciseInfo> = emptyList()
     )
 
-    // Las categorías físicas siguen siendo modalidad/categoría. En Secuencias,
-    // cada selección se identifica por categoría + tipo, sin alterar las rutas.
+    // La selección conserva la jerarquía categoría/tipo/ejercicio, sin cambiar
+    // la estructura física de carpetas del paquete.
     fun sequenceSelectionKey(directory: String, type: SequenceType): String =
         "$directory::${type.jsonValue}"
+
+    fun sequenceExerciseSelectionKey(directory: String, type: SequenceType, exerciseDirectory: String): String =
+        "$directory::${type.jsonValue}::$exerciseDirectory"
 
     private fun selectedCategoryDirectories(
         modality: ContentStorage.Modality,
@@ -39,16 +44,16 @@ internal object LibraryPackageManager {
     private fun isExerciseSelected(
         modality: ContentStorage.Modality,
         categoryDirectory: String,
+        exerciseDirectory: String,
         content: Any,
         selection: Set<String>
     ): Boolean {
         if (modality != ContentStorage.Modality.SECUENCIAS) return categoryDirectory in selection
-        val selectedForCategory = selection.filter { it.substringBefore("::") == categoryDirectory }
-        if (selectedForCategory.isEmpty()) return false
-        // Compatibilidad con selecciones antiguas que solo contenían el directorio.
         if (categoryDirectory in selection) return true
         val sequence = content as? SequenceExerciseContent ?: return false
-        return selectedForCategory.any { it.substringAfter("::", "") == sequence.type.jsonValue }
+        val typeKey = sequenceSelectionKey(categoryDirectory, sequence.type)
+        return typeKey in selection ||
+            sequenceExerciseSelectionKey(categoryDirectory, sequence.type, exerciseDirectory) in selection
     }
     data class ModalityInfo(
         val modality: ContentStorage.Modality,
@@ -90,7 +95,13 @@ internal object LibraryPackageManager {
                 exercises.size,
                 if (modality == ContentStorage.Modality.SECUENCIAS) {
                     exercises.groupingBy { (it.content as SequenceExerciseContent).type }.eachCount()
-                } else emptyMap()
+                } else emptyMap(),
+                if (modality == ContentStorage.Modality.SECUENCIAS) {
+                    exercises.map { stored ->
+                        SequenceExerciseInfo(stored.directory.name, stored.metadata.title,
+                            (stored.content as SequenceExerciseContent).type)
+                    }
+                } else emptyList()
             )
         }?.sortedBy { it.name.lowercase() } ?: emptyList()
     }
@@ -122,7 +133,7 @@ internal object LibraryPackageManager {
                         require(categoryDir.parentFile == root && categoryDir.isDirectory) { "La categoría seleccionada ya no está disponible." }
                         val allExercises = ExerciseRepository.list(context, modality).filter { it.directory.parentFile?.canonicalFile == categoryDir }
                         val validExercises = allExercises.filter { exercise ->
-                            isExerciseSelected(modality, categoryDir.name, exercise.content, selected)
+                            isExerciseSelected(modality, categoryDir.name, exercise.directory.name, exercise.content, selected)
                         }
                         require(validExercises.isNotEmpty()) { "La categoría ${categoryDir.name} no contiene ejercicios válidos para la selección." }
                         validExercises.forEach { exercise ->
@@ -312,7 +323,14 @@ internal object LibraryPackageManager {
                             "El recuento por tipo de la categoría $name no coincide con sus ejercicios."
                         }
                     }
-                    CategoryInfo(directory, name, exerciseDirs.size, sequenceCounts)
+                    val sequenceExercises = if (modality == ContentStorage.Modality.SECUENCIAS) {
+                        exerciseDirs.map { exerciseDir ->
+                            val stored = ExerciseRepository.read(exerciseDir)
+                            SequenceExerciseInfo(exerciseDir.name, stored.metadata.title,
+                                (stored.content as SequenceExerciseContent).type)
+                        }
+                    } else emptyList()
+                    CategoryInfo(directory, name, exerciseDirs.size, sequenceCounts, sequenceExercises)
                 }
                 val includesUsage = item.optBoolean("includesUsageStatistics")
                 val usageFile = File(staging, "${modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}")
@@ -544,7 +562,7 @@ internal object LibraryPackageManager {
                 val targetCategory = File(ContentStorage.modalityDirectory(context, modality), category.directory)
                 sourceCategory.listFiles()?.filter { it.isDirectory }?.forEach { incomingDirectory ->
                     val incoming = ExerciseRepository.read(incomingDirectory)
-                    if (!isExerciseSelected(modality, category.directory, incoming.content, selected)) return@forEach
+                    if (!isExerciseSelected(modality, category.directory, incomingDirectory.name, incoming.content, selected)) return@forEach
                     val matching = localExercises.firstOrNull {
                         it.metadata.category.equals(incoming.metadata.category, true) &&
                             it.metadata.title.equals(incoming.metadata.title, true)
