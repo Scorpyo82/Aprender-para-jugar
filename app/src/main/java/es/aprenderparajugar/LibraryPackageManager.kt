@@ -750,7 +750,7 @@ internal object LibraryPackageManager {
                     if (!categoryExisted) rollbackTargets.add(targetCategory to null)
                     sourceCategory.listFiles()?.filter { it.isDirectory }?.forEach { incoming ->
                         val incomingStored = ExerciseRepository.read(incoming)
-                        if (!isExerciseSelected(modality, category.directory, incomingStored.content, selected)) return@forEach
+                        if (!isExerciseSelected(modality, category.directory, incoming.name, incomingStored.content, selected)) return@forEach
                         val existing = ExerciseRepository.list(context, modality).firstOrNull {
                             it.metadata.category.equals(category.name, true) &&
                                 it.metadata.title.equals(incomingStored.metadata.title, true)
