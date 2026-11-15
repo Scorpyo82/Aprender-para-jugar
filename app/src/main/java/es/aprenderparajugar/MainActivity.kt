@@ -2169,38 +2169,76 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     Text("No hay categorías con ejercicios guardados.", fontSize = 13.sp, color = Color(0xFF667085))
                                 } else {
                                     if (modality == ContentStorage.Modality.SECUENCIAS) {
-                                        val allKeys = categoriesForModality.flatMap { category ->
-                                            category.sequenceTypeCounts.keys.map { type -> LibraryPackageManager.sequenceSelectionKey(category.directory, type) }
-                                        }.toSet()
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                checked = allKeys.isNotEmpty() && allKeys.all { it in transferExportCategories[modality].orEmpty() },
-                                                onCheckedChange = { checked ->
-                                                    transferExportCategories = transferExportCategories.toMutableMap().also { it[modality] = if (checked) allKeys else emptySet() }
+                                        val selected = transferExportCategories[modality].orEmpty()
+                                        SequenceType.entries.forEach { type ->
+                                            val exercisesOfType = categoriesForModality.flatMap { category ->
+                                                category.sequenceExercises.filter { it.type == type }.map { exercise ->
+                                                    LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
                                                 }
-                                            )
-                                            Text("Seleccionar todos los tipos y categorías")
-                                        }
-                                        categoriesForModality.forEach { category ->
-                                            Text(category.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
-                                            SequenceType.entries.forEach { type ->
-                                                val count = category.sequenceTypeCounts[type] ?: 0
-                                                if (count > 0) {
-                                                    val key = LibraryPackageManager.sequenceSelectionKey(category.directory, type)
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Checkbox(
-                                                            checked = key in transferExportCategories[modality].orEmpty(),
-                                                            onCheckedChange = { checked ->
-                                                                transferExportCategories = transferExportCategories.toMutableMap().also { map ->
-                                                                    map[modality] = map[modality].orEmpty().toMutableSet().also { set ->
-                                                                        if (checked) set.add(key) else set.remove(key)
-                                                                    }
+                                            }
+                                            if (exercisesOfType.isNotEmpty()) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Checkbox(
+                                                        checked = exercisesOfType.all { it in selected },
+                                                        onCheckedChange = { checked ->
+                                                            transferExportCategories = transferExportCategories.toMutableMap().also { map ->
+                                                                map[modality] = selected.toMutableSet().also { set ->
+                                                                    if (checked) set.addAll(exercisesOfType) else set.removeAll(exercisesOfType.toSet())
                                                                 }
                                                             }
-                                                        )
-                                                        Column {
-                                                            Text(type.displayName)
-                                                            Text("$count ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        }
+                                                    )
+                                                    Text(type.displayName, fontWeight = FontWeight.Bold)
+                                                }
+                                                categoriesForModality.forEach { category ->
+                                                    val exercises = category.sequenceExercises.filter { it.type == type }
+                                                    if (exercises.isNotEmpty()) {
+                                                        val categoryKey = "${type.jsonValue}::${category.directory}"
+                                                        val exerciseKeys = exercises.map { exercise ->
+                                                            LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
+                                                        }
+                                                        val expanded = categoryKey in expandedExportSequenceCategories
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth().clickable {
+                                                                expandedExportSequenceCategories = expandedExportSequenceCategories.toMutableSet().also {
+                                                                    if (expanded) it.remove(categoryKey) else it.add(categoryKey)
+                                                                }
+                                                            }.padding(start = 28.dp, top = 4.dp, bottom = 4.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Checkbox(
+                                                                checked = exerciseKeys.all { it in selected },
+                                                                onCheckedChange = { checked ->
+                                                                    transferExportCategories = transferExportCategories.toMutableMap().also { map ->
+                                                                        map[modality] = selected.toMutableSet().also { set ->
+                                                                            if (checked) set.addAll(exerciseKeys) else set.removeAll(exerciseKeys.toSet())
+                                                                        }
+                                                                    }
+                                                                }
+                                                            )
+                                                            Text(if (expanded) "▾" else "▸", modifier = Modifier.padding(end = 8.dp), color = Color(0xFF667085))
+                                                            Text(category.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
+                                                            Spacer(Modifier.weight(1f))
+                                                            Text("${exercises.size}", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        }
+                                                        if (expanded) exercises.forEach { exercise ->
+                                                            val key = LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth().padding(start = 68.dp, top = 2.dp, bottom = 2.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Checkbox(
+                                                                    checked = key in selected,
+                                                                    onCheckedChange = { checked ->
+                                                                        transferExportCategories = transferExportCategories.toMutableMap().also { map ->
+                                                                            map[modality] = selected.toMutableSet().also { set ->
+                                                                                if (checked) set.add(key) else set.remove(key)
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                )
+                                                                Text(exercise.title)
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -2756,25 +2794,78 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                     modalityInfo.categories.forEach { category ->
                                         if (modality == ContentStorage.Modality.SECUENCIAS) {
-                                            Text(category.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
+                                            val selected = transferImportCategories[modality].orEmpty()
                                             SequenceType.entries.forEach { type ->
-                                                val count = category.sequenceTypeCounts[type] ?: 0
-                                                if (count > 0) {
-                                                    val key = LibraryPackageManager.sequenceSelectionKey(category.directory, type)
+                                                val exercisesOfType = modalityInfo.categories.flatMap { item ->
+                                                    item.sequenceExercises.filter { it.type == type }.map { exercise ->
+                                                        LibraryPackageManager.sequenceExerciseSelectionKey(item.directory, type, exercise.directory)
+                                                    }
+                                                }
+                                                if (exercisesOfType.isNotEmpty()) {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                                         Checkbox(
-                                                            checked = key in transferImportCategories[modality].orEmpty(),
+                                                            checked = exercisesOfType.all { it in selected },
                                                             onCheckedChange = { checked ->
                                                                 transferImportCategories = transferImportCategories.toMutableMap().also { map ->
-                                                                    map[modality] = map[modality].orEmpty().toMutableSet().also { set ->
-                                                                        if (checked) set.add(key) else set.remove(key)
+                                                                    map[modality] = selected.toMutableSet().also { set ->
+                                                                        if (checked) set.addAll(exercisesOfType) else set.removeAll(exercisesOfType.toSet())
                                                                     }
                                                                 }
                                                             }
                                                         )
-                                                        Column {
-                                                            Text(type.displayName)
-                                                            Text("$count ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        Text(type.displayName, fontWeight = FontWeight.Bold)
+                                                    }
+                                                    val categoriesForType = modalityInfo.categories.filter { category ->
+                                                        category.sequenceExercises.any { it.type == type }
+                                                    }
+                                                    categoriesForType.forEach { category ->
+                                                        val exercises = category.sequenceExercises.filter { it.type == type }
+                                                        val categoryKey = "${type.jsonValue}::${category.directory}"
+                                                        val exerciseKeys = exercises.map { exercise ->
+                                                            LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
+                                                        }
+                                                        val expanded = categoryKey in expandedImportSequenceCategories
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth().clickable {
+                                                                expandedImportSequenceCategories = expandedImportSequenceCategories.toMutableSet().also {
+                                                                    if (expanded) it.remove(categoryKey) else it.add(categoryKey)
+                                                                }
+                                                            }.padding(start = 28.dp, top = 4.dp, bottom = 4.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Checkbox(
+                                                                checked = exerciseKeys.all { it in selected },
+                                                                onCheckedChange = { checked ->
+                                                                    transferImportCategories = transferImportCategories.toMutableMap().also { map ->
+                                                                        map[modality] = selected.toMutableSet().also { set ->
+                                                                            if (checked) set.addAll(exerciseKeys) else set.removeAll(exerciseKeys.toSet())
+                                                                        }
+                                                                    }
+                                                                }
+                                                            )
+                                                            Text(if (expanded) "▾" else "▸", modifier = Modifier.padding(end = 8.dp), color = Color(0xFF667085))
+                                                            Text(category.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
+                                                            Spacer(Modifier.weight(1f))
+                                                            Text("${exercises.size}", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        }
+                                                        if (expanded) exercises.forEach { exercise ->
+                                                            val key = LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth().padding(start = 68.dp, top = 2.dp, bottom = 2.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Checkbox(
+                                                                    checked = key in selected,
+                                                                    onCheckedChange = { checked ->
+                                                                        transferImportCategories = transferImportCategories.toMutableMap().also { map ->
+                                                                            map[modality] = selected.toMutableSet().also { set ->
+                                                                                if (checked) set.add(key) else set.remove(key)
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                )
+                                                                Text(exercise.title)
+                                                            }
                                                         }
                                                     }
                                                 }
