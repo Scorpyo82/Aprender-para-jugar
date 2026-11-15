@@ -1027,6 +1027,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var linkedExerciseFont by remember { mutableStateOf(preferences.getBoolean("linked_exercise_font_v1", true)) }
     val exerciseFontFamily = if (linkedExerciseFont) FontFamily(Font(R.font.playwrite_es)) else FontFamily.Default
     var transferExportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
+    var expandedExportSequenceCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var expandedImportSequenceCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferExportStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferExportUsageStatistics by remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferExportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -1215,8 +1217,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 transferPackage = inspected
                 transferImportCategories = inspected.modalities.associate { info ->
                     info.modality to info.categories.flatMap { category ->
-                        if (info.modality == ContentStorage.Modality.SECUENCIAS) {
-                            category.sequenceTypeCounts.keys.map { type -> LibraryPackageManager.sequenceSelectionKey(category.directory, type) }
+                        if (info.modality == ContentStorage.Modality.SECUENCIAS) category.sequenceExercises.map { exercise ->
+                            LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory)
                         } else listOf(category.directory)
                     }.toSet()
                 }
@@ -1786,7 +1788,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
                 item {
                     ParentMenuNavigationCard("📦", "Importar y exportar bibliotecas", "Copias selectivas de Tarjetas, Palabras y Secuencias") {
-                        transferExportCategories = ContentStorage.Modality.entries.associateWith { modality -> LibraryPackageManager.categories(context, modality).map { it.directory }.toSet() }
+                        transferExportCategories = ContentStorage.Modality.entries.associateWith { modality ->
+                            LibraryPackageManager.categories(context, modality).flatMap { category ->
+                                if (modality == ContentStorage.Modality.SECUENCIAS) category.sequenceExercises.map { exercise ->
+                                    LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory)
+                                } else listOf(category.directory)
+                            }.toSet()
+                        }
+                        expandedExportSequenceCategories = emptySet()
                         transferExportStatistics = emptySet()
                         transferMessage = ""
                         parentSection = "library-transfer"
@@ -5581,8 +5590,8 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             transferPackage = inspected
                             transferImportCategories = inspected.modalities.associate { info ->
                     info.modality to info.categories.flatMap { category ->
-                        if (info.modality == ContentStorage.Modality.SECUENCIAS) {
-                            category.sequenceTypeCounts.keys.map { type -> LibraryPackageManager.sequenceSelectionKey(category.directory, type) }
+                        if (info.modality == ContentStorage.Modality.SECUENCIAS) category.sequenceExercises.map { exercise ->
+                            LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory)
                         } else listOf(category.directory)
                     }.toSet()
                 }
