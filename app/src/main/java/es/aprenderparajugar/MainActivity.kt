@@ -3619,7 +3619,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             sequenceCategoryDraft = exercise.category; sequenceTypeDraft = exercise.type; sequenceDifficultyDraft = exercise.difficulty
                                             sequenceCardsDraft = exercise.cards
                                             sequenceCardPicturesDraft = exercise.cards.indices.map { cardIndex -> exercise.pictures.getOrNull(cardIndex).orEmpty().ifBlank { defaultSequencePicture(cardIndex) } }
-                                            sequenceAlternativeDraft = exercise.alternatives.joinToString("\n") { alternative -> alternative.split("|").mapNotNull { step -> exercise.cards.indexOf(step).takeIf { it >= 0 }?.plus(1) }.joinToString(",") }
+                                            sequenceAlternativeDraft = exercise.alternatives.joinToString("\n")
                                             sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
                                         }) {
                                             Text(exercise.title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
