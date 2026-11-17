@@ -5757,7 +5757,9 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             val inspected = withContext(Dispatchers.IO) {
                                 LibraryPackageManager.inspect(context, Uri.fromFile(file), updateLibraryTaskProgress)
                             }
-                            transferPackage?.let { LibraryPackageManager.discard(it) }
+                            transferPackage?.let { previous ->
+                                withContext(Dispatchers.IO) { LibraryPackageManager.discard(previous) }
+                            }
                             transferPackage = inspected
                             transferImportCategories = inspected.modalities.associate { info ->
                     info.modality to info.categories.flatMap { category ->
