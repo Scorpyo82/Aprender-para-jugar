@@ -1329,6 +1329,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 try {
                     transferPackage?.let { previous ->
                         withContext(Dispatchers.IO) { LibraryPackageManager.discard(previous) }
+                        transferPackage = null
                     }
                     val inspected = withContext(Dispatchers.IO) {
                         LibraryPackageManager.inspect(context, uri, updateLibraryTaskProgress)
@@ -5857,6 +5858,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             }
                             transferPackage?.let { previous ->
                                 withContext(Dispatchers.IO) { LibraryPackageManager.discard(previous) }
+                                transferPackage = null
                             }
                             transferPackage = inspected
                             transferImportCategories = inspected.modalities.associate { info ->
