@@ -5815,20 +5815,58 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             onDismissRequest = { },
             title = { Text("Procesando biblioteca") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(libraryTaskMessage.ifBlank { "Preparando operación…" }, fontSize = 14.sp)
-                    if (libraryTaskIndeterminate) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        Text("La operación puede tardar unos instantes. No cierres la aplicación.", fontSize = 12.sp, color = Color(0xFF667085))
-                    } else {
-                        LinearProgressIndicator(
-                            progress = { libraryTaskProgress },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Reservar siempre el mismo espacio para el mensaje evita que
+                    // el diálogo cambie de altura cuando cambia el texto de progreso.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         Text(
-                            "${(libraryTaskProgress * 100).toInt()}% completado. No cierres la aplicación.",
+                            libraryTaskMessage.ifBlank { "Preparando operación…" },
+                            fontSize = 14.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    // El indicador conserva una altura fija tanto en modo
+                    // indeterminado como cuando ya se conoce el porcentaje.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (libraryTaskIndeterminate) {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        } else {
+                            LinearProgressIndicator(
+                                progress = { libraryTaskProgress },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(
+                            if (libraryTaskIndeterminate) {
+                                "La operación puede tardar. No cierres la aplicación."
+                            } else {
+                                "${(libraryTaskProgress * 100).toInt()}% completado. No cierres la aplicación."
+                            },
                             fontSize = 12.sp,
-                            color = Color(0xFF667085)
+                            color = Color(0xFF667085),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
