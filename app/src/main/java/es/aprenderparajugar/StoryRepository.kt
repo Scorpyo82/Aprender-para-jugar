@@ -384,6 +384,24 @@ object StoryRepository {
 
     fun rootDirectory(context: Context): File = ensureDirectory(File(context.filesDir, ROOT))
 
+    /** Elimina un cuento completo después de validar su ubicación dentro de la biblioteca. */
+    fun deleteStory(context: Context, stored: StoredStory) {
+        val root = rootDirectory(context).canonicalFile
+        val target = stored.directory.canonicalFile
+        require(target.toPath().startsWith(root.toPath()) && target.parentFile?.parentFile == root) {
+            "La ubicación del cuento no es válida."
+        }
+        require(target.name == stored.folderName && target.isDirectory) {
+            "El cuento ya no está disponible en su ubicación original."
+        }
+        check(target.walkBottomUp().all { it.delete() || !it.exists() }) {
+            "No se pudo eliminar todo el contenido del cuento."
+        }
+        target.parentFile?.let { collection ->
+            if (collection.list()?.isEmpty() == true) collection.delete()
+        }
+    }
+
     fun list(context: Context): List<StoredStory> {
         val root = rootDirectory(context)
         return root.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }
