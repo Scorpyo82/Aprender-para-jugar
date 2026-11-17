@@ -260,6 +260,9 @@ internal fun LazyListScope.LibraryDeleteScreen(
                             objectFolders.forEach { folder ->
                                 val storedObject = objects.firstOrNull { it.folderName == folder }
                                 val dependentStories = dependencySnapshot.storyFoldersByObject[folder].orEmpty()
+                                val dependentStoryTitles = dependentStories.mapNotNull { dependentPath ->
+                                    stories.firstOrNull { it.directory.canonicalPath == dependentPath }?.metadata?.title
+                                }
                                 val canDeleteObject = dependencySnapshot.scanErrors.isEmpty() &&
                                     dependentStories.size == 1 && storyPath in dependentStories &&
                                     storedObject != null
@@ -280,7 +283,7 @@ internal fun LazyListScope.LibraryDeleteScreen(
                                             when {
                                                 dependencySnapshot.scanErrors.isNotEmpty() -> "No se puede verificar su uso"
                                                 storedObject == null -> "El objeto ya no está disponible en la biblioteca"
-                                                dependentStories.size > 1 -> "Compartido por ${dependentStories.size} cuentos; no se puede borrar"
+                                                dependentStories.size > 1 -> "Compartido por: ${dependentStoryTitles.joinToString(", ")}. No se puede borrar"
                                                 canDeleteObject -> "Solo pertenece a este cuento; borrado opcional"
                                                 else -> "No se puede verificar la dependencia"
                                             },
