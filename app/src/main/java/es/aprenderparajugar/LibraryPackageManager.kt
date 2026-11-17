@@ -770,7 +770,11 @@ internal object LibraryPackageManager {
                 }
                 val target = existing?.directory ?: File(File(ObjectRepository.rootDirectory(context), incoming.collection), incoming.directory)
                 val temporary = File(target.parentFile, ".import-${incoming.directory}-${System.nanoTime()}")
-                copyDirectory(source, temporary)
+                copyDirectory(source, temporary) { copiedFile ->
+                    onProgress?.invoke("Copiando cuento ${incoming.title}: $copiedFile", progressCurrent, progressTotal)
+                } { copiedFile ->
+                    onProgress?.invoke("Copiando objeto ${incomingObject.metadata.name}: $copiedFile", progressCurrent, progressTotal)
+                }
                 if (target.exists()) {
                     val backup = File(target.parentFile, ".backup-${incoming.directory}-${System.nanoTime()}")
                     check(target.renameTo(backup)) { "No se pudo reservar el objeto anterior «${incoming.name}»." }
@@ -858,7 +862,9 @@ internal object LibraryPackageManager {
                         }
                         val target = conflictExisting?.directory ?: File(targetCategory, incoming.name)
                         val stagingExercise = File(targetCategory, ".import-${System.nanoTime()}")
-                        copyDirectory(incoming, stagingExercise)
+                        copyDirectory(incoming, stagingExercise) { copiedFile ->
+                            onProgress?.invoke("Copiando ejercicio ${incomingStored.metadata.title}: $copiedFile", progressCurrent, progressTotal)
+                        }
                         val incomingStatistics = File(stagingExercise, STATISTICS_FILE)
                         if (!importLearningStatistics) {
                             // El ZIP no debe sobrescribir las estadísticas locales si el usuario
@@ -999,13 +1005,33 @@ internal object LibraryPackageManager {
         }
     }
 
-    private fun copyDirectory(source: File, destination: File) {
+    private fun copyDirectory(
+        source: File,
+        destination: File,
+        onFileProgress: ((fileName: String) -> Unit)? = null
+    ) {
         source.walkTopDown().forEach { file ->
             val target = File(destination, file.relativeTo(source).path)
             if (file.isDirectory) check(target.mkdirs() || target.isDirectory)
             else {
                 target.parentFile?.let { check(it.mkdirs() || it.isDirectory) }
-                file.copyTo(target, overwrite = true)
+                file.inputStream().buffered().use { input ->
+                    target.outputStream().buffered().use { output ->
+                        val buffer = ByteArray(32 * 1024)
+                        var copiedBytes = 0L
+                        var lastProgressBytes = 0L
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            copiedBytes += read
+                            if (copiedBytes - lastProgressBytes >= 512L * 1024L) {
+                                onFileProgress?.invoke("${file.name} · ${copiedBytes / 1024L} KB")
+                                lastProgressBytes = copiedBytes
+                            }
+                        }
+                    }
+                }
             }
         }
     }
