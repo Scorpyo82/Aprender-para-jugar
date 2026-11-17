@@ -323,7 +323,7 @@ internal object LibraryPackageManager {
                     File(staging, "${modality.directoryName}/$directory").listFiles()?.count { it.isDirectory } ?: 0
                 }
             }
-            val validationTotal = (exerciseValidationTotal + modalitiesJson.length() + storiesJson.length() + objectsJson.length).coerceAtLeast(1)
+            val validationTotal = (exerciseValidationTotal + modalitiesJson.length() + storiesJson.length() + objectsJson.length()).coerceAtLeast(1)
             var validationProgress = 0
             val seenModalities = mutableSetOf<ContentStorage.Modality>()
             val result = (0 until modalitiesJson.length()).map { index ->
@@ -428,7 +428,6 @@ internal object LibraryPackageManager {
                 StoryInfo(key, collection, directory, title, storedStory.metadata.scenes.size)
             }
             require(storyInfos.map { it.key }.distinct().size == storyInfos.size) { "El manifiesto repite cuentos." }
-            val objectsJson = manifest.optJSONArray("objectDependencies") ?: JSONArray()
             val objectInfos = (0 until objectsJson.length()).map { index ->
                 val item = objectsJson.getJSONObject(index)
                 val collection = item.optString("collection")
