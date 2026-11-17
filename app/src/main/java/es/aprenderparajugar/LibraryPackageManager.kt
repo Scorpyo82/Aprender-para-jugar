@@ -545,7 +545,8 @@ internal object LibraryPackageManager {
         context: Context,
         packageInfo: PackageInfo,
         selectedStories: Set<String>,
-        selectedObjects: Set<String> = emptySet()
+        selectedObjects: Set<String> = emptySet(),
+        localObjectsOverride: List<StoredObject>? = null
     ): List<ObjectConflictInfo> {
         val requiredNames = linkedSetOf<String>()
         packageInfo.objects.filter { it.key in selectedObjects || it.directory in selectedObjects }
@@ -561,7 +562,7 @@ internal object LibraryPackageManager {
                 }
             }
         }
-        val localObjects = ObjectRepository.list(context)
+        val localObjects = localObjectsOverride ?: ObjectRepository.list(context)
         return packageInfo.objects.filter { it.directory in requiredNames }.mapNotNull { dependency ->
             val incoming = ObjectRepository.read(File(packageInfo.staging, "objetos/${dependency.key}"))
             val existing = localObjects.firstOrNull {
