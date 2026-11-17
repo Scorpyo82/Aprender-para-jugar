@@ -1085,6 +1085,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var libraryTaskProgress by remember { mutableStateOf(0f) }
     var libraryTaskIndeterminate by remember { mutableStateOf(true) }
     var transferImportPreparationLoading by remember { mutableStateOf(false) }
+    var transferImportPreparationError by remember { mutableStateOf(false) }
     var transferExerciseConflicts by remember { mutableStateOf<List<LibraryPackageManager.ExerciseConflictInfo>>(emptyList()) }
     var transferObjectConflicts by remember { mutableStateOf<List<LibraryPackageManager.ObjectConflictInfo>>(emptyList()) }
     var transferStoryNameConflicts by remember { mutableStateOf<List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>>(emptyList()) }
@@ -1109,9 +1110,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             transferRequiredImportObjects = emptyMap()
             transferLocalObjects = emptyList()
             transferObjectConflictThumbnails = emptyMap()
+            transferImportPreparationError = false
             transferImportPreparationLoading = false
             return@LaunchedEffect
         }
+        transferImportPreparationError = false
         transferImportPreparationLoading = true
         try {
             val prepared = withContext(Dispatchers.IO) {
@@ -1144,6 +1147,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             transferExerciseConflicts = prepared.exerciseConflicts
             transferObjectConflicts = prepared.objectConflicts
             transferStoryNameConflicts = prepared.storyNameConflicts
+            transferImportPreparationError = false
             transferImportObjectEntries = prepared.incomingObjects
             transferRequiredImportObjects = prepared.requiredObjects
             transferLocalObjects = prepared.localObjects
@@ -1153,6 +1157,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             transferExerciseConflicts = emptyList()
             transferObjectConflicts = emptyList()
             transferStoryNameConflicts = emptyList()
+            transferImportObjectEntries = emptyList()
+            transferRequiredImportObjects = emptyMap()
+            transferLocalObjects = emptyList()
+            transferObjectConflictThumbnails = emptyMap()
+            transferImportPreparationError = true
         } finally {
             transferImportPreparationLoading = false
         }
@@ -3262,7 +3271,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         libraryTaskRunning = false
                                     }
                                     }
-                                }, enabled = !transferImportPreparationLoading &&
+                                }, enabled = !transferImportPreparationLoading && !transferImportPreparationError &&
                                     (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
                                     transferExerciseConflicts.all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
                                     transferObjectConflicts.all { it.incoming.folderName in transferObjectConflictDecisions } &&
