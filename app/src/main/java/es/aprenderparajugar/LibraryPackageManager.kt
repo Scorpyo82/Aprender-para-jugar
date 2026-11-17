@@ -247,11 +247,16 @@ internal object LibraryPackageManager {
         }
     }
 
-    fun inspect(context: Context, source: Uri): PackageInfo {
+    fun inspect(
+        context: Context,
+        source: Uri,
+        onProgress: ((message: String, current: Int, total: Int) -> Unit)? = null
+    ): PackageInfo {
         val staging = File(context.cacheDir, "library-import-${System.nanoTime()}")
         check(staging.mkdirs()) { "No se pudo preparar la validación del archivo." }
         try {
             val entries = mutableSetOf<String>()
+            var extractedEntries = 0
             ZipInputStream(context.contentResolver.openInputStream(source)?.buffered()
                 ?: throw IllegalArgumentException("No se puede leer el archivo seleccionado.")).use { zip ->
                 while (true) {
@@ -268,8 +273,13 @@ internal object LibraryPackageManager {
                         destination.outputStream().buffered().use { output -> zip.copyTo(output) }
                     }
                     zip.closeEntry()
+                    extractedEntries++
+                    if (extractedEntries == 1 || extractedEntries % 5 == 0) {
+                        onProgress?.invoke("Descomprimiendo paquete · $extractedEntries archivos", 0, 0)
+                    }
                 }
             }
+            onProgress?.invoke("Comprobando la estructura del paquete…", 0, 0)
             val manifestFile = File(staging, MANIFEST)
             require(manifestFile.isFile) { "El archivo no contiene el manifiesto de biblioteca." }
             val manifest = JSONObject(manifestFile.readText(Charsets.UTF_8))
@@ -280,6 +290,19 @@ internal object LibraryPackageManager {
                 ?: throw IllegalArgumentException("El manifiesto no declara bibliotecas.")
             // Un paquete puede contener exclusivamente cuentos, sin modalidades
             // de ejercicios. La existencia de contenido se comprueba tras leer ambas secciones.
+            val storiesJson = manifest.optJSONArray("stories") ?: JSONArray()
+            val objectsJson = manifest.optJSONArray("objectDependencies") ?: JSONArray()
+            val exerciseValidationTotal = (0 until modalitiesJson.length()).sumOf { modalityIndex ->
+                val modalityItem = modalitiesJson.getJSONObject(modalityIndex)
+                val modality = ContentStorage.Modality.entries.first { it.directoryName == modalityItem.optString("id") }
+                val categoryItems = modalityItem.optJSONArray("categories") ?: JSONArray()
+                (0 until categoryItems.length()).sumOf { categoryIndex ->
+                    val directory = categoryItems.getJSONObject(categoryIndex).optString("directory")
+                    File(staging, "${modality.directoryName}/$directory").listFiles()?.count { it.isDirectory } ?: 0
+                }
+            }
+            val validationTotal = (exerciseValidationTotal + modalitiesJson.length() + storiesJson.length() + objectsJson.length).coerceAtLeast(1)
+            var validationProgress = 0
             val seenModalities = mutableSetOf<ContentStorage.Modality>()
             val result = (0 until modalitiesJson.length()).map { index ->
                 val item = modalitiesJson.getJSONObject(index)
@@ -305,6 +328,8 @@ internal object LibraryPackageManager {
                             "Los metadatos de ${exerciseDir.name} no coinciden con su ubicación."
                         }
                         validateAssets(stored.content, exerciseDir)
+                        validationProgress++
+                        onProgress?.invoke("Validando ejercicio: ${stored.metadata.title}", validationProgress, validationTotal)
                         val stats = File(exerciseDir, STATISTICS_FILE)
                         if (stats.exists()) {
                             require(item.optBoolean("includesLearningStatistics")) { "El paquete contiene estadísticas de aprendizaje no declaradas." }
@@ -338,9 +363,11 @@ internal object LibraryPackageManager {
                     require(includesUsage) { "El paquete contiene estadísticas de uso no declaradas." }
                     UsageStatisticsRepository.validateFile(usageFile, modality)
                 }
+                validationProgress++
+                onProgress?.invoke("Validando biblioteca ${modality.directoryName}", validationProgress, validationTotal)
                 ModalityInfo(modality, categories, item.optBoolean("includesLearningStatistics"), includesUsage)
             }
-            val storiesJson = manifest.optJSONArray("stories") ?: JSONArray()
+
             val storyInfos = (0 until storiesJson.length()).map { index ->
                 val item = storiesJson.getJSONObject(index)
                 val collection = item.optString("collection")
@@ -374,6 +401,8 @@ internal object LibraryPackageManager {
                 storedStory.metadata.cover?.let { cover ->
                     require(File(storyDirectory, cover).isFile) { "Falta la portada del cuento $title." }
                 }
+                validationProgress++
+                onProgress?.invoke("Validando cuento: $title", validationProgress, validationTotal)
                 StoryInfo(key, collection, directory, title, storedStory.metadata.scenes.size)
             }
             require(storyInfos.map { it.key }.distinct().size == storyInfos.size) { "El manifiesto repite cuentos." }
@@ -392,6 +421,8 @@ internal object LibraryPackageManager {
                 require(storedObject.metadata.name == name && storedObject.metadata.image == item.optString("image")) {
                     "Los datos del objeto $name no coinciden con el manifiesto."
                 }
+                validationProgress++
+                onProgress?.invoke("Validando objeto: $name", validationProgress, validationTotal)
                 ObjectDependencyInfo(key, collection, directory, name)
             }
             require(objectInfos.map { it.key }.distinct().size == objectInfos.size) { "El manifiesto repite objetos." }
@@ -592,7 +623,8 @@ internal object LibraryPackageManager {
         objectConflictDecisions: Map<String, String> = emptyMap(),
         storyConflictDecisions: Map<String, String> = emptyMap(),
         selectedObjects: Set<String> = emptySet(),
-        exerciseConflictDecisions: Map<String, String> = emptyMap()
+        exerciseConflictDecisions: Map<String, String> = emptyMap(),
+        onProgress: ((message: String, current: Int, total: Int) -> Unit)? = null
     ): Int {
         var imported = 0
         val rollbackTargets = mutableListOf<Pair<File, File?>>()
@@ -621,7 +653,30 @@ internal object LibraryPackageManager {
                 }
             }
             val selectedObjectInfos = packageInfo.objects.filter { it.directory in selectedObjectNames }
-            val localObjects = ObjectRepository.list(context)
+            val selectedExerciseCount = packageInfo.modalities.sumOf { modalityInfo ->
+                val modality = modalityInfo.modality
+                val selected = selectedCategories[modality].orEmpty()
+                modalityInfo.categories.filter { it.directory in selectedCategoryDirectories(modality, selected) }.sumOf { category ->
+                    val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
+                    sourceCategory.listFiles()?.filter { it.isDirectory }?.count { incoming ->
+                        val stored = ExerciseRepository.read(incoming)
+                        isExerciseSelected(modality, category.directory, incoming.name, stored.content, selected)
+                    } ?: 0
+                }
+            }
+            val usageStatisticsCount = packageInfo.modalities.count { modalityInfo ->
+                selectedCategories[modalityInfo.modality].orEmpty().isNotEmpty() && importUsageStatistics && modalityInfo.includesUsageStatistics &&
+                    File(packageInfo.staging, "${modalityInfo.modality.directoryName}/${UsageStatisticsRepository.FILE_NAME}").isFile
+            }
+            val progressTotal = (selectedObjectInfos.size + selectedStoryInfos.size + selectedExerciseCount + usageStatisticsCount).coerceAtLeast(1)
+            var progressCurrent = 0
+            fun reportProgress(message: String) {
+                progressCurrent++
+                onProgress?.invoke(message, progressCurrent, progressTotal)
+            }
+            onProgress?.invoke("Preparando la importación…", 0, progressTotal)
+            val localObjects = ObjectRepository.list(context).toMutableList()
+            val localExercisesByModality = mutableMapOf<ContentStorage.Modality, MutableList<StoredExercise>>()
             val objectReferenceRemapping = mutableMapOf<String, String>()
             selectedObjectInfos.forEach { incoming ->
                 val source = File(packageInfo.staging, "objetos/${incoming.key}")
@@ -665,7 +720,7 @@ internal object LibraryPackageManager {
             selectedObjectInfos.forEach { incoming ->
                 val source = File(packageInfo.staging, "objetos/${incoming.key}")
                 val incomingObject = ObjectRepository.read(source)
-                val existing = ObjectRepository.list(context).firstOrNull {
+                val existing = localObjects.firstOrNull {
                     it.collection == incomingObject.collection &&
                         NameRules.key(it.metadata.name) == NameRules.key(incomingObject.metadata.name)
                 }
@@ -681,7 +736,10 @@ internal object LibraryPackageManager {
                             File(incomingObject.directory, incomingObject.metadata.image).readBytes()
                         )
                     }.getOrDefault(false)
-                if (existing != null && (decision == "reuse" || identical)) return@forEach
+                if (existing != null && (decision == "reuse" || identical)) {
+                    reportProgress("Objeto ya existente: ${incomingObject.metadata.name}")
+                    return@forEach
+                }
                 val target = existing?.directory ?: File(File(ObjectRepository.rootDirectory(context), incoming.collection), incoming.directory)
                 val temporary = File(target.parentFile, ".import-${incoming.directory}-${System.nanoTime()}")
                 copyDirectory(source, temporary)
@@ -697,6 +755,9 @@ internal object LibraryPackageManager {
                     check(temporary.renameTo(target)) { "No se pudo importar el objeto «${incoming.name}»." }
                     rollbackTargets.add(target to null)
                 }
+                localObjects.removeAll { it.directory.canonicalFile == target.canonicalFile }
+                localObjects.add(ObjectRepository.read(target))
+                reportProgress("Importando objeto: ${incomingObject.metadata.name}")
             }
             selectedStoryInfos.forEach { incoming ->
                 val source = File(packageInfo.staging, "cuentos/${incoming.key}")
@@ -721,6 +782,7 @@ internal object LibraryPackageManager {
                     check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
                     rollbackTargets.add(target to null)
                 }
+                reportProgress("Importando cuento: ${incoming.title}")
             }
             // Las portadas viajan con los cuentos, pero nunca sustituyen una portada local.
             selectedStoryInfos.map { it.collection }.distinct().forEach { collectionName ->
@@ -742,6 +804,9 @@ internal object LibraryPackageManager {
             packageInfo.modalities.forEach { modalityInfo ->
                 val modality = modalityInfo.modality
                 val selected = selectedCategories[modality].orEmpty()
+                val localExercises = localExercisesByModality.getOrPut(modality) {
+                    ExerciseRepository.list(context, modality).toMutableList()
+                }
                 modalityInfo.categories.filter { it.directory in selectedCategoryDirectories(modality, selected) }.forEach { category ->
                     val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
                     val targetCategory = File(ContentStorage.modalityDirectory(context, modality), category.directory)
@@ -751,17 +816,20 @@ internal object LibraryPackageManager {
                     sourceCategory.listFiles()?.filter { it.isDirectory }?.forEach { incoming ->
                         val incomingStored = ExerciseRepository.read(incoming)
                         if (!isExerciseSelected(modality, category.directory, incoming.name, incomingStored.content, selected)) return@forEach
-                        val existing = ExerciseRepository.list(context, modality).firstOrNull {
+                        val existing = localExercises.firstOrNull {
                             it.metadata.category.equals(category.name, true) &&
                                 it.metadata.title.equals(incomingStored.metadata.title, true)
                         }
                         val conflictKey = "${modality.directoryName}/${category.directory}/${incoming.name}"
-                        val pathExisting = ExerciseRepository.list(context, modality).firstOrNull {
+                        val pathExisting = localExercises.firstOrNull {
                             runCatching { it.directory.canonicalFile == File(targetCategory, incoming.name).canonicalFile }.getOrDefault(false)
                         }
                         val conflictExisting = existing ?: pathExisting
                         val decision = exerciseConflictDecisions[conflictKey]
-                        if (conflictExisting != null && decision == "reuse") return@forEach
+                        if (conflictExisting != null && decision == "reuse") {
+                            reportProgress("Ejercicio ya existente: ${incomingStored.metadata.title}")
+                            return@forEach
+                        }
                         val target = conflictExisting?.directory ?: File(targetCategory, incoming.name)
                         val stagingExercise = File(targetCategory, ".import-${System.nanoTime()}")
                         copyDirectory(incoming, stagingExercise)
@@ -790,6 +858,11 @@ internal object LibraryPackageManager {
                             rollbackTargets.add(target to null)
                         }
                         imported++
+                        if (conflictExisting != null) {
+                            localExercises.removeAll { it.directory.canonicalFile == conflictExisting.directory.canonicalFile }
+                        }
+                        localExercises.add(incomingStored.copy(directory = target))
+                        reportProgress("Importando ejercicio: ${incomingStored.metadata.title}")
                     }
                 }
                 if (selected.isNotEmpty() && importUsageStatistics && modalityInfo.includesUsageStatistics) {
@@ -810,6 +883,7 @@ internal object LibraryPackageManager {
                             throw IllegalStateException("No se pudieron guardar las estadísticas de uso de ${modality.directoryName}.")
                         }
                         rollbackTargets.add(targetUsage to backupUsage.takeIf { it.exists() })
+                        reportProgress("Importando estadísticas de uso: ${modality.directoryName}")
                     }
                 }
             }
