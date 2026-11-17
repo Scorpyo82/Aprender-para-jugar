@@ -322,8 +322,9 @@ internal object LibraryPackageManager {
                     require(categoryDir.isDirectory) { "Falta la carpeta de categoría $name." }
                     val exerciseDirs = categoryDir.listFiles()?.filter { it.isDirectory } ?: emptyList()
                     require(exerciseDirs.isNotEmpty()) { "La categoría $name no contiene ejercicios." }
-                    exerciseDirs.forEach { exerciseDir ->
-                        val stored = ExerciseRepository.read(exerciseDir)
+                    val storedExercises = exerciseDirs.map { ExerciseRepository.read(it) }
+                    storedExercises.forEach { stored ->
+                        val exerciseDir = stored.directory
                         require(stored.metadata.modality == modality && stored.metadata.category == name) {
                             "Los metadatos de ${exerciseDir.name} no coinciden con su ubicación."
                         }
@@ -338,7 +339,7 @@ internal object LibraryPackageManager {
                         }
                     }
                     val sequenceCounts = if (modality == ContentStorage.Modality.SECUENCIAS) {
-                        exerciseDirs.groupingBy { (ExerciseRepository.read(it).content as SequenceExerciseContent).type }.eachCount()
+                        storedExercises.groupingBy { (it.content as SequenceExerciseContent).type }.eachCount()
                     } else emptyMap()
                     val declaredCounts = category.optJSONObject("sequenceTypeCounts")
                     if (modality == ContentStorage.Modality.SECUENCIAS && declaredCounts != null) {
@@ -349,9 +350,8 @@ internal object LibraryPackageManager {
                         }
                     }
                     val sequenceExercises = if (modality == ContentStorage.Modality.SECUENCIAS) {
-                        exerciseDirs.map { exerciseDir ->
-                            val stored = ExerciseRepository.read(exerciseDir)
-                            SequenceExerciseInfo(exerciseDir.name, stored.metadata.title,
+                        storedExercises.map { stored ->
+                            SequenceExerciseInfo(stored.directory.name, stored.metadata.title,
                                 (stored.content as SequenceExerciseContent).type)
                         }
                     } else emptyList()
@@ -581,12 +581,13 @@ internal object LibraryPackageManager {
     fun exerciseConflicts(
         context: Context,
         packageInfo: PackageInfo,
-        selectedCategories: Map<ContentStorage.Modality, Set<String>>
+        selectedCategories: Map<ContentStorage.Modality, Set<String>>,
+        localExercisesByModality: Map<ContentStorage.Modality, List<StoredExercise>>? = null
     ): List<ExerciseConflictInfo> {
         val conflicts = mutableListOf<ExerciseConflictInfo>()
         packageInfo.modalities.forEach { modalityInfo ->
             val modality = modalityInfo.modality
-            val localExercises = ExerciseRepository.list(context, modality)
+            val localExercises = localExercisesByModality?.get(modality) ?: ExerciseRepository.list(context, modality)
             val selected = selectedCategories[modality].orEmpty()
             modalityInfo.categories.filter { it.directory in selectedCategoryDirectories(modality, selected) }.forEach { category ->
                 val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
@@ -630,7 +631,10 @@ internal object LibraryPackageManager {
         val rollbackTargets = mutableListOf<Pair<File, File?>>()
         try {
             val selectedStoryInfos = packageInfo.stories.filter { it.key in selectedStories }
-            val unresolvedExerciseConflicts = exerciseConflicts(context, packageInfo, selectedCategories)
+            val localExercisesByModality = packageInfo.modalities.associate { modalityInfo ->
+                modalityInfo.modality to ExerciseRepository.list(context, modalityInfo.modality).toMutableList()
+            }.toMutableMap()
+            val unresolvedExerciseConflicts = exerciseConflicts(context, packageInfo, selectedCategories, localExercisesByModality)
                 .filter { exerciseConflictDecisions[it.key] !in setOf("reuse", "overwrite") }
             require(unresolvedExerciseConflicts.isEmpty()) {
                 "Debes resolver los conflictos de ejercicios antes de importar."
@@ -657,11 +661,15 @@ internal object LibraryPackageManager {
                 val modality = modalityInfo.modality
                 val selected = selectedCategories[modality].orEmpty()
                 modalityInfo.categories.filter { it.directory in selectedCategoryDirectories(modality, selected) }.sumOf { category ->
-                    val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
-                    sourceCategory.listFiles()?.filter { it.isDirectory }?.count { incoming ->
-                        val stored = ExerciseRepository.read(incoming)
-                        isExerciseSelected(modality, category.directory, incoming.name, stored.content, selected)
-                    } ?: 0
+                    if (modality != ContentStorage.Modality.SECUENCIAS) {
+                        category.exerciseCount
+                    } else {
+                        category.sequenceExercises.count { exercise ->
+                            category.directory in selected ||
+                                sequenceSelectionKey(category.directory, exercise.type) in selected ||
+                                sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory) in selected
+                        }
+                    }
                 }
             }
             val usageStatisticsCount = packageInfo.modalities.count { modalityInfo ->
@@ -676,7 +684,6 @@ internal object LibraryPackageManager {
             }
             onProgress?.invoke("Preparando la importación…", 0, progressTotal)
             val localObjects = ObjectRepository.list(context).toMutableList()
-            val localExercisesByModality = mutableMapOf<ContentStorage.Modality, MutableList<StoredExercise>>()
             val objectReferenceRemapping = mutableMapOf<String, String>()
             selectedObjectInfos.forEach { incoming ->
                 val source = File(packageInfo.staging, "objetos/${incoming.key}")
@@ -804,9 +811,7 @@ internal object LibraryPackageManager {
             packageInfo.modalities.forEach { modalityInfo ->
                 val modality = modalityInfo.modality
                 val selected = selectedCategories[modality].orEmpty()
-                val localExercises = localExercisesByModality.getOrPut(modality) {
-                    ExerciseRepository.list(context, modality).toMutableList()
-                }
+                val localExercises = localExercisesByModality.getValue(modality)
                 modalityInfo.categories.filter { it.directory in selectedCategoryDirectories(modality, selected) }.forEach { category ->
                     val sourceCategory = File(packageInfo.staging, "${modality.directoryName}/${category.directory}")
                     val targetCategory = File(ContentStorage.modalityDirectory(context, modality), category.directory)
