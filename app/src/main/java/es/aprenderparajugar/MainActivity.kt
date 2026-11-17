@@ -77,6 +77,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -1182,6 +1183,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var deleteSelectedItems by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteExpandedCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteConfirmArmed by remember { mutableStateOf(false) }
+    var deleteDependencySnapshot by remember { mutableStateOf<StoryObjectDependencySnapshot?>(null) }
+
+    LaunchedEffect(parentSection) {
+        if (parentSection == "library-delete") {
+            deleteDependencySnapshot = null
+            val loaded = withContext(Dispatchers.IO) {
+                Triple(
+                    StoryRepository.list(context),
+                    ObjectRepository.list(context),
+                    StoryObjectDependencyRepository.scan(context)
+                )
+            }
+            storedStories = loaded.first
+            storedStoryObjects = loaded.second
+            deleteDependencySnapshot = loaded.third
+        }
+    }
 
     var easyRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_easy_minutes", 2).coerceIn(0, 120)) }
     var normalRewardMinutes by remember { mutableIntStateOf(preferences.getInt("reward_normal_minutes", 5).coerceIn(0, 120)) }
@@ -2181,6 +2199,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 deleteSelectedItems = emptySet()
                                 deleteExpandedCategories = emptySet()
                                 deleteConfirmArmed = false
+                                deleteDependencySnapshot = null
                                 transferMessage = ""
                                 parentSection = "library-delete"
                             }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -2440,6 +2459,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         LibraryDeleteScreen(
                             modalityCategories = modalityCategories,
+                            stories = storedStories,
+                            objects = storedStoryObjects,
+                            dependencySnapshot = deleteDependencySnapshot,
                             selectedItems = deleteSelectedItems,
                             expandedCategories = deleteExpandedCategories,
                             confirmArmed = deleteConfirmArmed,
@@ -2448,6 +2470,43 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onConfirmArmedChanged = { deleteConfirmArmed = it },
                             onDeleteConfirmed = {
                                 try {
+                                    val selectedStoryPaths = deleteSelectedItems
+                                        .filter { it.startsWith("T|") }
+                                        .map { it.removePrefix("T|") }
+                                        .toSet()
+                                    val selectedObjectFolders = deleteSelectedItems
+                                        .filter { it.startsWith("O|") }
+                                        .map { it.removePrefix("O|") }
+                                        .toSet()
+                                    val removedStoryAndObjectCounts = withContext(Dispatchers.IO) {
+                                        val latestDependencies = StoryObjectDependencyRepository.scan(context)
+                                        val currentStories = StoryRepository.list(context)
+                                        val currentObjects = ObjectRepository.list(context)
+                                        check(selectedObjectFolders.isEmpty() || latestDependencies.scanErrors.isEmpty()) {
+                                            "No se pueden borrar objetos porque no se han podido comprobar todas las dependencias de cuentos."
+                                        }
+                                        selectedObjectFolders.forEach { folder ->
+                                            val dependentStories = latestDependencies.storyFoldersByObject[folder].orEmpty()
+                                            check(dependentStories.size == 1 && dependentStories.single() in selectedStoryPaths) {
+                                                "El objeto «$folder» está compartido o ya no pertenece exclusivamente a un cuento seleccionado. No se ha eliminado."
+                                            }
+                                            check(currentObjects.any { it.folderName == folder }) {
+                                                "El objeto «$folder» ya no está disponible."
+                                            }
+                                        }
+                                        selectedStoryPaths.forEach { storyPath ->
+                                            val story = currentStories.firstOrNull { it.directory.canonicalPath == storyPath }
+                                                ?: throw IllegalStateException("Uno de los cuentos seleccionados ya no está disponible.")
+                                            StoryRepository.deleteStory(context, story)
+                                        }
+                                        selectedObjectFolders.forEach { folder ->
+                                            val stored = currentObjects.first { it.folderName == folder }
+                                            ObjectRepository.delete(context, stored)
+                                            InventoryRepository.remove(context, folder)
+                                            ObjectUnlockRepository.remove(context, folder)
+                                        }
+                                        selectedStoryPaths.size to selectedObjectFolders.size
+                                    }
                                     var removedExercises = 0
                                     var removedStatistics = 0
                                     ContentStorage.Modality.entries.forEach { modality ->
@@ -2483,10 +2542,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
                                     wordExercises = wordLibraryState.reloadExercises()
                                     sequenceExercises = sequenceLibraryState.reloadExercises()
+                                    storedStories = withContext(Dispatchers.IO) { StoryRepository.list(context) }
+                                    storedStoryObjects = withContext(Dispatchers.IO) { ObjectRepository.list(context) }
+                                    deleteDependencySnapshot = null
                                     deleteSelectedItems = emptySet()
                                     deleteExpandedCategories = emptySet()
                                     deleteConfirmArmed = false
-                                    transferMessage = "Eliminación completada: " + removedExercises + " ejercicios y " + removedStatistics + " estadísticas eliminados."
+                                    transferMessage = "Eliminación completada: " + removedExercises + " ejercicios, " + removedStatistics +
+                                        " estadísticas, " + removedStoryAndObjectCounts.first + " cuentos y " +
+                                        removedStoryAndObjectCounts.second + " objetos eliminados."
                                     parentSection = "library-transfer"
                                 } catch (e: Exception) {
                                     deleteConfirmArmed = false
