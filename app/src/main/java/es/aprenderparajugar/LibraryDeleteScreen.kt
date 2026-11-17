@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.sp
 
 internal fun LazyListScope.LibraryDeleteScreen(
     modalityCategories: Map<ContentStorage.Modality, List<Pair<String, List<StoredExercise>>>>,
+    stories: List<StoredStory>,
+    objects: List<StoredObject>,
+    dependencySnapshot: StoryObjectDependencySnapshot?,
     selectedItems: Set<String>,
     expandedCategories: Set<String>,
     confirmArmed: Boolean,
@@ -194,11 +197,110 @@ internal fun LazyListScope.LibraryDeleteScreen(
             }
         }
     }
+    val selectedStories = stories.filter { "T|" + it.folderName in selectedItems }
+    val selectedStoryCount = selectedStories.size
+    val selectedObjectCount = selectedItems.count { it.startsWith("O|") }
+
+    item {
+        androidx.compose.material3.HorizontalDivider()
+        Text("Cuentos", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Selecciona un cuento para ver los objetos que utiliza. Los objetos compartidos por varios cuentos no se podrán borrar desde aquí.",
+            fontSize = 13.sp,
+            color = Color(0xFF667085)
+        )
+        if (dependencySnapshot == null) {
+            Text("Comprobando dependencias de cuentos y objetos…", fontSize = 13.sp, color = Color(0xFF667085))
+        } else if (dependencySnapshot.scanErrors.isNotEmpty()) {
+            Text(
+                "No se han podido comprobar todas las dependencias. Por seguridad, no se permitirá borrar ningún objeto. " +
+                    dependencySnapshot.scanErrors.take(3).joinToString(" "),
+                fontSize = 12.sp,
+                color = Color(0xFFB3261E)
+            )
+        }
+    }
+    stories.forEach { story ->
+        val storyKey = "T|" + story.folderName
+        val storySelected = storyKey in selectedItems
+        val objectFolders = dependencySnapshot?.objectFoldersByStory?.get(story.folderName).orEmpty()
+        item {
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8F2))
+            ) {
+                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = storySelected,
+                            onCheckedChange = { checked ->
+                                val next = selectedItems.toMutableSet()
+                                if (checked) next.add(storyKey) else {
+                                    next.remove(storyKey)
+                                    objectFolders.forEach { next.remove("O|" + it) }
+                                }
+                                onSelectionChanged(next)
+                            }
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(story.metadata.title, fontWeight = FontWeight.Bold)
+                            Text(story.collection.replace('_', ' '), fontSize = 12.sp, color = Color(0xFF667085))
+                        }
+                        Text(if (storySelected) "Seleccionado" else "Seleccionar", fontSize = 12.sp, color = Color(0xFF6750A4))
+                    }
+                    if (storySelected) {
+                        Text("Objetos asociados a este cuento", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        if (dependencySnapshot == null) {
+                            Text("Aún no se han podido verificar los objetos.", fontSize = 12.sp, color = Color(0xFFB3261E))
+                        } else if (objectFolders.isEmpty()) {
+                            Text("Este cuento no tiene objetos asociados.", fontSize = 12.sp, color = Color(0xFF667085))
+                        } else {
+                            objectFolders.forEach { folder ->
+                                val storedObject = objects.firstOrNull { it.folderName == folder }
+                                val dependentStories = dependencySnapshot.storyFoldersByObject[folder].orEmpty()
+                                val canDeleteObject = dependencySnapshot.scanErrors.isEmpty() &&
+                                    dependentStories.size == 1 && story.folderName in dependentStories &&
+                                    storedObject != null
+                                val objectKey = "O|" + folder
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = objectKey in selectedItems,
+                                        enabled = canDeleteObject,
+                                        onCheckedChange = { checked ->
+                                            val next = selectedItems.toMutableSet()
+                                            if (checked) next.add(objectKey) else next.remove(objectKey)
+                                            onSelectionChanged(next)
+                                        }
+                                    )
+                                    Column(Modifier.weight(1f)) {
+                                        Text(storedObject?.metadata?.name ?: folder, fontWeight = FontWeight.Medium)
+                                        Text(
+                                            when {
+                                                dependencySnapshot.scanErrors.isNotEmpty() -> "No se puede verificar su uso"
+                                                storedObject == null -> "El objeto ya no está disponible en la biblioteca"
+                                                dependentStories.size > 1 -> "Compartido por ${dependentStories.size} cuentos; no se puede borrar"
+                                                canDeleteObject -> "Solo pertenece a este cuento; borrado opcional"
+                                                else -> "No se puede verificar la dependencia"
+                                            },
+                                            fontSize = 11.sp,
+                                            color = if (canDeleteObject) Color(0xFF24733B) else Color(0xFFB3261E)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     item {
         Text(
             "Selección: " + selectedCategoryCount + " categorías, " + selectedExerciseCount +
                 " ejercicios y " + selectedStatsCount +
-                " conjuntos de estadísticas. El PIN, los límites y las preferencias generales se conservarán.",
+                " conjuntos de estadísticas, " + selectedStoryCount + " cuentos y " + selectedObjectCount +
+                " objetos. El PIN, los límites y las preferencias generales se conservarán.",
             fontSize = 13.sp,
             color = Color(0xFF667085)
         )
@@ -216,8 +318,9 @@ internal fun LazyListScope.LibraryDeleteScreen(
         } else {
             Text(
                 "CONFIRMACIÓN: se eliminarán " + selectedCategoryCount + " categorías, " +
-                    selectedExerciseCount + " ejercicios y " + selectedStatsCount +
-                    " conjuntos de estadísticas. Esta acción no se puede deshacer.",
+                    selectedExerciseCount + " ejercicios, " + selectedStatsCount +
+                    " conjuntos de estadísticas, " + selectedStoryCount + " cuentos y " +
+                    selectedObjectCount + " objetos. Esta acción no se puede deshacer.",
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFFB3261E)
             )
