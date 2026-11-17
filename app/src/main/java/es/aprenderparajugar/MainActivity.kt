@@ -1053,7 +1053,17 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var remoteLibraryTotalBytes by remember { mutableStateOf(0L) }
     var remoteLibraryPendingImport by remember { mutableStateOf<RemoteLibraryPackage?>(null) }
     var transferRemoteLibraryName by remember { mutableStateOf<String?>(null) }
+    var libraryTaskRunning by remember { mutableStateOf(false) }
+    var libraryTaskMessage by remember { mutableStateOf("") }
+    var libraryTaskProgress by remember { mutableStateOf(0f) }
+    var libraryTaskIndeterminate by remember { mutableStateOf(true) }
     val remoteLibraryScope = rememberCoroutineScope()
+    val updateLibraryTaskProgress: (String, Int, Int) -> Unit = { message, current, total ->
+        libraryTaskMessage = message
+        libraryTaskIndeterminate = total <= 0
+        libraryTaskProgress = if (total > 0) (current.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
+    }
+    BackHandler(enabled = libraryTaskRunning) { }
     androidx.compose.runtime.LaunchedEffect(parentSection) {
         if (parentSection == "basic-library" && remoteLibraryPackages.isEmpty() && !remoteLibraryLoading) {
             remoteLibraryLoading = true
@@ -1211,29 +1221,39 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     val unifiedImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
         if (uri != null) {
-            try {
-                transferPackage?.let { LibraryPackageManager.discard(it) }
-                val inspected = LibraryPackageManager.inspect(context, uri)
-                transferPackage = inspected
-                transferImportCategories = inspected.modalities.associate { info ->
-                    info.modality to info.categories.flatMap { category ->
-                        if (info.modality == ContentStorage.Modality.SECUENCIAS) category.sequenceExercises.map { exercise ->
-                            LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory)
-                        } else listOf(category.directory)
-                    }.toSet()
+            libraryTaskRunning = true
+            updateLibraryTaskProgress("Preparando la inspección del paquete…", 0, 0)
+            remoteLibraryScope.launch {
+                try {
+                    transferPackage?.let { previous ->
+                        withContext(Dispatchers.IO) { LibraryPackageManager.discard(previous) }
+                    }
+                    val inspected = withContext(Dispatchers.IO) {
+                        LibraryPackageManager.inspect(context, uri, updateLibraryTaskProgress)
+                    }
+                    transferPackage = inspected
+                    transferImportCategories = inspected.modalities.associate { info ->
+                        info.modality to info.categories.flatMap { category ->
+                            if (info.modality == ContentStorage.Modality.SECUENCIAS) category.sequenceExercises.map { exercise ->
+                                LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory)
+                            } else listOf(category.directory)
+                        }.toSet()
+                    }
+                    transferImportStories = inspected.stories.map { it.key }.toSet()
+                    transferImportObjects = emptySet()
+                    transferObjectConflictDecisions = emptyMap()
+                    transferStoryConflictDecisions = emptyMap()
+                    transferExerciseConflictDecisions = emptyMap()
+                    transferConflictIndex = 0
+                    transferReplaceDuplicates = false
+                    transferImportStatistics = false
+                    transferMessage = "Archivo válido. Selecciona las categorías que deseas importar."
+                    parentSection = "library-import"
+                } catch (e: Exception) {
+                    transferMessage = "No se puede importar: ${e.message ?: "archivo no válido"}"
+                } finally {
+                    libraryTaskRunning = false
                 }
-                transferImportStories = inspected.stories.map { it.key }.toSet()
-                transferImportObjects = emptySet()
-                transferObjectConflictDecisions = emptyMap()
-                transferStoryConflictDecisions = emptyMap()
-                transferExerciseConflictDecisions = emptyMap()
-                transferConflictIndex = 0
-                transferReplaceDuplicates = false
-                transferImportStatistics = false
-                transferMessage = "Archivo válido. Selecciona las categorías que deseas importar."
-                parentSection = "library-import"
-            } catch (e: Exception) {
-                transferMessage = "No se puede importar: ${e.message ?: "archivo no válido"}"
             }
         }
     }
@@ -3056,8 +3076,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                             item {
                                 Button(onClick = {
+                                    libraryTaskRunning = true
+                                    updateLibraryTaskProgress("Preparando la importación…", 0, 0)
+                                    remoteLibraryScope.launch {
                                     try {
-                                        val count = LibraryPackageManager.import(context, info, transferImportCategories, false, transferImportStatistics, transferImportUsageStatistics, transferImportStories, transferObjectConflictDecisions, transferStoryConflictDecisions, transferImportObjects, transferExerciseConflictDecisions)
+                                        val count = withContext(Dispatchers.IO) {
+                                            LibraryPackageManager.import(
+                                                context, info, transferImportCategories, false,
+                                                transferImportStatistics, transferImportUsageStatistics,
+                                                transferImportStories, transferObjectConflictDecisions,
+                                                transferStoryConflictDecisions, transferImportObjects,
+                                                transferExerciseConflictDecisions, updateLibraryTaskProgress
+                                            )
+                                        }
                                         // Mark the exact release as installed only after the import completed
                                         // successfully. This state survives deletion of the downloaded ZIP.
                                         transferRemoteLibraryName?.let { packageName ->
@@ -3072,8 +3103,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         // La biblioteca de cuentos mantiene una lista en estado Compose.
                                         // Tras importar, hay que recargarla explícitamente para que los
                                         // cuentos recién copiados aparezcan sin reiniciar la aplicación.
-                                        storedStories = StoryRepository.list(context)
-                                        storedStoryObjects = ObjectRepository.list(context)
+                                        storedStories = withContext(Dispatchers.IO) { StoryRepository.list(context) }
+                                        storedStoryObjects = withContext(Dispatchers.IO) { ObjectRepository.list(context) }
                                         // Registrar también las colecciones de objetos que llegan con
                                         // las dependencias de los cuentos importados. La biblioteca de
                                         // objetos se copia correctamente, pero la pantalla de colecciones
@@ -3111,12 +3142,25 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 .putString("story_collections", storyCollections.joinToString("|"))
                                                 .apply()
                                         }
-                                        pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
-                                        wordExercises = wordLibraryState.reloadExercises()
-                                        sequenceExercises = sequenceLibraryState.reloadExercises()
-                                        categoryNames = (categoryNames + ExerciseRepository.list(context, ContentStorage.Modality.TARJETAS).map { it.metadata.category }).distinct()
-                                        wordLibraryState.mergeImportedCategories(ExerciseRepository.list(context, ContentStorage.Modality.PALABRAS).map { it.metadata.category }, false)
-                                        sequenceCategoryNames = (sequenceCategoryNames + ExerciseRepository.list(context, ContentStorage.Modality.SECUENCIAS).map { it.metadata.category }).distinct()
+                                        val refreshedLibraryData = withContext(Dispatchers.IO) {
+                                            Triple(
+                                                ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS),
+                                                ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS),
+                                                ExerciseUiStorage.loadSequences(context)
+                                            ) to Triple(
+                                                ExerciseRepository.list(context, ContentStorage.Modality.TARJETAS).map { it.metadata.category },
+                                                ExerciseRepository.list(context, ContentStorage.Modality.PALABRAS).map { it.metadata.category },
+                                                ExerciseRepository.list(context, ContentStorage.Modality.SECUENCIAS).map { it.metadata.category }
+                                            )
+                                        }
+                                        pairs = refreshedLibraryData.first.first
+                                        wordExercises = refreshedLibraryData.first.second
+                                        wordLibraryState.exercises.value = wordExercises
+                                        sequenceExercises = refreshedLibraryData.first.third
+                                        sequenceLibraryState.exercises.value = sequenceExercises
+                                        categoryNames = (categoryNames + refreshedLibraryData.second.first).distinct()
+                                        wordLibraryState.mergeImportedCategories(refreshedLibraryData.second.second, false)
+                                        sequenceCategoryNames = (sequenceCategoryNames + refreshedLibraryData.second.third).distinct()
                                         preferences.edit()
                                             .putString("categories", categoryNames.joinToString("|"))
                                             .putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|"))
@@ -3126,6 +3170,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         parentSection = "library-transfer"
                                     } catch (e: Exception) {
                                         transferMessage = "No se pudo completar la importación: ${e.message ?: "error"}"
+                                    } finally {
+                                        libraryTaskRunning = false
+                                    }
                                     }
                                 }, enabled = (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
                                     LibraryPackageManager.exerciseConflicts(context, info, transferImportCategories).all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
@@ -5662,6 +5709,32 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             }
         )
     }
+    if (libraryTaskRunning) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Procesando biblioteca") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(libraryTaskMessage.ifBlank { "Preparando operación…" }, fontSize = 14.sp)
+                    if (libraryTaskIndeterminate) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        Text("La operación puede tardar unos instantes. No cierres la aplicación.", fontSize = 12.sp, color = Color(0xFF667085))
+                    } else {
+                        LinearProgressIndicator(
+                            progress = { libraryTaskProgress },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            "${(libraryTaskProgress * 100).toInt()}% completado. No cierres la aplicación.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF667085)
+                        )
+                    }
+                }
+            },
+            confirmButton = { }
+        )
+    }
     if (remoteLibraryPendingImport != null) {
         val pendingPackage = remoteLibraryPendingImport!!
         AlertDialog(
@@ -5674,8 +5747,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                         try {
                             val file = RemoteLibraryRepository.cachedFile(context, pendingPackage.name)
                             check(file.isFile && file.length() > 0L) { "El archivo descargado ya no está disponible. Descárgalo de nuevo." }
+                            libraryTaskRunning = true
+                            updateLibraryTaskProgress("Validando el paquete descargado…", 0, 0)
                             val inspected = withContext(Dispatchers.IO) {
-                                LibraryPackageManager.inspect(context, Uri.fromFile(file))
+                                LibraryPackageManager.inspect(context, Uri.fromFile(file), updateLibraryTaskProgress)
                             }
                             transferPackage?.let { LibraryPackageManager.discard(it) }
                             transferPackage = inspected
@@ -5702,6 +5777,8 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                         } catch (error: Exception) {
                             remoteLibraryMessage = "No se ha podido validar el paquete: ${error.message ?: "archivo no válido"}"
                             remoteLibraryPendingImport = null
+                        } finally {
+                            libraryTaskRunning = false
                         }
                     }
                 }) { Text("Importar ahora") }
