@@ -270,7 +270,29 @@ internal object LibraryPackageManager {
                         check(destination.mkdirs() || destination.isDirectory)
                     } else {
                         destination.parentFile?.let { check(it.mkdirs() || it.isDirectory) }
-                        destination.outputStream().buffered().use { output -> zip.copyTo(output) }
+                        onProgress?.invoke("Descomprimiendo: ${entry.name}", 0, 0)
+                        destination.outputStream().buffered().use { output ->
+                            val buffer = ByteArray(32 * 1024)
+                            var copiedBytes = 0L
+                            var lastProgressBytes = 0L
+                            while (true) {
+                                val read = zip.read(buffer)
+                                if (read < 0) break
+                                output.write(buffer, 0, read)
+                                copiedBytes += read
+                                if (copiedBytes - lastProgressBytes >= 512L * 1024L) {
+                                    val entrySize = entry.size
+                                    if (entrySize > 0L) {
+                                        val totalBytes = entrySize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                                        val currentBytes = copiedBytes.coerceAtMost(totalBytes.toLong()).toInt()
+                                        onProgress?.invoke("Descomprimiendo: ${entry.name}", currentBytes, totalBytes)
+                                    } else {
+                                        onProgress?.invoke("Descomprimiendo: ${entry.name} · ${copiedBytes / 1024L} KB", 0, 0)
+                                    }
+                                    lastProgressBytes = copiedBytes
+                                }
+                            }
+                        }
                     }
                     zip.closeEntry()
                     extractedEntries++
