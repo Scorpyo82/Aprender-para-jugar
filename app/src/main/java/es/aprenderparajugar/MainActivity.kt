@@ -113,8 +113,26 @@ private data class LibraryImportPreparation(
     val storyNameConflicts: List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>,
     val incomingObjects: List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>,
     val requiredObjects: Map<String, List<String>>,
-    val localObjects: List<StoredObject>
+    val localObjects: List<StoredObject>,
+    val conflictThumbnails: Map<String, Pair<Bitmap?, Bitmap?>>
 )
+
+private fun decodeLibraryImportThumbnail(file: File): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sampleSize = 1
+    while (bounds.outWidth / sampleSize > 256 || bounds.outHeight / sampleSize > 256) {
+        sampleSize *= 2
+    }
+    return BitmapFactory.decodeFile(
+        file.absolutePath,
+        BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.RGB_565
+        }
+    )
+}
 
 class MainActivity : ComponentActivity() {
     // Start the earned-time countdown at the first lifecycle transition away from the app.
@@ -1073,6 +1091,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferImportObjectEntries by remember { mutableStateOf<List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>>(emptyList()) }
     var transferRequiredImportObjects by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
     var transferLocalObjects by remember { mutableStateOf<List<StoredObject>>(emptyList()) }
+    var transferObjectConflictThumbnails by remember { mutableStateOf<Map<String, Pair<Bitmap?, Bitmap?>>>(emptyMap()) }
     val remoteLibraryScope = rememberCoroutineScope()
     val updateLibraryTaskProgress: (String, Int, Int) -> Unit = { message, current, total ->
         libraryTaskMessage = message
@@ -1089,6 +1108,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             transferImportObjectEntries = emptyList()
             transferRequiredImportObjects = emptyMap()
             transferLocalObjects = emptyList()
+            transferObjectConflictThumbnails = emptyMap()
             transferImportPreparationLoading = false
             return@LaunchedEffect
         }
@@ -1102,15 +1122,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
                     }?.let { existing -> incomingStory to existing }
                 }
+                val objectConflicts = LibraryPackageManager.objectConflicts(context, packageInfo, transferImportStories, transferImportObjects)
+                val conflictThumbnails = objectConflicts.associate { conflict ->
+                    conflict.incoming.folderName to (
+                        decodeLibraryImportThumbnail(File(conflict.incoming.directory, conflict.incoming.metadata.image)) to
+                            decodeLibraryImportThumbnail(File(conflict.existing.directory, conflict.existing.metadata.image))
+                    )
+                }
                 LibraryImportPreparation(
                     exerciseConflicts = LibraryPackageManager.exerciseConflicts(context, packageInfo, transferImportCategories),
-                    objectConflicts = LibraryPackageManager.objectConflicts(context, packageInfo, transferImportStories, transferImportObjects),
+                    objectConflicts = objectConflicts,
                     storyNameConflicts = storyConflicts,
                     incomingObjects = packageInfo.objects.map { objectInfo ->
                         objectInfo to ObjectRepository.read(File(packageInfo.staging, "objetos/${objectInfo.key}"))
                     },
                     requiredObjects = LibraryPackageManager.requiredImportObjects(packageInfo, transferImportStories),
-                    localObjects = localObjects
+                    localObjects = localObjects,
+                    conflictThumbnails = conflictThumbnails
                 )
             }
             transferExerciseConflicts = prepared.exerciseConflicts
@@ -1119,6 +1147,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             transferImportObjectEntries = prepared.incomingObjects
             transferRequiredImportObjects = prepared.requiredObjects
             transferLocalObjects = prepared.localObjects
+            transferObjectConflictThumbnails = prepared.conflictThumbnails
         } catch (error: Exception) {
             transferMessage = "No se pudieron comprobar las coincidencias: ${error.message ?: "error"}"
             transferExerciseConflicts = emptyList()
@@ -2661,14 +2690,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
                                                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                                                 Text("En el ZIP", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                                                val incomingBitmap = BitmapFactory.decodeFile(File(incoming.directory, incoming.metadata.image).absolutePath)
+                                                                val incomingBitmap = transferObjectConflictThumbnails[dependency.directory]?.first
                                                                 if (incomingBitmap != null) Image(incomingBitmap.asImageBitmap(), contentDescription = "Objeto del ZIP", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
                                                                 Text(incoming.metadata.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                                                 Text("Aparece en la tienda: ${if (incoming.metadata.availableInStore) "Sí" else "No"}", fontSize = 11.sp, color = Color(0xFF667085))
                                                             }
                                                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                                                 Text("En este dispositivo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                                                val existingBitmap = BitmapFactory.decodeFile(File(existing.directory, existing.metadata.image).absolutePath)
+                                                                val existingBitmap = transferObjectConflictThumbnails[dependency.directory]?.second
                                                                 if (existingBitmap != null) Image(existingBitmap.asImageBitmap(), contentDescription = "Objeto existente", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
                                                                 Text(existing.metadata.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                                                 Text("Aparece en la tienda: ${if (existing.metadata.availableInStore) "Sí" else "No"}", fontSize = 11.sp, color = Color(0xFF667085))
