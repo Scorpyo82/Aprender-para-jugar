@@ -2469,6 +2469,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onExpandedCategoriesChanged = { deleteExpandedCategories = it },
                             onConfirmArmedChanged = { deleteConfirmArmed = it },
                             onDeleteConfirmed = {
+                                remoteLibraryScope.launch {
                                 try {
                                     val selectedStoryPaths = deleteSelectedItems
                                         .filter { it.startsWith("T|") }
@@ -2555,6 +2556,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 } catch (e: Exception) {
                                     deleteConfirmArmed = false
                                     transferMessage = "No se pudo completar la eliminación: " + (e.message ?: "error")
+                                }
                                 }
                             }
                         )
