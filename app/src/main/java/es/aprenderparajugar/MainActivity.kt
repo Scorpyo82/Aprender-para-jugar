@@ -5843,12 +5843,15 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             text = { Text("«${pendingPackage.name}» se ha descargado correctamente y está lista para instalar. Puedes importarla ahora o dejarla para más tarde.") },
             confirmButton = {
                 TextButton(onClick = {
+                    remoteLibraryPendingImport = null
+                    libraryTaskRunning = true
+                    updateLibraryTaskProgress("Validando el paquete descargado…", 0, 0)
                     remoteLibraryScope.launch {
                         try {
-                            val file = RemoteLibraryRepository.cachedFile(context, pendingPackage.name)
+                            val file = withContext(Dispatchers.IO) {
+                                RemoteLibraryRepository.cachedFile(context, pendingPackage.name)
+                            }
                             check(file.isFile && file.length() > 0L) { "El archivo descargado ya no está disponible. Descárgalo de nuevo." }
-                            libraryTaskRunning = true
-                            updateLibraryTaskProgress("Validando el paquete descargado…", 0, 0)
                             val inspected = withContext(Dispatchers.IO) {
                                 LibraryPackageManager.inspect(context, Uri.fromFile(file), updateLibraryTaskProgress)
                             }
