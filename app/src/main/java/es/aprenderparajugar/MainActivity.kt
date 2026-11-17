@@ -1125,7 +1125,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
                     }?.let { existing -> incomingStory to existing }
                 }
-                val objectConflicts = LibraryPackageManager.objectConflicts(context, packageInfo, transferImportStories, transferImportObjects)
+                val objectConflicts = LibraryPackageManager.objectConflicts(context, packageInfo, transferImportStories, transferImportObjects, localObjects)
                 val conflictThumbnails = objectConflicts.associate { conflict ->
                     conflict.incoming.folderName to (
                         decodeLibraryImportThumbnail(File(conflict.incoming.directory, conflict.incoming.metadata.image)) to
