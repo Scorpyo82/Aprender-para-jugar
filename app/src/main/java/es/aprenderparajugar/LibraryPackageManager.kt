@@ -771,8 +771,6 @@ internal object LibraryPackageManager {
                 val target = existing?.directory ?: File(File(ObjectRepository.rootDirectory(context), incoming.collection), incoming.directory)
                 val temporary = File(target.parentFile, ".import-${incoming.directory}-${System.nanoTime()}")
                 copyDirectory(source, temporary) { copiedFile ->
-                    onProgress?.invoke("Copiando cuento ${incoming.title}: $copiedFile", progressCurrent, progressTotal)
-                } { copiedFile ->
                     onProgress?.invoke("Copiando objeto ${incomingObject.metadata.name}: $copiedFile", progressCurrent, progressTotal)
                 }
                 if (target.exists()) {
@@ -801,7 +799,9 @@ internal object LibraryPackageManager {
                 }
                 val target = existing?.directory ?: File(collection, incoming.directory)
                 val temporary = File(collection, ".import-${incoming.directory}-${System.nanoTime()}")
-                copyDirectory(source, temporary)
+                copyDirectory(source, temporary) { copiedFile ->
+                    onProgress?.invoke("Copiando cuento ${incoming.title}: $copiedFile", progressCurrent, progressTotal)
+                }
                 if (target.exists()) {
                     val backup = File(collection, ".backup-story-${incoming.directory}-${System.nanoTime()}")
                     check(target.renameTo(backup)) { "No se pudo reservar el cuento anterior «${incoming.title}»." }
