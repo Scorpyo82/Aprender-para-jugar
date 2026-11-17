@@ -1432,7 +1432,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "library-export", "library-import", "library-delete" -> {
-                        transferPackage?.let { LibraryPackageManager.discard(it) }
+                        transferPackage?.let { packageToDiscard ->
+                            remoteLibraryScope.launch {
+                                withContext(Dispatchers.IO) { LibraryPackageManager.discard(packageToDiscard) }
+                            }
+                        }
                         transferPackage = null
                         deleteConfirmArmed = false
                         parentSection = parentBackSection(parentSection, transferRemoteLibraryName != null) ?: "menu"
@@ -3279,8 +3283,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
                             item { OutlinedButton(onClick = {
-                                LibraryPackageManager.discard(info)
                                 transferPackage = null
+                                remoteLibraryScope.launch {
+                                    withContext(Dispatchers.IO) { LibraryPackageManager.discard(info) }
+                                }
                                 parentSection = if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"
                                 transferRemoteLibraryName = null
                             }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
