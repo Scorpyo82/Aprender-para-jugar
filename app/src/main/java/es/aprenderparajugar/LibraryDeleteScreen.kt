@@ -197,7 +197,7 @@ internal fun LazyListScope.LibraryDeleteScreen(
             }
         }
     }
-    val selectedStories = stories.filter { "T|" + it.folderName in selectedItems }
+    val selectedStories = stories.filter { "T|" + it.directory.absolutePath in selectedItems }
     val selectedStoryCount = selectedStories.size
     val selectedObjectCount = selectedItems.count { it.startsWith("O|") }
 
@@ -221,9 +221,10 @@ internal fun LazyListScope.LibraryDeleteScreen(
         }
     }
     stories.forEach { story ->
-        val storyKey = "T|" + story.folderName
+        val storyPath = story.directory.canonicalPath
+        val storyKey = "T|" + story.directory.absolutePath
         val storySelected = storyKey in selectedItems
-        val objectFolders = dependencySnapshot?.objectFoldersByStory?.get(story.folderName).orEmpty()
+        val objectFolders = dependencySnapshot?.objectFoldersByStory?.get(storyPath).orEmpty()
         item {
             Card(
                 Modifier.fillMaxWidth(),
@@ -260,7 +261,7 @@ internal fun LazyListScope.LibraryDeleteScreen(
                                 val storedObject = objects.firstOrNull { it.folderName == folder }
                                 val dependentStories = dependencySnapshot.storyFoldersByObject[folder].orEmpty()
                                 val canDeleteObject = dependencySnapshot.scanErrors.isEmpty() &&
-                                    dependentStories.size == 1 && story.folderName in dependentStories &&
+                                    dependentStories.size == 1 && storyPath in dependentStories &&
                                     storedObject != null
                                 val objectKey = "O|" + folder
                                 Row(verticalAlignment = Alignment.CenterVertically) {
