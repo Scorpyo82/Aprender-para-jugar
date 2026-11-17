@@ -731,7 +731,7 @@ internal object LibraryPackageManager {
                     objectReferenceRemapping[incoming.directory] = existing.folderName
                 }
             }
-            val localStories = StoryRepository.list(context)
+            val localStories = StoryRepository.list(context).toMutableList()
             selectedStoryInfos.forEach { incoming ->
                 val existing = localStories.firstOrNull {
                     it.collection == incoming.collection && NameRules.key(it.metadata.title) == NameRules.key(incoming.title)
@@ -794,7 +794,7 @@ internal object LibraryPackageManager {
                 if (objectReferenceRemapping.isNotEmpty()) remapStoryObjectReferences(source, objectReferenceRemapping)
                 val collection = File(StoryRepository.rootDirectory(context), incoming.collection)
                 check(collection.mkdirs() || collection.isDirectory)
-                val existing = StoryRepository.list(context).firstOrNull {
+                val existing = localStories.firstOrNull {
                     it.collection == incoming.collection && NameRules.key(it.metadata.title) == NameRules.key(incoming.title)
                 }
                 val target = existing?.directory ?: File(collection, incoming.directory)
@@ -814,6 +814,11 @@ internal object LibraryPackageManager {
                     check(temporary.renameTo(target)) { "No se pudo importar el cuento «${incoming.title}»." }
                     rollbackTargets.add(target to null)
                 }
+                localStories.removeAll {
+                    it.directory.canonicalFile == target.canonicalFile ||
+                        (it.collection == incoming.collection && NameRules.key(it.metadata.title) == NameRules.key(incoming.title))
+                }
+                localStories.add(StoryRepository.read(target))
                 reportProgress("Importando cuento: ${incoming.title}")
             }
             // Las portadas viajan con los cuentos, pero nunca sustituyen una portada local.
