@@ -24,33 +24,34 @@ internal object StoryObjectDependencyRepository {
             return StoryObjectDependencySnapshot(emptyMap(), emptyMap(), listOf("No se pudo leer la biblioteca de cuentos."))
         }
 
-        collections.filter { it.isDirectory && !it.name.startsWith(".") }.forEach { collection ->
+        collections.filter { it.isDirectory && !it.name.startsWith(".") }.forEach collectionLoop@ { collection ->
             val directories = collection.listFiles()
             if (directories == null) {
                 errors += "No se pudo leer la colección «${collection.name}»."
-                return@forEach
+                return@collectionLoop
             }
-            directories.filter { it.isDirectory && !it.name.startsWith(".") }.forEach { directory ->
+            directories.filter { it.isDirectory && !it.name.startsWith(".") }.forEach storyLoop@ { directory ->
                 val story = runCatching { StoryRepository.read(directory) }.getOrElse {
                     errors += "No se pudo leer el cuento «${directory.name}»."
-                    return@forEach
+                    return@storyLoop
                 }
                 val references = linkedSetOf<String>()
                 story.metadata.connectionConditions.mapNotNullTo(references) { it.requiredObject }
                 story.metadata.connectionAlternatives.mapNotNullTo(references) { it.requiredObject }
 
-                story.metadata.scenes.forEach { sceneFolder ->
+                story.metadata.scenes.forEach sceneLoop@ { sceneFolder ->
                     val scene = runCatching { StoryRepository.readScene(story, sceneFolder).metadata }.getOrElse {
                         errors += "No se pudo leer «${story.metadata.title} / $sceneFolder»."
-                        return@forEach
+                        return@sceneLoop
                     }
                     scene.awardedObject?.let(references::add)
                     scene.requiredObject?.let(references::add)
                     references.addAll(scene.awardedObjects)
                     references.addAll(scene.unlockedObjects)
                 }
-                objectsByStory[story.folderName] = references
-                references.forEach { folder -> storiesByObject.getOrPut(folder) { linkedSetOf() }.add(story.folderName) }
+                val storyKey = story.directory.canonicalPath
+                objectsByStory[storyKey] = references
+                references.forEach { folder -> storiesByObject.getOrPut(folder) { linkedSetOf() }.add(storyKey) }
             }
         }
         return StoryObjectDependencySnapshot(
