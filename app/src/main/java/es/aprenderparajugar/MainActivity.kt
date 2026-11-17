@@ -5824,13 +5824,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(40.dp),
+                            .height(72.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
                         Text(
                             libraryTaskMessage.ifBlank { "Preparando operación…" },
                             fontSize = 14.sp,
-                            maxLines = 2,
+                            maxLines = 4,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
