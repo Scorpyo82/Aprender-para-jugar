@@ -107,6 +107,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private data class LibraryImportPreparation(
+    val exerciseConflicts: List<LibraryPackageManager.ExerciseConflictInfo>,
+    val objectConflicts: List<LibraryPackageManager.ObjectConflictInfo>,
+    val storyNameConflicts: List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>,
+    val incomingObjects: List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>,
+    val requiredObjects: Map<String, List<String>>,
+    val localObjects: List<StoredObject>
+)
+
 class MainActivity : ComponentActivity() {
     // Start the earned-time countdown at the first lifecycle transition away from the app.
     // onPause is earlier than onStop and closes the race with the accessibility service/Home.
@@ -1057,6 +1066,13 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var libraryTaskMessage by remember { mutableStateOf("") }
     var libraryTaskProgress by remember { mutableStateOf(0f) }
     var libraryTaskIndeterminate by remember { mutableStateOf(true) }
+    var transferImportPreparationLoading by remember { mutableStateOf(false) }
+    var transferExerciseConflicts by remember { mutableStateOf<List<LibraryPackageManager.ExerciseConflictInfo>>(emptyList()) }
+    var transferObjectConflicts by remember { mutableStateOf<List<LibraryPackageManager.ObjectConflictInfo>>(emptyList()) }
+    var transferStoryNameConflicts by remember { mutableStateOf<List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>>(emptyList()) }
+    var transferImportObjectEntries by remember { mutableStateOf<List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>>(emptyList()) }
+    var transferRequiredImportObjects by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
+    var transferLocalObjects by remember { mutableStateOf<List<StoredObject>>(emptyList()) }
     val remoteLibraryScope = rememberCoroutineScope()
     val updateLibraryTaskProgress: (String, Int, Int) -> Unit = { message, current, total ->
         libraryTaskMessage = message
@@ -1064,6 +1080,54 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         libraryTaskProgress = if (total > 0) (current.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
     }
     BackHandler(enabled = libraryTaskRunning) { }
+    androidx.compose.runtime.LaunchedEffect(transferPackage, transferImportCategories, transferImportStories, transferImportObjects) {
+        val packageInfo = transferPackage
+        if (packageInfo == null) {
+            transferExerciseConflicts = emptyList()
+            transferObjectConflicts = emptyList()
+            transferStoryNameConflicts = emptyList()
+            transferImportObjectEntries = emptyList()
+            transferRequiredImportObjects = emptyMap()
+            transferLocalObjects = emptyList()
+            transferImportPreparationLoading = false
+            return@LaunchedEffect
+        }
+        transferImportPreparationLoading = true
+        try {
+            val prepared = withContext(Dispatchers.IO) {
+                val localStories = StoryRepository.list(context)
+                val localObjects = ObjectRepository.list(context)
+                val storyConflicts = packageInfo.stories.filter { it.key in transferImportStories }.mapNotNull { incomingStory ->
+                    localStories.firstOrNull {
+                        it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
+                    }?.let { existing -> incomingStory to existing }
+                }
+                LibraryImportPreparation(
+                    exerciseConflicts = LibraryPackageManager.exerciseConflicts(context, packageInfo, transferImportCategories),
+                    objectConflicts = LibraryPackageManager.objectConflicts(context, packageInfo, transferImportStories, transferImportObjects),
+                    storyNameConflicts = storyConflicts,
+                    incomingObjects = packageInfo.objects.map { objectInfo ->
+                        objectInfo to ObjectRepository.read(File(packageInfo.staging, "objetos/${objectInfo.key}"))
+                    },
+                    requiredObjects = LibraryPackageManager.requiredImportObjects(packageInfo, transferImportStories),
+                    localObjects = localObjects
+                )
+            }
+            transferExerciseConflicts = prepared.exerciseConflicts
+            transferObjectConflicts = prepared.objectConflicts
+            transferStoryNameConflicts = prepared.storyNameConflicts
+            transferImportObjectEntries = prepared.incomingObjects
+            transferRequiredImportObjects = prepared.requiredObjects
+            transferLocalObjects = prepared.localObjects
+        } catch (error: Exception) {
+            transferMessage = "No se pudieron comprobar las coincidencias: ${error.message ?: "error"}"
+            transferExerciseConflicts = emptyList()
+            transferObjectConflicts = emptyList()
+            transferStoryNameConflicts = emptyList()
+        } finally {
+            transferImportPreparationLoading = false
+        }
+    }
     androidx.compose.runtime.LaunchedEffect(parentSection) {
         if (parentSection == "basic-library" && remoteLibraryPackages.isEmpty() && !remoteLibraryLoading) {
             remoteLibraryLoading = true
@@ -2492,16 +2556,18 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "library-import" -> {
                         val info = transferPackage
                         item { Text("Contenido del archivo", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        if (transferImportPreparationLoading) {
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Comprobando coincidencias y dependencias…", fontSize = 13.sp, color = Color(0xFF667085))
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                            }
+                        }
                         if (info == null) {
                             item { Text("No hay ningún paquete validado. Vuelve atrás y selecciona un archivo.") }
                         } else {
-                            val localStoriesForImport = StoryRepository.list(context)
-                            val storyNameConflicts = info.stories.filter { it.key in transferImportStories }.mapNotNull { incomingStory ->
-                                val existingStory = localStoriesForImport.firstOrNull {
-                                    it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
-                                }
-                                existingStory?.let { incomingStory to it }
-                            }
+                            val storyNameConflicts = transferStoryNameConflicts
                             if (info.stories.isNotEmpty()) {
                                 item {
                                     Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -2534,7 +2600,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         }
                                     }
                                 }
-                                val conflictDetails = LibraryPackageManager.objectConflicts(context, info, transferImportStories, transferImportObjects)
+                                val conflictDetails = transferObjectConflicts
                                 if (storyNameConflicts.isNotEmpty()) {
                                     item {
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2578,20 +2644,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         Text("Resuelve las coincidencias una a una. Se comparan las imágenes reales y los datos de cada objeto.", fontSize = 12.sp, color = Color(0xFF667085))
                                     }
                                 }
-                                val localObjects = ObjectRepository.list(context)
-                                val neededObjectNames = linkedSetOf<String>()
-                                info.stories.filter { it.key in transferImportStories }.forEach { storyInfo ->
-                                    val story = StoryRepository.read(File(info.staging, "cuentos/${storyInfo.key}"))
-                                    story.metadata.connectionConditions.mapNotNullTo(neededObjectNames) { it.requiredObject }
-                                    story.metadata.scenes.forEach { sceneName ->
-                                        val sceneFile = File(File(File(story.directory, "escenas"), sceneName), "escena.json")
-                                        if (sceneFile.isFile) {
-                                            val scene = StorySceneJsonCodec.decode(JSONObject(sceneFile.readText(Charsets.UTF_8)))
-                                            listOfNotNull(scene.awardedObject, scene.requiredObject).forEach { neededObjectNames.add(it) }
-                                        }
-                                    }
-                                }
-                                info.objects.filter { it.directory in neededObjectNames }.forEach { dependency ->
+                                val localObjects = transferLocalObjects
+                                val requiredObjectKeys = transferRequiredImportObjects.keys
+                                info.objects.filter { it.key in requiredObjectKeys }.forEach { dependency ->
                                     val incoming = ObjectRepository.read(File(info.staging, "objetos/${dependency.key}"))
                                     val existing = localObjects.firstOrNull {
                                         it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
@@ -2658,10 +2713,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                             }
                             if (info.objects.isNotEmpty()) {
-                                val importObjectsWithData = info.objects.map { objectInfo ->
-                                    objectInfo to ObjectRepository.read(File(info.staging, "objetos/${objectInfo.key}"))
-                                }
-                                val requiredImportObjects = LibraryPackageManager.requiredImportObjects(info, transferImportStories)
+                                val importObjectsWithData = transferImportObjectEntries
+                                val requiredImportObjects = transferRequiredImportObjects
                                 item {
                                     Text("Objetos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                     Text("Los objetos requeridos por los cuentos seleccionados se incorporarán automáticamente. También puedes seleccionar objetos por separado. Esta operación no modifica el inventario del niño.", fontSize = 12.sp, color = Color(0xFF667085))
@@ -2683,7 +2736,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         val requiredBy = requiredImportObjects[objectInfo.key].orEmpty()
                                         val isRequired = requiredBy.isNotEmpty()
                                         val selected = isRequired || objectInfo.key in transferImportObjects
-                                        val local = ObjectRepository.list(context).firstOrNull {
+                                        val local = transferLocalObjects.firstOrNull {
                                             it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
                                         }
                                         item {
@@ -2749,7 +2802,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                             val requiredBy = requiredImportObjects[objectInfo.key].orEmpty()
                                             val isRequired = requiredBy.isNotEmpty()
                                             val selected = isRequired || objectInfo.key in transferImportObjects
-                                            val local = ObjectRepository.list(context).firstOrNull {
+                                            val local = transferLocalObjects.firstOrNull {
                                                 it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
                                             }
                                             item {
@@ -2929,7 +2982,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                             }
                             item {
-                                val exerciseConflicts = LibraryPackageManager.exerciseConflicts(context, info, transferImportCategories)
+                                val exerciseConflicts = transferExerciseConflicts
                                 val groupedConflicts = ContentStorage.Modality.entries.mapNotNull { modality ->
                                     val conflicts = exerciseConflicts.filter { it.modality == modality }
                                     if (conflicts.isEmpty()) null else modality to conflicts
@@ -3059,7 +3112,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                             }
                             item {
-                                val finalConflictReview = LibraryPackageManager.objectConflicts(context, info, transferImportStories, transferImportObjects)
+                                val finalConflictReview = transferObjectConflicts
                                 val resolvedCount = finalConflictReview.count { it.incoming.folderName in transferObjectConflictDecisions }
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text("Resumen de coincidencias", fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -3179,15 +3232,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         libraryTaskRunning = false
                                     }
                                     }
-                                }, enabled = (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
-                                    LibraryPackageManager.exerciseConflicts(context, info, transferImportCategories).all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
-                                    LibraryPackageManager.objectConflicts(context, info, transferImportStories, transferImportObjects).all { it.incoming.folderName in transferObjectConflictDecisions } &&
-                                    info.stories.filter { it.key in transferImportStories }.all { incomingStory ->
-                                        val duplicate = StoryRepository.list(context).any {
-                                            it.collection == incomingStory.collection && NameRules.key(it.metadata.title) == NameRules.key(incomingStory.title)
-                                        }
-                                        !duplicate || transferStoryConflictDecisions[incomingStory.key] == "overwrite"
-                                    }, modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
+                                }, enabled = !transferImportPreparationLoading &&
+                                    (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
+                                    transferExerciseConflicts.all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
+                                    transferObjectConflicts.all { it.incoming.folderName in transferObjectConflictDecisions } &&
+                                    transferStoryNameConflicts.all { transferStoryConflictDecisions[it.first.key] == "overwrite" },
+                                    modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                             }
                             item { OutlinedButton(onClick = {
                                 LibraryPackageManager.discard(info)
