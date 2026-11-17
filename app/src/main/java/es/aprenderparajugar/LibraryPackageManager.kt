@@ -281,14 +281,11 @@ internal object LibraryPackageManager {
                                 output.write(buffer, 0, read)
                                 copiedBytes += read
                                 if (copiedBytes - lastProgressBytes >= 512L * 1024L) {
-                                    val entrySize = entry.size
-                                    if (entrySize > 0L) {
-                                        val totalBytes = entrySize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                                        val currentBytes = copiedBytes.coerceAtMost(totalBytes.toLong()).toInt()
-                                        onProgress?.invoke("Descomprimiendo: ${entry.name}", currentBytes, totalBytes)
-                                    } else {
-                                        onProgress?.invoke("Descomprimiendo: ${entry.name} · ${copiedBytes / 1024L} KB", 0, 0)
-                                    }
+                                    onProgress?.invoke(
+                                        "Descomprimiendo: ${entry.name} · ${copiedBytes / 1024L} KB",
+                                        0,
+                                        0
+                                    )
                                     lastProgressBytes = copiedBytes
                                 }
                             }
