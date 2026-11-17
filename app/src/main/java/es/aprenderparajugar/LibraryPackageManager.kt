@@ -1020,10 +1020,10 @@ internal object LibraryPackageManager {
             if (file.isDirectory) check(target.mkdirs() || target.isDirectory)
             else {
                 target.parentFile?.let { check(it.mkdirs() || it.isDirectory) }
+                var copiedBytes = 0L
                 file.inputStream().buffered().use { input ->
                     target.outputStream().buffered().use { output ->
                         val buffer = ByteArray(32 * 1024)
-                        var copiedBytes = 0L
                         var lastProgressBytes = 0L
                         while (true) {
                             val read = input.read(buffer)
@@ -1037,6 +1037,7 @@ internal object LibraryPackageManager {
                         }
                     }
                 }
+                if (copiedBytes < 512L * 1024L) onFileProgress?.invoke(file.name)
             }
         }
     }
