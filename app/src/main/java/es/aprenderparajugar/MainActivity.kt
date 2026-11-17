@@ -2676,7 +2676,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 val localObjects = transferLocalObjects
                                 val requiredObjectKeys = transferRequiredImportObjects.keys
                                 info.objects.filter { it.key in requiredObjectKeys }.forEach { dependency ->
-                                    val incoming = ObjectRepository.read(File(info.staging, "objetos/${dependency.key}"))
+                                    val incoming = transferImportObjectEntries.firstOrNull { it.first.key == dependency.key }?.second
+                                        ?: return@forEach
                                     val existing = localObjects.firstOrNull {
                                         it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
                                     }
