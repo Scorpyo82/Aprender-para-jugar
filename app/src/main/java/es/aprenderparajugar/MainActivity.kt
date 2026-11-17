@@ -3089,16 +3089,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                                 transferExerciseConflictDecisions, updateLibraryTaskProgress
                                             )
                                         }
+                                        updateLibraryTaskProgress("Actualizando las bibliotecas locales…", 0, 0)
                                         // Mark the exact release as installed only after the import completed
                                         // successfully. This state survives deletion of the downloaded ZIP.
                                         transferRemoteLibraryName?.let { packageName ->
                                             remoteLibraryPackages.firstOrNull { it.name == packageName }?.let { remotePackage ->
-                                                RemoteLibraryRepository.saveInstalled(context, packageName, remotePackage.sha)
+                                                withContext(Dispatchers.IO) {
+                                                    RemoteLibraryRepository.saveInstalled(context, packageName, remotePackage.sha)
+                                                }
                                             }
                                         }
                                         transferPackage = null
-                                        LibraryPackageManager.discard(info)
-                                        transferRemoteLibraryName?.let { RemoteLibraryRepository.deleteCached(context, it) }
+                                        withContext(Dispatchers.IO) {
+                                            LibraryPackageManager.discard(info)
+                                            transferRemoteLibraryName?.let { RemoteLibraryRepository.deleteCached(context, it) }
+                                        }
                                         transferRemoteLibraryName = null
                                         // La biblioteca de cuentos mantiene una lista en estado Compose.
                                         // Tras importar, hay que recargarla explícitamente para que los
