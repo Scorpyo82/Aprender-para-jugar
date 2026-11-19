@@ -2,6 +2,8 @@ package es.aprenderparajugar
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,6 +47,7 @@ internal fun StoryEditorScreen(
     var editingCollectionFolder by state.editingCollectionFolder
     var storedStories by state.storedStories
     var requiredAccessObjects by state.requiredAccessObjects
+    var showAccessObjectsDialog by remember { mutableStateOf(false) }
     var storyScenePendingDeletion by remember { mutableStateOf<String?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -75,16 +78,61 @@ internal fun StoryEditorScreen(
                             if (objects.isEmpty()) {
                                 Text("No hay objetos disponibles en la biblioteca.", fontSize = 12.sp, color = Color(0xFF667085))
                             } else {
-                                objects.sortedBy { it.metadata.name.lowercase() }.forEach { storedObject ->
-                                    Row(Modifier.fillMaxWidth().clickable {
-                                        requiredAccessObjects = if (storedObject.folderName in requiredAccessObjects) requiredAccessObjects - storedObject.folderName else requiredAccessObjects + storedObject.folderName
-                                    }.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = storedObject.folderName in requiredAccessObjects,
-                                            onCheckedChange = { checked -> requiredAccessObjects = if (checked) (requiredAccessObjects + storedObject.folderName).distinct() else requiredAccessObjects - storedObject.folderName }
-                                        )
-                                        Text(storedObject.metadata.name)
-                                    }
+                                val sortedObjects = objects.sortedBy { it.metadata.name.lowercase() }
+                                val selectedNames = sortedObjects
+                                    .filter { it.folderName in requiredAccessObjects }
+                                    .map { it.metadata.name }
+                                OutlinedButton(
+                                    onClick = { showAccessObjectsDialog = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Seleccionar objetos (${requiredAccessObjects.size})")
+                                }
+                                Text(
+                                    if (selectedNames.isEmpty()) "No se requieren objetos para iniciar."
+                                    else selectedNames.joinToString(", "),
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF667085)
+                                )
+                                if (showAccessObjectsDialog) {
+                                    AlertDialog(
+                                        onDismissRequest = { showAccessObjectsDialog = false },
+                                        title = { Text("Requisitos para iniciar") },
+                                        text = {
+                                            Column(
+                                                Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())
+                                            ) {
+                                                sortedObjects.forEach { storedObject ->
+                                                    Row(
+                                                        Modifier.fillMaxWidth(),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Checkbox(
+                                                            checked = storedObject.folderName in requiredAccessObjects,
+                                                            onCheckedChange = { checked ->
+                                                                requiredAccessObjects = if (checked) {
+                                                                    (requiredAccessObjects + storedObject.folderName).distinct()
+                                                                } else {
+                                                                    requiredAccessObjects - storedObject.folderName
+                                                                }
+                                                            }
+                                                        )
+                                                        Text(storedObject.metadata.name)
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        confirmButton = {
+                                            TextButton(onClick = { showAccessObjectsDialog = false }) {
+                                                Text("Aceptar")
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = { showAccessObjectsDialog = false }) {
+                                                Text("Cerrar")
+                                            }
+                                        }
+                                    )
                                 }
                             }
                         }
