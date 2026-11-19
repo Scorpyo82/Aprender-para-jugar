@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 fun LazyListScope.StorySettingsScreen(
+    showPendingObjectImages: Boolean,
+    onShowPendingObjectImagesChange: (Boolean) -> Unit,
     onOpenStoryManagement: () -> Unit,
     onOpenObjectManagement: () -> Unit
 ) {
@@ -39,6 +41,33 @@ fun LazyListScope.StorySettingsScreen(
                     Text("Gestión de cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text("Biblioteca de cuentos y colecciones", color = Color(0xFF667085))
                 }
+            }
+        }
+    }
+    item {
+        Card(
+            Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE5))
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("🖼️", fontSize = 30.sp)
+                Column(Modifier.weight(1f)) {
+                    Text("Mostrar imágenes de objetos pendientes", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Si está desactivado, los objetos que faltan se mostrarán con una incógnita.",
+                        color = Color(0xFF667085),
+                        fontSize = 13.sp
+                    )
+                }
+                androidx.compose.material3.Switch(
+                    checked = showPendingObjectImages,
+                    onCheckedChange = onShowPendingObjectImagesChange
+                )
             }
         }
     }
