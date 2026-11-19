@@ -667,6 +667,7 @@ private fun AprenderApp() {
     var storyEditorSelectedScene by storyEditorState.selectedScene
     var storyScenePendingDeletion by remember { mutableStateOf<String?>(null) }
     var storyAmbientDuringNarration by remember { mutableIntStateOf(preferences.getInt("story_ambient_during_narration_percent", 20).coerceIn(0, 30)) }
+    var showPendingStoryObjectImages by remember { mutableStateOf(preferences.getBoolean("stories_show_pending_object_images", false)) }
     var storySceneTest by remember { mutableStateOf<StoredStoryScene?>(null) }
     var storySceneTestAmbientOverride by remember { mutableStateOf(false) }
     var storySceneTestAmbientFile by remember { mutableStateOf<File?>(null) }
@@ -3442,6 +3443,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "stories-settings" -> {
                         StorySettingsScreen(
+                            showPendingObjectImages = showPendingStoryObjectImages,
+                            onShowPendingObjectImagesChange = { enabled ->
+                                showPendingStoryObjectImages = enabled
+                                preferences.edit().putBoolean("stories_show_pending_object_images", enabled).apply()
+                            },
                             onOpenStoryManagement = { parentSection = "stories-content-settings" },
                             onOpenObjectManagement = { parentSection = "stories-objects" }
                         )
