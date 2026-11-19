@@ -24,7 +24,8 @@ internal fun StorySceneEditorContent(
     onPickIllustration: () -> Unit,
     onPickAmbient: () -> Unit,
     onPickNarration: () -> Unit,
-    onBackToMap: () -> Unit
+    onBackToMap: () -> Unit,
+    illustrationRevision: Int = 0
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var selectedScene by state.selectedScene
@@ -69,7 +70,7 @@ internal fun StorySceneEditorContent(
                             val illustrationFile = if (illustrations[selectedScene] != null && editingFolder != null && editingCollectionFolder != null)
                                 File(File(File(File(StoryRepository.rootDirectory(context), editingCollectionFolder!!), editingFolder!!), "escenas"), StoryRepository.sceneFolderName(selectedScene)).let { File(it, illustrations[selectedScene]!!) }
                             else null
-                            StoryImagePreview(illustrationFile, "Vista previa de ilustración")
+                            StoryImagePreview(illustrationFile, "Vista previa de ilustración", illustrationRevision)
                         }
             Column {
                             val keepPreviousAmbient = keepAmbientByScene[selectedScene] ?: false
