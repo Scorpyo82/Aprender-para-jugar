@@ -508,8 +508,8 @@ private fun currentDayKey(): String {
 }
 
 @Composable
-internal fun StoryImagePreview(file: File?, label: String) {
-    val bitmap = remember(file?.absolutePath, file?.lastModified()) {
+internal fun StoryImagePreview(file: File?, label: String, revision: Int = 0) {
+    val bitmap = remember(file?.absolutePath, file?.lastModified(), revision) {
         file?.takeIf { it.isFile && it.length() > 0L }?.let { runCatching { BitmapFactory.decodeFile(it.absolutePath) }.getOrNull() }
     }
     Column(
@@ -686,6 +686,8 @@ private fun AprenderApp() {
     var disabledStoryCollections by storyCollectionsState.disabledCollections
     var pendingStoryCollectionCover by remember { mutableStateOf<String?>(null) }
     var storyCollectionCoverRevision by remember { mutableIntStateOf(0) }
+    var storyEditorCoverRevision by remember { mutableIntStateOf(0) }
+    var storyEditorIllustrationRevision by remember { mutableIntStateOf(0) }
     var editingStoryCollection by remember { mutableStateOf<String?>(null) }
     var storiesBoardTab by remember { mutableStateOf("all") }
     var selectedStoriesCollection by remember { mutableStateOf<String?>(null) }
@@ -773,6 +775,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             val stored = persistStoryDraft() ?: error(storyEditorMessage)
             storyEditorCover = StoryRepository.importMedia(context, uri, stored.directory, "portada")
             persistStoryDraft()
+            storyEditorCoverRevision++
         }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la portada." }
     }
     val storyIllustrationPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -783,6 +786,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             val fileName = StoryRepository.importMedia(context, uri, File(File(stored.directory, "escenas"), scene), "ilustracion")
             storyEditorIllustrations = storyEditorIllustrations.toMutableMap().apply { put(storyEditorSelectedScene, fileName) }
             persistStoryDraft()
+            storyEditorIllustrationRevision++
         }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la ilustración." }
     }
     val storyAmbientPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -3512,6 +3516,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 state = storyEditorState,
                                 collections = storyCollections,
                                 objects = storedStoryObjects,
+                                coverRevision = storyEditorCoverRevision,
                                 onPickCover = {
                                     preferences.edit().putBoolean("content_picker_active", true).apply()
                                     storyCoverPicker.launch(arrayOf("image/*"))
@@ -3569,6 +3574,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             StorySceneEditorContent(
                                 state = storyEditorState,
                                 storyAmbientDuringNarration = storyAmbientDuringNarration,
+                                illustrationRevision = storyEditorIllustrationRevision,
                                 onPickIllustration = {
                                     preferences.edit().putBoolean("content_picker_active", true).apply()
                                     storyIllustrationPicker.launch(arrayOf("image/*"))
