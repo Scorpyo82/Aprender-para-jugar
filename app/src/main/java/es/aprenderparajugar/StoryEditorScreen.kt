@@ -22,7 +22,8 @@ internal fun StoryEditorScreen(
     onPickCover: () -> Unit,
     onOpenScene: (String) -> Unit,
     onOpenStructure: () -> Unit,
-    onBackToLibrary: () -> Unit
+    onBackToLibrary: () -> Unit,
+    objects: List<StoredObject> = emptyList()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var title by state.title
@@ -43,6 +44,7 @@ internal fun StoryEditorScreen(
     var editingFolder by state.editingFolder
     var editingCollectionFolder by state.editingCollectionFolder
     var storedStories by state.storedStories
+    var requiredAccessObjects by state.requiredAccessObjects
     var storyScenePendingDeletion by remember { mutableStateOf<String?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -65,6 +67,25 @@ internal fun StoryEditorScreen(
                                     }
                                 }
                                 if (collections.isEmpty()) Text("Todavía no hay colecciones de cuentos.", fontSize = 12.sp, color = Color(0xFF667085))
+                            }
+                        }
+            Column {
+                            Text("Requisitos para iniciar", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("El niño deberá tener todos los objetos seleccionados en su inventario para poder comenzar este cuento. No se consumen al iniciar.", fontSize = 13.sp, color = Color(0xFF667085))
+                            if (objects.isEmpty()) {
+                                Text("No hay objetos disponibles en la biblioteca.", fontSize = 12.sp, color = Color(0xFF667085))
+                            } else {
+                                objects.sortedBy { it.metadata.name.lowercase() }.forEach { storedObject ->
+                                    Row(Modifier.fillMaxWidth().clickable {
+                                        requiredAccessObjects = if (storedObject.folderName in requiredAccessObjects) requiredAccessObjects - storedObject.folderName else requiredAccessObjects + storedObject.folderName
+                                    }.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = storedObject.folderName in requiredAccessObjects,
+                                            onCheckedChange = { checked -> requiredAccessObjects = if (checked) (requiredAccessObjects + storedObject.folderName).distinct() else requiredAccessObjects - storedObject.folderName }
+                                        )
+                                        Text(storedObject.metadata.name)
+                                    }
+                                }
                             }
                         }
             Column {

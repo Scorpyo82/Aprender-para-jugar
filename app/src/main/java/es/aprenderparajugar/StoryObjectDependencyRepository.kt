@@ -36,6 +36,7 @@ internal object StoryObjectDependencyRepository {
                     return@storyLoop
                 }
                 val references = linkedSetOf<String>()
+                references.addAll(story.metadata.requiredAccessObjects)
                 story.metadata.connectionConditions.mapNotNullTo(references) { it.requiredObject }
                 story.metadata.connectionAlternatives.mapNotNullTo(references) { it.requiredObject }
 

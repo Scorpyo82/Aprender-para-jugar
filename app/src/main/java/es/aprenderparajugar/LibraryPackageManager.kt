@@ -938,6 +938,7 @@ internal object LibraryPackageManager {
         if (storyFile.isFile) {
             val metadata = StoryJsonCodec.decode(JSONObject(storyFile.readText(Charsets.UTF_8)))
             val remapped = metadata.copy(
+                requiredAccessObjects = metadata.requiredAccessObjects.map { mapping[it] ?: it }.distinct(),
                 connectionConditions = metadata.connectionConditions.map { condition ->
                     condition.copy(requiredObject = condition.requiredObject?.let { mapping[it] ?: it })
                 },
@@ -971,6 +972,7 @@ internal object LibraryPackageManager {
         metadata: StoryMetadata,
         destination: MutableSet<String>
     ) {
+        metadata.requiredAccessObjects.mapTo(destination) { it }
         val configuredOrigins = metadata.connectionAlternatives.map { it.fromScene }.toSet()
         metadata.connectionAlternatives
             .filter { it.kind == "object" }

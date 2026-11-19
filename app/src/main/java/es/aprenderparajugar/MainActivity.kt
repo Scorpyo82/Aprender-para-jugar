@@ -652,6 +652,7 @@ private fun AprenderApp() {
     var storyCollectionMessage by storyCollectionsState.message
     val storyEditorState = remember(context) { StoryEditorState(context) }
     var storyEditorTitle by storyEditorState.title
+    var storyAccessMessage by remember { mutableStateOf("") }
     var storyEditorCover by storyEditorState.cover
     var storyEditorIllustrations by storyEditorState.illustrations
     var storyEditorAmbientAudio by storyEditorState.ambientAudio
@@ -3456,6 +3457,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             },
                             onStorySelected = { stored ->
                                 storyEditorState.loadStructure(stored.metadata)
+                                storyEditorState.requiredAccessObjects.value = stored.metadata.requiredAccessObjects
                                 storyEditorTitle = stored.metadata.title
                                 storyEditorCover = stored.metadata.cover
                                 storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
@@ -3481,6 +3483,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             },
                             onCreateStory = {
                                 storyEditorState.resetStructure(listOf("Escena 1"))
+                                storyEditorState.requiredAccessObjects.value = emptyList()
                                 storyEditorTitle = ""
                                 storyEditorCover = null
                                 storyEditorIllustrations = emptyMap()
@@ -3508,6 +3511,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             StoryEditorScreen(
                                 state = storyEditorState,
                                 collections = storyCollections,
+                                objects = storedStoryObjects,
                                 onPickCover = {
                                     preferences.edit().putBoolean("content_picker_active", true).apply()
                                     storyCoverPicker.launch(arrayOf("image/*"))
@@ -5564,8 +5568,25 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 story = selectedStory,
                 fontFamily = exerciseFontFamily,
                 onBack = { screen = "stories"; selectedStoryPath = null },
-                onPlay = { screen = "story-player" }
+                onPlay = {
+                    val missingObjects = selectedStory.metadata.requiredAccessObjects.filterNot { InventoryRepository.contains(context, it) }
+                    if (missingObjects.isEmpty()) {
+                        storyAccessMessage = ""
+                        screen = "story-player"
+                    } else {
+                        val names = ObjectRepository.list(context).filter { it.folderName in missingObjects }.map { it.metadata.name }
+                        storyAccessMessage = "Para iniciar este cuento necesitas: ${names.joinToString(", ")}."
+                    }
+                }
             )
+            if (storyAccessMessage.isNotBlank()) {
+                AlertDialog(
+                    onDismissRequest = { storyAccessMessage = "" },
+                    title = { Text("Cuento bloqueado") },
+                    text = { Text(storyAccessMessage) },
+                    confirmButton = { Button(onClick = { storyAccessMessage = "" }) { Text("Entendido") } }
+                )
+            }
         }
     } else if (screen == "story-player") {
         val selectedStory = selectedStoryPath?.let { path ->
@@ -5574,6 +5595,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         }
         if (selectedStory == null) {
             screen = "stories"
+        } else if (selectedStory.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) {
+            AlertDialog(
+                onDismissRequest = { screen = "stories"; selectedStoryPath = null },
+                title = { Text("Cuento bloqueado") },
+                text = { Text("Necesitas los objetos requeridos para iniciar este cuento.") },
+                confirmButton = { Button(onClick = { screen = "stories"; selectedStoryPath = null }) { Text("Volver") } }
+            )
         } else if (selectedStory.metadata.connections.values.any { STORY_LOST_DESTINATION in it }) {
             AlertDialog(
                 onDismissRequest = { screen = "stories"; selectedStoryPath = null },

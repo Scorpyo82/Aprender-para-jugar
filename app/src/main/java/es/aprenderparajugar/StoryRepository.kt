@@ -18,7 +18,9 @@ data class StoryMetadata(
     val scenes: List<String>,
     val connections: Map<String, List<String>>,
     val connectionConditions: List<StoryConnectionCondition> = emptyList(),
-    val connectionAlternatives: List<StoryConnectionAlternative> = emptyList()
+    val connectionAlternatives: List<StoryConnectionAlternative> = emptyList(),
+    /** Objetos que el jugador debe poseer para poder iniciar el cuento. */
+    val requiredAccessObjects: List<String> = emptyList()
 )
 
 /** Condición configurada en una conexión; el compositor solo almacena estos datos. */
@@ -123,6 +125,7 @@ object StoryJsonCodec {
             .put("connections", connectionsJson)
             .put("connectionConditions", conditionsJson)
             .put("connectionAlternatives", alternativesJson)
+            .put("requiredAccessObjects", JSONArray(metadata.requiredAccessObjects.distinct()))
     }
 
     fun decode(json: JSONObject): StoryMetadata {
@@ -179,7 +182,10 @@ object StoryJsonCodec {
             scenes = scenes,
             connections = connections,
             connectionConditions = conditions,
-            connectionAlternatives = alternatives
+            connectionAlternatives = alternatives,
+            requiredAccessObjects = (0 until (json.optJSONArray("requiredAccessObjects")?.length() ?: 0)).mapNotNull { index ->
+                json.optJSONArray("requiredAccessObjects")?.optString(index)?.takeIf { it.isNotBlank() && it != "null" }
+            }.distinct()
         ).also(::validateStoryMetadata)
     }
 
@@ -238,6 +244,8 @@ object StoryJsonCodec {
                     "Una misma opción de decisión no puede conducir a destinos diferentes."
                 }
             }
+        require(metadata.requiredAccessObjects.distinct().size == metadata.requiredAccessObjects.size) { "Hay objetos de acceso duplicados." }
+        require(metadata.requiredAccessObjects.all(::isSafeSegment)) { "La referencia a un objeto de acceso no es válida." }
         require(metadata.cover == null || isSafeFileName(metadata.cover)) { "El nombre de portada no es válido." }
     }
 

@@ -38,6 +38,7 @@ internal object ObjectStoryReferenceChecker {
                 }
 
                 val manifestReferences =
+                    objectFolder in story.metadata.requiredAccessObjects ||
                     story.metadata.connectionConditions.any { it.requiredObject == objectFolder } ||
                     story.metadata.connectionAlternatives.any { it.requiredObject == objectFolder }
 

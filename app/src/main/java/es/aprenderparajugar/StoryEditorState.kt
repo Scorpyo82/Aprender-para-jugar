@@ -40,6 +40,7 @@ internal class StoryEditorState(private val context: Context) {
     val connections: MutableState<Map<String, List<String>>> = mutableStateOf(emptyMap())
     val connectionConditions: MutableState<List<StoryConnectionCondition>> = mutableStateOf(emptyList())
     val connectionAlternatives: MutableState<List<StoryConnectionAlternative>> = mutableStateOf(emptyList())
+    val requiredAccessObjects: MutableState<List<String>> = mutableStateOf(emptyList())
     val startScene: MutableState<String> = mutableStateOf("Escena 1")
 
     /** Carga los datos de decisión de todas las escenas de un cuento. */
@@ -80,6 +81,7 @@ internal class StoryEditorState(private val context: Context) {
     fun loadStructure(metadata: StoryMetadata) {
         val visibleByFolder = metadata.scenes.associate { it to it.replace('_', ' ') }
         startScene.value = visibleByFolder[metadata.startScene] ?: visibleByFolder.values.firstOrNull().orEmpty()
+        requiredAccessObjects.value = metadata.requiredAccessObjects.distinct()
         connections.value = metadata.scenes.associate { folder ->
             visibleByFolder.getValue(folder) to metadata.connections[folder].orEmpty().map { destination -> if (destination == STORY_LOST_DESTINATION) STORY_LOST_DESTINATION else visibleByFolder[destination] ?: STORY_LOST_DESTINATION }
         }
@@ -247,7 +249,8 @@ internal class StoryEditorState(private val context: Context) {
                 scenes = sceneFolders,
                 connections = persistedConnections,
                 connectionConditions = persistedConditions,
-                connectionAlternatives = persistedAlternatives
+                connectionAlternatives = persistedAlternatives,
+                requiredAccessObjects = requiredAccessObjects.value.distinct()
             )
             var stored = StoryRepository.save(context = context, collection = collectionFolder, folderName = storyFolder, metadata = metadata)
             sceneFolders.forEachIndexed { index, sceneFolder ->
