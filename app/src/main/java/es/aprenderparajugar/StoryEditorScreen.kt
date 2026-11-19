@@ -25,7 +25,8 @@ internal fun StoryEditorScreen(
     onOpenScene: (String) -> Unit,
     onOpenStructure: () -> Unit,
     onBackToLibrary: () -> Unit,
-    objects: List<StoredObject> = emptyList()
+    objects: List<StoredObject> = emptyList(),
+    coverRevision: Int = 0
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var title by state.title
@@ -143,7 +144,7 @@ internal fun StoryEditorScreen(
                             val coverFile = if (cover != null && editingFolder != null && editingCollectionFolder != null)
                                 File(File(File(StoryRepository.rootDirectory(context), editingCollectionFolder!!), editingFolder!!), cover!!)
                             else null
-                            StoryImagePreview(coverFile, "Vista previa de portada")
+                            StoryImagePreview(coverFile, "Vista previa de portada", coverRevision)
                         }
             Column { Spacer(Modifier.height(8.dp)); Text("Estructura del cuento", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
             Column { Text("Pulsa una escena para editar su contenido. El resumen de ilustración ayudará a identificarla en este mapa.", fontSize = 13.sp, color = Color(0xFF667085)) }
