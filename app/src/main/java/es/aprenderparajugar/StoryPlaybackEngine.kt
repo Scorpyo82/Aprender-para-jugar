@@ -30,6 +30,7 @@ internal class StoryPlaybackEngine(
     )
 
     private var currentSceneFolder: String = story.metadata.startScene
+    private val newlyAwardedNormalObjects = linkedMapOf<String, StoredObject>()
     private var started = false
     private var finished = false
 
@@ -82,6 +83,13 @@ internal class StoryPlaybackEngine(
     fun current(): Snapshot {
         check(started && !finished) { "El cuento no está en reproducción." }
         return snapshot()
+    }
+
+    /** Devuelve y vacía los objetos normales adquiridos desde la última consulta. */
+    fun claimNewNormalObjects(): List<StoredObject> {
+        val awarded = newlyAwardedNormalObjects.values.toList()
+        newlyAwardedNormalObjects.clear()
+        return awarded
     }
 
     /** Avanza únicamente por una alternativa libre y no ambigua. */
@@ -235,8 +243,16 @@ internal class StoryPlaybackEngine(
         val metadata = runCatching { StoryRepository.readScene(story, sceneFolder).metadata }.getOrNull() ?: return
         if (metadata.awardTiming != timing) return
         unlockAndQueueStoreObjects(metadata.unlockedObjects)
+        val availableObjects = ObjectRepository.list(context).associateBy { it.folderName }
         (listOfNotNull(metadata.awardedObject) + metadata.awardedObjects).distinct().forEach { objectFolder ->
-            runCatching { InventoryRepository.add(context, objectFolder) }
+            val storedObject = availableObjects[objectFolder] ?: return@forEach
+            val alreadyOwned = runCatching { InventoryRepository.contains(context, objectFolder) }.getOrDefault(true)
+            if (!alreadyOwned) {
+                val added = runCatching { InventoryRepository.add(context, objectFolder) }.getOrNull()
+                if (added != null && objectFolder in added && !storedObject.metadata.collectible) {
+                    newlyAwardedNormalObjects[objectFolder] = storedObject
+                }
+            }
         }
     }
 }
