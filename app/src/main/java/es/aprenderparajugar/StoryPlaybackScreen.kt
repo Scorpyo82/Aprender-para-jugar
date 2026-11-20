@@ -334,7 +334,7 @@ internal fun StoryPlayerScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val hasUsableObject = snapshot.inventory.any { item ->
+                    val hasUsableObject = !snapshot.isFinished && snapshot.inventory.any { item ->
                         !item.metadata.collectible && engine.canUseObject(item.folderName)
                     }
                     val backpackAttention = hasUsableObject && narrationFinished &&
