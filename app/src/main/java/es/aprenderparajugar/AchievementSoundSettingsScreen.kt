@@ -132,43 +132,76 @@ internal fun AchievementSoundSettingsScreen() {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(event.title, style = MaterialTheme.typography.titleMedium)
                     Text(if (custom == null) "Sonido predeterminado" else "Audio personalizado", style = MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = {
-                            scope.launch {
-                                runCatching { AchievementSoundManager.play(context, event, preview = true) }
-                                    .onFailure { message = "No se pudo reproducir: ${it.message}" }
-                            }
-                        }) { Text("▶ Escuchar") }
-                        OutlinedButton(onClick = {
-                            scope.launch {
-                                repeat(2) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
                                     runCatching { AchievementSoundManager.play(context, event, preview = true) }
                                         .onFailure { message = "No se pudo reproducir: ${it.message}" }
                                 }
                             }
-                        }) { Text("↻ Repetir") }
-                        OutlinedButton(onClick = {
+                        ) { Text("▶ Escuchar", maxLines = 1) }
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                scope.launch {
+                                    repeat(2) {
+                                        runCatching { AchievementSoundManager.play(context, event, preview = true) }
+                                            .onFailure { message = "No se pudo reproducir: ${it.message}" }
+                                    }
+                                }
+                            }
+                        ) { Text("↻ Repetir", maxLines = 1) }
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
                             pendingImport = event
                             importLauncher.launch(arrayOf("audio/*"))
-                        }) { Text("Importar") }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(enabled = recordingEvent == null, onClick = {
-                            pendingRecord = event
-                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            } else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }) { Text("Grabar voz") }
-                        if (recordingEvent == event) {
-                            Button(onClick = { stopRecording(true) }) { Text("Guardar") }
-                            OutlinedButton(onClick = { stopRecording(false) }) { Text("Descartar") }
-                        } else {
-                            OutlinedButton(enabled = custom != null, onClick = {
+                        }
+                    ) { Text("Importar audio") }
+
+                    if (recordingEvent == event) {
+                        Text(
+                            "● GRABACIÓN EN CURSO",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        Text(
+                            "Cuando termines de hablar, pulsa «Parar y guardar».",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                onClick = { stopRecording(true) }
+                            ) { Text("Parar y guardar") }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = { stopRecording(false) }
+                            ) { Text("Descartar grabación") }
+                        }
+                    } else {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = recordingEvent == null,
+                            onClick = {
+                                pendingRecord = event
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                } else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        ) { Text("Grabar voz") }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = custom != null,
+                            onClick = {
                                 AchievementSoundManager.restoreDefault(context, event)
                                 message = "Se ha restaurado el sonido original."
                                 refresh++
-                            }) { Text("Restaurar original") }
-                        }
+                            }
+                        ) { Text("Restaurar sonido original") }
                     }
                 }
             }
