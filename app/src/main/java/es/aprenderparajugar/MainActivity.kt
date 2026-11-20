@@ -652,7 +652,7 @@ private fun AprenderApp() {
     var storyCollectionMessage by storyCollectionsState.message
     val storyEditorState = remember(context) { StoryEditorState(context) }
     var storyEditorTitle by storyEditorState.title
-    var storyAccessMessage by remember { mutableStateOf("") }
+    var showStoryAccessRequirements by remember { mutableStateOf(false) }
     var storyEditorCover by storyEditorState.cover
     var storyEditorIllustrations by storyEditorState.illustrations
     var storyEditorAmbientAudio by storyEditorState.ambientAudio
@@ -5576,27 +5576,27 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 OutlinedButton(onClick = { screen = "stories"; selectedStoryPath = null }) { Text("Volver a la cartelera") }
             }
         } else {
-            StoryCoverScreen(
-                story = selectedStory,
-                fontFamily = exerciseFontFamily,
-                onBack = { screen = "stories"; selectedStoryPath = null },
-                onPlay = {
-                    val missingObjects = selectedStory.metadata.requiredAccessObjects.filterNot { InventoryRepository.contains(context, it) }
-                    if (missingObjects.isEmpty()) {
-                        storyAccessMessage = ""
-                        screen = "story-player"
-                    } else {
-                        val names = ObjectRepository.list(context).filter { it.folderName in missingObjects }.map { it.metadata.name }
-                        storyAccessMessage = "Para iniciar este cuento necesitas: ${names.joinToString(", ")}."
+            if (showStoryAccessRequirements) {
+                StoryAccessRequirementsScreen(
+                    story = selectedStory,
+                    onBack = { showStoryAccessRequirements = false }
+                )
+            } else {
+                StoryCoverScreen(
+                    story = selectedStory,
+                    fontFamily = exerciseFontFamily,
+                    onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false },
+                    onPlay = {
+                        val missingObjects = selectedStory.metadata.requiredAccessObjects.filterNot {
+                            InventoryRepository.contains(context, it)
+                        }
+                        if (missingObjects.isEmpty()) {
+                            showStoryAccessRequirements = false
+                            screen = "story-player"
+                        } else {
+                            showStoryAccessRequirements = true
+                        }
                     }
-                }
-            )
-            if (storyAccessMessage.isNotBlank()) {
-                AlertDialog(
-                    onDismissRequest = { storyAccessMessage = "" },
-                    title = { Text("Cuento bloqueado") },
-                    text = { Text(storyAccessMessage) },
-                    confirmButton = { Button(onClick = { storyAccessMessage = "" }) { Text("Entendido") } }
                 )
             }
         }
@@ -5608,11 +5608,9 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         if (selectedStory == null) {
             screen = "stories"
         } else if (selectedStory.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) {
-            AlertDialog(
-                onDismissRequest = { screen = "stories"; selectedStoryPath = null },
-                title = { Text("Cuento bloqueado") },
-                text = { Text("Necesitas los objetos requeridos para iniciar este cuento.") },
-                confirmButton = { Button(onClick = { screen = "stories"; selectedStoryPath = null }) { Text("Volver") } }
+            StoryAccessRequirementsScreen(
+                story = selectedStory,
+                onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
             )
         } else if (selectedStory.metadata.connections.values.any { STORY_LOST_DESTINATION in it }) {
             AlertDialog(
