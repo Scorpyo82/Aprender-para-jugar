@@ -86,8 +86,9 @@ internal fun AchievementSoundSettingsScreen() {
                 .let { File(it, "${event.key}_voice_${System.currentTimeMillis()}.m4a") }
             var newRecorder: MediaRecorder? = null
             try {
-                newRecorder = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(context) else MediaRecorder()
-                newRecorder.apply {
+                val createdRecorder = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(context) else MediaRecorder()
+                newRecorder = createdRecorder
+                createdRecorder.apply {
                     setAudioSource(MediaRecorder.AudioSource.MIC)
                     setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                     setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -95,7 +96,7 @@ internal fun AchievementSoundSettingsScreen() {
                     prepare()
                     start()
                 }
-                recorder = newRecorder
+                recorder = createdRecorder
                 recordingFile = file
                 recordingEvent = event
                 message = "Grabando para «${event.title}»…"
