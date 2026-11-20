@@ -68,6 +68,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
+import kotlinx.coroutines.delay
 
 private val StoryBackground = Color(0xFF101827)
 private val StoryGold = Color(0xFFFFD968)
@@ -137,9 +138,9 @@ internal fun StoryPlayerScreen(
     var decisionDialogOpen by remember { mutableStateOf(false) }
     var decisionSelectionInProgress by remember { mutableStateOf(false) }
     val decisionOptionsListState = remember(snapshot.scene.folderName) { LazyListState() }
-    var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
-    var acquiredNormalObjects by remember(engine) { mutableStateOf(engine.claimNewNormalObjects()) }
-    var finishAfterObjectCollection by remember { mutableStateOf(false) }
+    var rewardQueue by remember(engine) { mutableStateOf(engine.claimPendingRewards()) }
+    var pendingRewardAction by remember { mutableStateOf(if (rewardQueue.isNotEmpty()) "enter" else null) }
+    var rewardFlowHadPresentation by remember { mutableStateOf(rewardQueue.isNotEmpty()) }
     DisposableEffect(Unit) {
         onDispose { NotificationQueueRepository.setPaused(false) }
     }
@@ -153,8 +154,40 @@ internal fun StoryPlayerScreen(
     var narrationPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
 
-    LaunchedEffect(acquiredNormalObjects.isNotEmpty()) {
-        if (acquiredNormalObjects.isNotEmpty()) NotificationQueueRepository.setPaused(true)
+    LaunchedEffect(rewardQueue.isNotEmpty(), pendingRewardAction) {
+        if (rewardQueue.isNotEmpty()) {
+            NotificationQueueRepository.setPaused(true)
+            return@LaunchedEffect
+        }
+        when (pendingRewardAction) {
+            "transition" -> {
+                snapshot = engine.completePendingTransition()
+                rewardQueue = engine.claimPendingRewards()
+                if (rewardQueue.isNotEmpty()) pendingRewardAction = "enter"
+                else {
+                    if (rewardFlowHadPresentation) delay(2000)
+                    pendingRewardAction = null
+                    rewardFlowHadPresentation = false
+                    NotificationQueueRepository.setPaused(false)
+                }
+            }
+            "enter" -> {
+                if (rewardFlowHadPresentation) delay(2000)
+                pendingRewardAction = null
+                rewardFlowHadPresentation = false
+                NotificationQueueRepository.setPaused(false)
+            }
+            "finish" -> {
+                engine.completeFinish()
+                if (rewardFlowHadPresentation) delay(2000)
+                pendingRewardAction = null
+                rewardFlowHadPresentation = false
+                NotificationQueueRepository.setPaused(false)
+                safelyStopAndRelease(ambientPlayer); ambientPlayer = null
+                safelyStopAndRelease(narrationPlayer); narrationPlayer = null
+                onExit()
+            }
+        }
     }
 
     DisposableEffect(activity) {
@@ -320,8 +353,14 @@ internal fun StoryPlayerScreen(
                     }
                 }
 
+                rewardQueue.firstOrNull()?.takeIf { !it.collectible }?.let { reward ->
+                    StoryObjectCollectionScreen(objects = listOf(reward.storedObject)) {
+                        rewardQueue = rewardQueue.drop(1)
+                    }
+                }
+
                 OutlinedButton(
-                    onClick = { exitConfirmation = true },
+                    onClick = { if (pendingRewardAction == null) exitConfirmation = true },
                     modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
                     shape = RoundedCornerShape(22.dp),
                     border = BorderStroke(2.dp, Color.White)
@@ -390,42 +429,30 @@ internal fun StoryPlayerScreen(
                     if (snapshot.isFinished) {
                         Button(
                             onClick = {
-                                NotificationQueueRepository.setPaused(true)
-                                val collectible = engine.claimCurrentSceneExitCollectible()
-
-                                if (collectible != null) {
-                                    celebrationObject = collectible
-                                } else {
-                                    engine.finish()
-                                    acquiredNormalObjects = engine.claimNewNormalObjects()
-                                    if (acquiredNormalObjects.isNotEmpty()) {
-                                        finishAfterObjectCollection = true
-                                    } else {
-                                        NotificationQueueRepository.setPaused(false)
-                                        safelyStopAndRelease(ambientPlayer); ambientPlayer = null
-                                        safelyStopAndRelease(narrationPlayer); narrationPlayer = null
-                                        onExit()
-                                    }
+                                if (pendingRewardAction == null && engine.prepareFinish()) {
+                                    NotificationQueueRepository.setPaused(true)
+                                    pendingRewardAction = "finish"
+                                    rewardQueue = engine.claimPendingRewards()
+                                    rewardFlowHadPresentation = rewardQueue.isNotEmpty()
                                 }
                             },
+                            enabled = pendingRewardAction == null,
                             shape = RoundedCornerShape(24.dp)
                         ) { Text("Fin") }
                     } else if (snapshot.canAdvance || snapshot.decisionOptions.isNotEmpty()) {
                         Button(
                             onClick = {
-                                NotificationQueueRepository.setPaused(true)
-                                val collectible = engine.claimCurrentSceneExitCollectible()
-
-                                if (collectible != null) celebrationObject = collectible
-                                else {
-                                    NotificationQueueRepository.setPaused(false)
+                                if (pendingRewardAction == null) {
                                     if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
-                                    else engine.advance()?.let {
-                                        snapshot = it
-                                        acquiredNormalObjects = engine.claimNewNormalObjects()
+                                    else if (engine.prepareFreeAdvance()) {
+                                        NotificationQueueRepository.setPaused(true)
+                                        pendingRewardAction = "transition"
+                                        rewardQueue = engine.claimPendingRewards()
+                                        rewardFlowHadPresentation = rewardQueue.isNotEmpty()
                                     }
                                 }
                             },
+                            enabled = pendingRewardAction == null,
                             shape = RoundedCornerShape(24.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -459,7 +486,7 @@ internal fun StoryPlayerScreen(
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center
                                 )
-                                TextButton(onClick = { if (!decisionSelectionInProgress) decisionDialogOpen = false }, enabled = !decisionSelectionInProgress) {
+                                TextButton(onClick = { if (!decisionSelectionInProgress && pendingRewardAction == null) decisionDialogOpen = false }, enabled = !decisionSelectionInProgress && pendingRewardAction == null) {
                                     Text("✕", fontSize = 20.sp, color = Color(0xFF475467))
                                 }
                             }
@@ -477,10 +504,11 @@ internal fun StoryPlayerScreen(
                                         onClick = {
                                             if (!decisionSelectionInProgress) {
                                                 decisionSelectionInProgress = true
-                                                val next = runCatching { engine.chooseDecisionOption(option.key) }.getOrNull()
-                                                if (next != null) {
-                                                    snapshot = next
-                                                    acquiredNormalObjects = engine.claimNewNormalObjects()
+                                                if (engine.prepareDecisionTransition(option.key)) {
+                                                    NotificationQueueRepository.setPaused(true)
+                                                    pendingRewardAction = "transition"
+                                                    rewardQueue = engine.claimPendingRewards()
+                                                    rewardFlowHadPresentation = rewardQueue.isNotEmpty()
                                                     decisionDialogOpen = false
                                                 }
                                                 decisionSelectionInProgress = false
@@ -541,22 +569,10 @@ internal fun StoryPlayerScreen(
         }
     }
 
-    celebrationObject?.let { awarded ->
-        CollectibleCelebrationDialog(awarded, fontFamily) {
-            celebrationObject = null
-            NotificationQueueRepository.setPaused(false)
-        }
-    }
-
-    if (acquiredNormalObjects.isNotEmpty()) {
-        StoryObjectCollectionScreen(objects = acquiredNormalObjects) {
-            acquiredNormalObjects = emptyList()
-            NotificationQueueRepository.setPaused(false)
-            if (finishAfterObjectCollection) {
-                finishAfterObjectCollection = false
-                safelyStopAndRelease(ambientPlayer); ambientPlayer = null
-                safelyStopAndRelease(narrationPlayer); narrationPlayer = null
-                onExit()
+    rewardQueue.firstOrNull()?.let { reward ->
+        if (reward.collectible) {
+            CollectibleCelebrationDialog(reward.storedObject, fontFamily) {
+                rewardQueue = rewardQueue.drop(1)
             }
         }
     }
@@ -581,18 +597,19 @@ internal fun StoryPlayerScreen(
         )
     }
 
-    if (backpackOpen) {
+    if (backpackOpen && pendingRewardAction == null) {
         StoryBackpackDialog(
             objects = contextualInventory,
             fontFamily = fontFamily,
             onUseObject = { item ->
-                if (engine.canUseObject(item.folderName)) {
-                    snapshot = engine.chooseObject(item.folderName)
-                    acquiredNormalObjects = engine.claimNewNormalObjects()
+                if (pendingRewardAction == null && engine.prepareObjectTransition(item.folderName)) {
+                    backpackOpen = false
+                    NotificationQueueRepository.setPaused(true)
+                    pendingRewardAction = "transition"
+                    rewardQueue = engine.claimPendingRewards()
+                    rewardFlowHadPresentation = rewardQueue.isNotEmpty()
                     true
-                } else {
-                    false
-                }
+                } else false
             },
             onDismiss = { backpackOpen = false }
         )

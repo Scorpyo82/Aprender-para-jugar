@@ -18,6 +18,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -39,9 +41,10 @@ internal fun CollectibleCelebrationDialog(
     onContinue: () -> Unit
 ) {
     val imageFile = File(stored.directory, stored.metadata.image)
+    LaunchedEffect(stored.folderName) { delay(2800); onContinue() }
 
     Dialog(
-        onDismissRequest = { /* El premio se cierra únicamente con el botón visible. */ },
+        onDismissRequest = { /* La celebración se cierra automáticamente. */ },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = false,
@@ -118,13 +121,7 @@ internal fun CollectibleCelebrationDialog(
                         )
                     }
                 }
-                Button(
-                    onClick = onContinue,
-                    modifier = Modifier.fillMaxWidth().height(58.dp),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Text("¡Continuar!", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, fontFamily = fontFamily)
-                }
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

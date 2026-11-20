@@ -19,6 +19,8 @@ internal class StoryPlaybackEngine(
         val decisionOptionKey: String? = null
     )
 
+    data class Reward(val storedObject: StoredObject, val collectible: Boolean)
+
     data class Snapshot(
         val scene: StoredStoryScene,
         val inventory: List<StoredObject>,
@@ -31,6 +33,9 @@ internal class StoryPlaybackEngine(
 
     private var currentSceneFolder: String = story.metadata.startScene
     private val newlyAwardedNormalObjects = linkedMapOf<String, StoredObject>()
+    private val pendingRewards = linkedMapOf<String, Reward>()
+    private var pendingTransition: Transition? = null
+    private var exitRewardsPrepared = false
     private var started = false
     private var finished = false
 
@@ -85,6 +90,70 @@ internal class StoryPlaybackEngine(
         return snapshot()
     }
 
+    fun claimPendingRewards(): List<Reward> {
+        val result = pendingRewards.values.toList()
+        pendingRewards.clear()
+        newlyAwardedNormalObjects.clear()
+        return result
+    }
+
+    fun prepareFreeAdvance(): Boolean {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        val free = transitions().filter { it.kind == "free" }
+        if (free.isEmpty()) return false
+        require(free.map { it.destination }.distinct().size == 1) { "El recorrido tiene más de una salida libre. Debe elegirse una opción." }
+        return prepareTransition(free.first())
+    }
+
+    fun prepareObjectTransition(folderName: String): Boolean {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        if (!canUseObject(folderName)) return false
+        return prepareTransition(transitions().first { it.kind == "object" && it.requiredObject == folderName })
+    }
+
+    fun prepareDecisionTransition(optionKey: String): Boolean {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        val selected = transitions().firstOrNull { it.kind == "decision" && it.decisionOptionKey == optionKey } ?: return false
+        return prepareTransition(selected)
+    }
+
+    private fun prepareTransition(transition: Transition): Boolean {
+        if (pendingTransition != null) return false
+        pendingTransition = transition
+        award(currentSceneFolder, "onExit")
+        exitRewardsPrepared = true
+        return true
+    }
+
+    fun completePendingTransition(): Snapshot {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        val transition = checkNotNull(pendingTransition) { "No hay ninguna transición pendiente." }
+        if (transition.consumeRequiredObject) transition.requiredObject?.let { InventoryRepository.remove(context, it) }
+        currentSceneFolder = transition.destination
+        pendingTransition = null
+        exitRewardsPrepared = false
+        award(currentSceneFolder, "onEnter")
+        return snapshot()
+    }
+
+    fun prepareFinish(): Boolean {
+        check(started && !finished) { "El cuento no está en reproducción." }
+        if (transitions().isNotEmpty()) return false
+        if (!exitRewardsPrepared) {
+            award(currentSceneFolder, "onExit")
+            exitRewardsPrepared = true
+        }
+        return true
+    }
+
+    fun completeFinish(): Boolean {
+        check(started) { "El cuento todavía no ha comenzado." }
+        if (transitions().isNotEmpty() || pendingTransition != null) return false
+        if (!exitRewardsPrepared) award(currentSceneFolder, "onExit")
+        finished = true
+        return true
+    }
+
     /** Devuelve y vacía los objetos normales adquiridos desde la última consulta. */
     fun claimNewNormalObjects(): List<StoredObject> {
         val awarded = newlyAwardedNormalObjects.values.toList()
@@ -133,7 +202,7 @@ internal class StoryPlaybackEngine(
     fun finish(): Boolean {
         check(started) { "El cuento todavía no ha comenzado." }
         if (transitions().isNotEmpty()) return false
-        award(currentSceneFolder, "onExit")
+        if (!exitRewardsPrepared) award(currentSceneFolder, "onExit")
         finished = true
         return true
     }
@@ -143,7 +212,7 @@ internal class StoryPlaybackEngine(
     }
 
     private fun moveTo(transition: Transition): Snapshot {
-        award(currentSceneFolder, "onExit")
+        if (!exitRewardsPrepared) award(currentSceneFolder, "onExit")
         if (transition.consumeRequiredObject) {
             transition.requiredObject?.let { InventoryRepository.remove(context, it) }
         }
@@ -249,8 +318,9 @@ internal class StoryPlaybackEngine(
             val alreadyOwned = runCatching { InventoryRepository.contains(context, objectFolder) }.getOrDefault(true)
             if (!alreadyOwned) {
                 val added = runCatching { InventoryRepository.add(context, objectFolder) }.getOrNull()
-                if (added != null && objectFolder in added && !storedObject.metadata.collectible) {
-                    newlyAwardedNormalObjects[objectFolder] = storedObject
+                if (added != null && objectFolder in added) {
+                    pendingRewards[objectFolder] = Reward(storedObject, storedObject.metadata.collectible)
+                    if (!storedObject.metadata.collectible) newlyAwardedNormalObjects[objectFolder] = storedObject
                 }
             }
         }
