@@ -17,6 +17,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +42,10 @@ internal fun ExerciseResultScreen(
     onHome: () -> Unit,
     onNextExercise: () -> Unit
 ) {
+    val context = LocalContext.current
+    LaunchedEffect(rewardStars, rewardIcon, rewardAmountText, correctCount, totalCount) {
+        try { AchievementSoundManager.play(context, AchievementSoundEvent.REWARD_GRANTED) } catch (_: Exception) { }
+    }
     val celebration = rememberInfiniteTransition(label = "celebracion")
     val iconScale by celebration.animateFloat(initialValue = 0.88f, targetValue = 1.12f, animationSpec = infiniteRepeatable(animation = tween(650), repeatMode = RepeatMode.Reverse), label = "rebote")
     val timeScale by celebration.animateFloat(initialValue = 1f, targetValue = 1.045f, animationSpec = infiniteRepeatable(animation = tween(900), repeatMode = RepeatMode.Reverse), label = "pulsoTiempo")

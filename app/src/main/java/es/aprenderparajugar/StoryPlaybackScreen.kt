@@ -179,6 +179,13 @@ internal fun StoryPlayerScreen(
             }
             "finish" -> {
                 engine.completeFinish()
+                val player = narrationPlayer
+                val wasNarrating = runCatching { player?.isPlaying == true }.getOrDefault(false)
+                if (wasNarrating) {
+                    runCatching { player?.pause() }
+                    narrationIsPlaying = false
+                }
+                try { AchievementSoundManager.play(context, AchievementSoundEvent.STORY_COMPLETED) } catch (_: Exception) { }
                 if (rewardFlowHadPresentation) delay(2000)
                 pendingRewardAction = null
                 rewardFlowHadPresentation = false
@@ -281,6 +288,30 @@ internal fun StoryPlayerScreen(
             if (narrationPlayer == null) narrationFinished = true
             else narrationIsPlaying = true
         } else narrationFinished = true
+    }
+
+    LaunchedEffect(rewardQueue.firstOrNull()?.storedObject?.folderName, narrationPlayer) {
+        val reward = rewardQueue.firstOrNull() ?: return@LaunchedEffect
+        val player = narrationPlayer
+        val wasNarrating = runCatching { player?.isPlaying == true }.getOrDefault(false)
+        if (wasNarrating) {
+            runCatching { player?.pause() }
+            narrationIsPlaying = false
+        }
+        try {
+            AchievementSoundManager.play(
+                context,
+                if (reward.collectible) AchievementSoundEvent.COLLECTIBLE_ACQUIRED
+                else AchievementSoundEvent.OBJECT_ACQUIRED
+            )
+        } catch (_: Exception) {
+            // Un efecto fallido nunca debe interrumpir el cuento.
+        } finally {
+            if (wasNarrating && !narrationFinished) {
+                runCatching { player?.start() }
+                narrationIsPlaying = runCatching { player?.isPlaying == true }.getOrDefault(false)
+            }
+        }
     }
 
     val audioPreferences = remember(context) { context.getSharedPreferences("aprender_para_jugar", android.content.Context.MODE_PRIVATE) }

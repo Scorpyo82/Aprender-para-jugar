@@ -1843,7 +1843,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     } else if (screen == "parent") {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (parentSection != "menu") {
-                item { TextButton(onClick = { if (parentSection == "device-setup-wizard") { if (pendingTimeModeActivation) { rewardMode = RewardMode.STARS; preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply() }; pendingTimeModeActivation = false; preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", false).apply(); parentSection = "menu" } else { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "music", "rewards", "security", "device-setup", "device-setup-wizard", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } } }) { Text(if (parentSection == "game-modes") "← Control parental" else if (parentSection == "music" || parentSection == "stories-audio") "← Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Modos de juego" else if (parentSection == "stories-settings") "← Modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Objetos" else if (parentSection.startsWith("sequence-type-")) "← Secuencias" else if (parentSection == "sequence-editor-temporal") "← Biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Catálogo" else "← Bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Estadísticas" else "← Control parental") } }
+                item { TextButton(onClick = { if (parentSection == "device-setup-wizard") { if (pendingTimeModeActivation) { rewardMode = RewardMode.STARS; preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply() }; pendingTimeModeActivation = false; preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", false).apply(); parentSection = "menu" } else { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "rewards", "security", "device-setup", "device-setup-wizard", "about", "library-transfer", "typography" -> "menu"; "music", "stories-audio", "achievement-sounds" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } } }) { Text(if (parentSection == "game-modes") "← Control parental" else if (parentSection == "music" || parentSection == "stories-audio" || parentSection == "achievement-sounds") "← Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Modos de juego" else if (parentSection == "stories-settings") "← Modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Objetos" else if (parentSection.startsWith("sequence-type-")) "← Secuencias" else if (parentSection == "sequence-editor-temporal") "← Biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Catálogo" else "← Bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Estadísticas" else "← Control parental") } }
             }
             if (parentSection == "menu") {
                 item {
@@ -1928,7 +1928,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                 }
                 item {
-                    ParentMenuNavigationCard("🔊", "Ajustes de sonido", "Música general y audio de cuentos") {
+                    ParentMenuNavigationCard("🔊", "Ajustes de sonido", "Música, audio de cuentos y efectos de logros") {
                         parentSection = "sound-settings"
                     }
                 }
@@ -2002,6 +2002,17 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 }
                             }
                         }
+                        item {
+                            Card(Modifier.fillMaxWidth().clickable { parentSection = "achievement-sounds" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("🏆 Efectos y notificaciones", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text("Personaliza los sonidos de objetos, logros, recompensas y compras.", fontSize = 14.sp, color = Color(0xFF667085))
+                                }
+                            }
+                        }
+                    }
+                    "achievement-sounds" -> {
+                        item { AchievementSoundSettingsScreen() }
                     }
                     "statistics-menu" -> {
                         item { Text("Estadísticas disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
@@ -4758,7 +4769,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "music" -> item {
                         Text("Música de fondo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("La música comienza al abrir la aplicación y se repite en bucle. Usa el altavoz de la pantalla principal para silenciar o activar todo el sonido.", fontSize = 14.sp, color = Color(0xFF667085))
+                        Text("La música comienza al abrir la aplicación y se repite en bucle. Usa el altavoz de la pantalla principal para silenciar o activar la música de fondo.", fontSize = 14.sp, color = Color(0xFF667085))
                         Text(if (musicUri.isNullOrBlank()) "Música predeterminada: Música Infantil 2." else "Archivo de música personalizado seleccionado.", fontWeight = FontWeight.SemiBold)
                         Button(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); musicPicker.launch(arrayOf("audio/mpeg", "audio/mp3", "audio/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir archivo MP3") }
                         OutlinedButton(onClick = {
@@ -4769,7 +4780,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         OutlinedButton(onClick = {
                             soundEnabled = !soundEnabled
                             preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
-                        }, modifier = Modifier.fillMaxWidth()) { Text(if (soundEnabled) "Silenciar sonido" else "Activar sonido") }
+                        }, modifier = Modifier.fillMaxWidth()) { Text(if (soundEnabled) "Silenciar música" else "Activar música") }
                         if (musicMessage.isNotBlank()) Text(musicMessage, color = Color(0xFF24733B))
                         Text("Consejo: elige una melodía instrumental tranquila, sin cambios bruscos de volumen y con un final que encaje bien al repetirse.", fontSize = 13.sp, color = Color(0xFF667085))
                         Spacer(Modifier.height(8.dp))
@@ -5672,6 +5683,11 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 balanceSeconds = result.balanceSeconds
                 storyObjectInventoryState.refresh(context)
                 storyInventoryMessage = result.message
+                if (result.success) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                        try { AchievementSoundManager.play(context, AchievementSoundEvent.ITEM_PURCHASED) } catch (_: Exception) { }
+                    }
+                }
                 result.success
             }
         )
