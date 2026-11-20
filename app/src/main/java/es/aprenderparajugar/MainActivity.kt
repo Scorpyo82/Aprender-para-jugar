@@ -5418,7 +5418,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                                 availableStories.sortedBy { it.metadata.title.lowercase() }.forEach { story ->
                                     val coverFile = story.metadata.cover?.let { File(story.directory, it) }?.takeIf { it.isFile }
                                     Card(
-                                        Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath; screen = "story-cover" },
+                                        Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath; screen = if (story.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) "story-access" else "story-cover" },
                                         shape = RoundedCornerShape(16.dp),
                                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2638)),
                                         border = androidx.compose.foundation.BorderStroke(if (selectedStoryPath == story.directory.absolutePath) 2.dp else 1.dp, if (selectedStoryPath == story.directory.absolutePath) Color(0xFF8DB8F5) else Color(0xFF34445A))
@@ -5436,6 +5436,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                                                     )
                                                 } else {
                                                     Text("📖", fontSize = 48.sp)
+                                                }
+                                                if (story.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) {
+                                                    Box(
+                                                        Modifier.align(Alignment.TopEnd).padding(8.dp)
+                                                            .background(Color(0xDD101827), RoundedCornerShape(50))
+                                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                    ) { Text("🔒", fontSize = 18.sp) }
                                                 }
                                             }
                                             Text(
@@ -5536,7 +5543,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             collectionStories.forEach { story ->
                                 val coverFile = story.metadata.cover?.let { File(story.directory, it) }?.takeIf { it.isFile }
                                 Card(
-                                    Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath; screen = "story-cover" },
+                                    Modifier.width(boardCardWidth).clickable { selectedStoryPath = story.directory.absolutePath; screen = if (story.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) "story-access" else "story-cover" },
                                     shape = RoundedCornerShape(16.dp),
                                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2638)),
                                     border = androidx.compose.foundation.BorderStroke(if (selectedStoryPath == story.directory.absolutePath) 2.dp else 1.dp, if (selectedStoryPath == story.directory.absolutePath) Color(0xFF8DB8F5) else Color(0xFF34445A))
@@ -5554,6 +5561,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                                                 )
                                             } else {
                                                 Text("📖", fontSize = 48.sp)
+                                            }
+                                            if (story.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) {
+                                                Box(
+                                                    Modifier.align(Alignment.TopEnd).padding(8.dp)
+                                                        .background(Color(0xDD101827), RoundedCornerShape(50))
+                                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                ) { Text("🔒", fontSize = 18.sp) }
                                             }
                                         }
                                         Text(story.metadata.title, fontSize = 15.sp, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
@@ -5594,11 +5608,27 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             showStoryAccessRequirements = false
                             screen = "story-player"
                         } else {
-                            showStoryAccessRequirements = true
+                            showStoryAccessRequirements = false
+                            screen = "story-access"
                         }
                     }
                 )
             }
+        }
+    } else if (screen == "story-access") {
+        val selectedStory = selectedStoryPath?.let { path ->
+            storedStories.firstOrNull { it.directory.absolutePath == path }
+                ?: runCatching { StoryRepository.read(File(path)) }.getOrNull()
+        }
+        if (selectedStory == null) {
+            screen = "stories"
+        } else if (selectedStory.metadata.requiredAccessObjects.none { !InventoryRepository.contains(context, it) }) {
+            screen = "story-cover"
+        } else {
+            StoryAccessRequirementsScreen(
+                story = selectedStory,
+                onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
+            )
         }
     } else if (screen == "story-player") {
         val selectedStory = selectedStoryPath?.let { path ->
