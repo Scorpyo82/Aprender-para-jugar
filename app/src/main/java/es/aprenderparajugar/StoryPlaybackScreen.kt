@@ -360,6 +360,7 @@ internal fun StoryPlayerScreen(
                 }
 
                 OutlinedButton(
+                    enabled = pendingRewardAction == null,
                     onClick = { if (pendingRewardAction == null) exitConfirmation = true },
                     modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
                     shape = RoundedCornerShape(22.dp),
@@ -389,9 +390,12 @@ internal fun StoryPlayerScreen(
                             label = "story-backpack-scale"
                         ).value
                     if (!snapshot.isFinished) OutlinedButton(
+                        enabled = pendingRewardAction == null,
                         onClick = {
-                            backpackPromptDismissedScene = snapshot.scene.folderName
-                            backpackOpen = true
+                            if (pendingRewardAction == null) {
+                                backpackPromptDismissedScene = snapshot.scene.folderName
+                                backpackOpen = true
+                            }
                         },
                         modifier = Modifier.graphicsLayer {
                             scaleX = backpackPulse
@@ -412,6 +416,7 @@ internal fun StoryPlayerScreen(
 
                     if (narrationFinished && snapshot.scene.metadata.narrationAudio != null) {
                         OutlinedButton(
+                            enabled = pendingRewardAction == null,
                             onClick = {
                                 narrationPlayer?.let { player ->
                                     runCatching { player.seekTo(0); player.start() }
