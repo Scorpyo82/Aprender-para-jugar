@@ -3,8 +3,6 @@ package es.aprenderparajugar
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
-import android.media.audiofx.AutomaticGainControl
-import android.media.audiofx.NoiseSuppressor
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -46,18 +44,12 @@ internal fun AchievementSoundSettingsScreen() {
     var pendingRecord by remember { mutableStateOf<AchievementSoundEvent?>(null) }
     var recordingEvent by remember { mutableStateOf<AchievementSoundEvent?>(null) }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
-    var automaticGainControl by remember { mutableStateOf<AutomaticGainControl?>(null) }
-    var noiseSuppressor by remember { mutableStateOf<NoiseSuppressor?>(null) }
     var recordingFile by remember { mutableStateOf<File?>(null) }
 
     fun stopRecording(save: Boolean) {
         val current = recorder
         val file = recordingFile
         runCatching { current?.stop() }
-        runCatching { automaticGainControl?.release() }
-        runCatching { noiseSuppressor?.release() }
-        automaticGainControl = null
-        noiseSuppressor = null
         runCatching { current?.release() }
         recorder = null
         recordingFile = null
@@ -99,7 +91,8 @@ internal fun AchievementSoundSettingsScreen() {
                 createdRecorder.apply {
                     // Captura mono optimizada para voz, con parámetros constantes
                     // en lugar de depender de los valores predeterminados del fabricante.
-                    setAudioSource(MediaRecorder.AudioSource.MIC)
+                    // Fuente orientada a voz: solicita al dispositivo su ruta de captura de comunicación.
+                    setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                     setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                     setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                     setAudioChannels(1)
@@ -109,32 +102,12 @@ internal fun AchievementSoundSettingsScreen() {
                     prepare()
                 }
 
-                // Los efectos son opcionales: dependen del hardware y del fabricante.
-                // Se conectan a la sesión de captura cuando Android lo permite.
-                if (android.os.Build.VERSION.SDK_INT >= 24) {
-                    val audioSessionId = createdRecorder.audioSessionId
-                    if (AutomaticGainControl.isAvailable()) {
-                        automaticGainControl = runCatching {
-                            AutomaticGainControl.create(audioSessionId)?.apply { enabled = true }
-                        }.getOrNull()
-                    }
-                    if (NoiseSuppressor.isAvailable()) {
-                        noiseSuppressor = runCatching {
-                            NoiseSuppressor.create(audioSessionId)?.apply { enabled = true }
-                        }.getOrNull()
-                    }
-                }
-
                 createdRecorder.start()
                 recorder = createdRecorder
                 recordingFile = file
                 recordingEvent = event
                 message = "Grabando para «${event.title}»…"
             } catch (error: Exception) {
-                runCatching { automaticGainControl?.release() }
-                runCatching { noiseSuppressor?.release() }
-                automaticGainControl = null
-                noiseSuppressor = null
                 runCatching { newRecorder?.release() }
                 file.delete()
                 message = "No se pudo iniciar la grabación: ${error.message ?: "error de audio"}"
