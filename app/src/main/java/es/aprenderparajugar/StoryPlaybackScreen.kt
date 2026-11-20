@@ -396,12 +396,12 @@ internal fun StoryPlayerScreen(
                                 if (collectible != null) {
                                     celebrationObject = collectible
                                 } else {
-                                    NotificationQueueRepository.setPaused(false)
                                     engine.finish()
                                     acquiredNormalObjects = engine.claimNewNormalObjects()
                                     if (acquiredNormalObjects.isNotEmpty()) {
                                         finishAfterObjectCollection = true
                                     } else {
+                                        NotificationQueueRepository.setPaused(false)
                                         safelyStopAndRelease(ambientPlayer); ambientPlayer = null
                                         safelyStopAndRelease(narrationPlayer); narrationPlayer = null
                                         onExit()
