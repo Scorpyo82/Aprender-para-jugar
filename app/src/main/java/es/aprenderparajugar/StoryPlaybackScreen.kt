@@ -349,7 +349,7 @@ internal fun StoryPlayerScreen(
                             ),
                             label = "story-backpack-scale"
                         ).value
-                    OutlinedButton(
+                    if (!snapshot.isFinished) OutlinedButton(
                         onClick = {
                             backpackPromptDismissedScene = snapshot.scene.folderName
                             backpackOpen = true
