@@ -138,6 +138,8 @@ internal fun StoryPlayerScreen(
     var decisionSelectionInProgress by remember { mutableStateOf(false) }
     val decisionOptionsListState = remember(snapshot.scene.folderName) { LazyListState() }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
+    var acquiredNormalObjects by remember(engine) { mutableStateOf(engine.claimNewNormalObjects()) }
+    var finishAfterObjectCollection by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
         onDispose { NotificationQueueRepository.setPaused(false) }
     }
@@ -150,6 +152,10 @@ internal fun StoryPlayerScreen(
     var ambientPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var narrationPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
+
+    LaunchedEffect(acquiredNormalObjects.isNotEmpty()) {
+        if (acquiredNormalObjects.isNotEmpty()) NotificationQueueRepository.setPaused(true)
+    }
 
     DisposableEffect(activity) {
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -392,9 +398,14 @@ internal fun StoryPlayerScreen(
                                 } else {
                                     NotificationQueueRepository.setPaused(false)
                                     engine.finish()
-                                    safelyStopAndRelease(ambientPlayer); ambientPlayer = null
-                                    safelyStopAndRelease(narrationPlayer); narrationPlayer = null
-                                    onExit()
+                                    acquiredNormalObjects = engine.claimNewNormalObjects()
+                                    if (acquiredNormalObjects.isNotEmpty()) {
+                                        finishAfterObjectCollection = true
+                                    } else {
+                                        safelyStopAndRelease(ambientPlayer); ambientPlayer = null
+                                        safelyStopAndRelease(narrationPlayer); narrationPlayer = null
+                                        onExit()
+                                    }
                                 }
                             },
                             shape = RoundedCornerShape(24.dp)
@@ -411,6 +422,7 @@ internal fun StoryPlayerScreen(
                                     if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
                                     else engine.advance()?.let {
                                         snapshot = it
+                                        acquiredNormalObjects = engine.claimNewNormalObjects()
                                     }
                                 }
                             },
@@ -468,7 +480,7 @@ internal fun StoryPlayerScreen(
                                                 val next = runCatching { engine.chooseDecisionOption(option.key) }.getOrNull()
                                                 if (next != null) {
                                                     snapshot = next
-
+                                                    acquiredNormalObjects = engine.claimNewNormalObjects()
                                                     decisionDialogOpen = false
                                                 }
                                                 decisionSelectionInProgress = false
@@ -536,6 +548,18 @@ internal fun StoryPlayerScreen(
         }
     }
 
+    if (acquiredNormalObjects.isNotEmpty()) {
+        StoryObjectCollectionScreen(objects = acquiredNormalObjects) {
+            acquiredNormalObjects = emptyList()
+            NotificationQueueRepository.setPaused(false)
+            if (finishAfterObjectCollection) {
+                finishAfterObjectCollection = false
+                safelyStopAndRelease(ambientPlayer); ambientPlayer = null
+                safelyStopAndRelease(narrationPlayer); narrationPlayer = null
+                onExit()
+            }
+        }
+    }
 
     if (exitConfirmation) {
         AlertDialog(
@@ -564,6 +588,7 @@ internal fun StoryPlayerScreen(
             onUseObject = { item ->
                 if (engine.canUseObject(item.folderName)) {
                     snapshot = engine.chooseObject(item.folderName)
+                    acquiredNormalObjects = engine.claimNewNormalObjects()
                     true
                 } else {
                     false
