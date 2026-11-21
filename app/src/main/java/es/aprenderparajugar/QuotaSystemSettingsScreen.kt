@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -203,7 +202,7 @@ private fun QuotaDifficultyRow(
         mutableStateOf(preferences.getBoolean("quota_${id}_unlimited", true))
     }
     var attempts by remember(id) {
-        mutableIntStateOf(preferences.getInt("quota_${id}_attempts", 3).coerceAtLeast(1))
+        mutableStateOf(preferences.getInt("quota_${id}_attempts", 3).coerceIn(1, 999).toString())
     }
 
     Row(
@@ -213,13 +212,13 @@ private fun QuotaDifficultyRow(
     ) {
         Text(label, modifier = Modifier.weight(1f), fontWeight = FontWeight.Medium)
         OutlinedTextField(
-            value = attempts.toString(),
+            value = attempts,
             onValueChange = { value ->
                 val number = value.filter(Char::isDigit).take(3)
-                if (number.isNotBlank()) {
-                    attempts = number.toInt().coerceIn(1, 999)
-                    preferences.edit().putInt("quota_${id}_attempts", attempts).apply()
-                }
+                attempts = number
+                number.toIntOrNull()
+                    ?.takeIf { it in 1..999 }
+                    ?.let { preferences.edit().putInt("quota_${id}_attempts", it).apply() }
             },
             modifier = Modifier.weight(0.65f),
             enabled = !unlimited,
