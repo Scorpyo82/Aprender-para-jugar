@@ -220,10 +220,10 @@ private fun QuotaDifficultyRow(
                     ?.takeIf { it in 1..999 }
                     ?.let { preferences.edit().putInt("quota_${id}_attempts", it).apply() }
             },
-            modifier = Modifier.weight(0.65f),
+            modifier = Modifier.weight(0.85f),
             enabled = !unlimited,
             singleLine = true,
-            label = { Text("Intentos") },
+            label = { Text("Intentos", maxLines = 1, softWrap = false) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
