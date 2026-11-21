@@ -5108,6 +5108,11 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         val pictureEmojiFontSize = if (isTabletLayout) 58.sp else 42.sp
         val pictureImageHeight = if (isTabletLayout) 150.dp else 110.dp
         val cardPadding = if (isTabletLayout) 24.dp else 18.dp
+        val cardsQuotaStatus = ExerciseQuotaRepository.status(
+            preferences,
+            ExerciseQuotaRepository.id("cards", difficulty),
+            pairs.count { it.active && it.difficulty.equals(difficulty, true) } >= questionCount
+        )
         val wordCardOrder = remember(activeExercisePairs) { exercisePairs.shuffled() }
         val pictureCardOrder = remember(activeExercisePairs) {
             val shuffled = exercisePairs.shuffled()
@@ -5117,6 +5122,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             modifier = Modifier.fillMaxSize().clipToBounds().verticalScroll(rememberScrollState()).padding(if (isTabletLayout) 28.dp else 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            ExerciseStatusBar(
+                balance = formatRewardBalance(balanceSeconds, rewardMode),
+                isStarsMode = rewardMode.isStars,
+                roundsRemaining = cardsQuotaStatus.remaining,
+                roundsLimit = cardsQuotaStatus.limit,
+                difficulty = difficulty
+            )
             Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63))
             Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -5224,7 +5236,19 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         } else {
             val targetWord = target.word
             val complete = wordExercisePlaced.size == targetWord.length
+            val wordQuotaStatus = ExerciseQuotaRepository.status(
+                preferences,
+                ExerciseQuotaRepository.id("words", target.difficulty),
+                wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(target.difficulty, true) }
+            )
             Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                ExerciseStatusBar(
+                    balance = formatRewardBalance(balanceSeconds, rewardMode),
+                    isStarsMode = rewardMode.isStars,
+                    roundsRemaining = wordQuotaStatus.remaining,
+                    roundsLimit = wordQuotaStatus.limit,
+                    difficulty = target.difficulty
+                )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Palabras", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
                     OutlinedButton(onClick = { wordExerciseTarget = null; screen = "home" }) { Text("Salir") }
@@ -5393,6 +5417,15 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         )
     } else if (screen == "sequence-game") {
         SequenceGameScreen(
+            balance = formatRewardBalance(balanceSeconds, rewardMode),
+            isStarsMode = rewardMode.isStars,
+            roundsStatus = sequencePlayingExercise?.let { exercise ->
+                ExerciseQuotaRepository.status(
+                    preferences,
+                    ExerciseQuotaRepository.id("sequences", exercise.difficulty, exercise.type),
+                    eligibleSequenceExercises(exercise.type, exercise.difficulty).isNotEmpty()
+                )
+            },
             exercise = sequencePlayingExercise,
             selectedOrder = sequenceSelectedOrder,
             playOrder = sequencePlayOrder,
