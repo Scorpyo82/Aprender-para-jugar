@@ -37,15 +37,15 @@ internal fun ExerciseOptionsScreen(
             Text("Dificultad", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF253344))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("Fácil" to easyReward, "Normal" to normalReward, "Difícil" to hardReward).forEach { (level, reward) ->
-                    Card(Modifier.weight(1f).clickable { onDifficultyChange(level) }, shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = if (difficulty == level) Color(0xFFEAF2FF) else Color.White),
-                        border = BorderStroke(if (difficulty == level) 2.dp else 1.dp, if (difficulty == level) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
+                    Card(Modifier.weight(1f).clickable(enabled = level !in lockedDifficulties) { if (level !in lockedDifficulties) onDifficultyChange(level) }, shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = when { level in lockedDifficulties -> Color(0xFFF0F0F0); difficulty == level -> Color(0xFFEAF2FF); else -> Color.White }),
+                        border = BorderStroke(if (difficulty == level && level !in lockedDifficulties) 2.dp else 1.dp, if (level in lockedDifficulties) Color(0xFFD7D7D7) else if (difficulty == level) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
                         Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                                Text(level, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                if (level in lockedDifficulties) Text(" ⏱️", fontSize = 14.sp)
+                                Text(level, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (level in lockedDifficulties) Color(0xFF888888) else Color(0xFF222222))
+                                if (level in lockedDifficulties) Text(" 🔒⌛", fontSize = 14.sp)
                             }
-                            Text("$reward ${if (isStarsMode) "⭐" else "min"}", fontSize = 12.sp, color = Color(0xFF667085))
+                            Text("$reward ${if (isStarsMode) "⭐" else "min"}", fontSize = 12.sp, color = if (level in lockedDifficulties) Color(0xFF999999) else Color(0xFF667085))
                         }
                     }
                 }
