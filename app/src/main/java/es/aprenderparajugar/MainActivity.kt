@@ -1512,24 +1512,76 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         }
     }
 
-    fun startWordExercise(category: String? = null) {
-        val previousCategory = wordCurrentCategory
-        val avoidCategory = if (wordSelectionMode == "Mezclar temas" && category == null) previousCategory else null
-        if (wordGameState.start(wordExercises, disabledWordExerciseCategories, category, avoidCategory)) screen = "word-exercise"
-    }
-
     fun eligibleSequenceExercises(type: String, level: String? = null): List<SequenceExercise> =
         sequenceGameState.eligibleExercises(
             sequenceExercises, type, sequenceMaxCards, disabledSequenceCategories, level
         )
 
+    fun quotaAvailabilitySnapshot(): Map<String, Boolean> {
+        val result = mutableMapOf<String, Boolean>()
+        listOf("Fácil", "Normal", "Difícil").forEach { level ->
+            result[ExerciseQuotaRepository.id("cards", level)] =
+                pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
+            result[ExerciseQuotaRepository.id("words", level)] =
+                wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(level, true) }
+            listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
+                result[ExerciseQuotaRepository.id("sequences", level, type)] =
+                    eligibleSequenceExercises(type, level).isNotEmpty()
+            }
+        }
+        return result
+    }
+
+    val quotaAvailability = quotaAvailabilitySnapshot()
+    LaunchedEffect(quotaAvailability) {
+        ExerciseQuotaRepository.allQuotaIds().forEach { id ->
+            ExerciseQuotaRepository.status(preferences, id, quotaAvailability[id] == true)
+        }
+        ExerciseQuotaRepository.refreshExhaustedCycle(preferences, quotaAvailability)
+    }
+
+    fun quotaMessage(status: ExerciseQuotaRepository.QuotaStatus): String =
+        when {
+            status.limit == null -> "Sin límite de intentos."
+            status.available -> "Intentos restantes hoy: ${status.remaining}/${status.limit}."
+            else -> status.reason ?: "Dificultad bloqueada."
+        }
+
+    fun startWordExercise(category: String? = null) {
+        val previousCategory = wordCurrentCategory
+        val avoidCategory = if (wordSelectionMode == "Mezclar temas" && category == null) previousCategory else null
+        val quotaId = ExerciseQuotaRepository.id("words", wordSelectedDifficulty)
+        val hasExercises = wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(wordSelectedDifficulty, true) }
+        val quota = ExerciseQuotaRepository.status(preferences, quotaId, hasExercises)
+        if (!quota.available) {
+            wordStartMessage = quota.reason ?: "Has agotado los intentos de esta dificultad."
+            screen = "word-options"
+            return
+        }
+        if (wordGameState.start(wordExercises, disabledWordExerciseCategories, category, avoidCategory)) {
+            ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
+            screen = "word-exercise"
+        }
+    }
+
     fun startSequenceExercise(type: String, level: String, category: String? = null): Boolean {
         val previousCategory = sequencePlayingExercise?.category
         val avoidCategory = if (sequenceSelectionMode == "Mezclar temas" && category == null) previousCategory else null
+        val quotaId = ExerciseQuotaRepository.id("sequences", level, type)
+        val hasExercises = eligibleSequenceExercises(type, level).isNotEmpty()
+        val quota = ExerciseQuotaRepository.status(preferences, quotaId, hasExercises)
+        if (!quota.available) {
+            sequencePlayMessage = quota.reason ?: "Has agotado los intentos de esta dificultad."
+            screen = "sequence-difficulty"
+            return false
+        }
         val candidates = eligibleSequenceExercises(type, level).filter { category == null || it.category.equals(category, true) }
         if (candidates.isEmpty()) { sequencePlayMessage = "No hay ejercicios disponibles para esta selección."; return false }
         val started = sequenceGameState.startExercise(candidates, type, level, sequenceMaxCards, disabledSequenceCategories, avoidCategory)
-        if (started) screen = "sequence-game"
+        if (started) {
+            ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
+            screen = "sequence-game"
+        }
         return started
     }
 
@@ -1562,6 +1614,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         val candidates = pairs.filter { it.active && it.difficulty == difficulty && (requestedMode != "Elegir" || it.category.equals(chosenCategory, true)) }
         if (candidates.size < questionCount) { cardsStartMessage = "No hay suficientes tarjetas activas para esta dificultad."; return }
         if (requestedMode == "Mezcladas" && candidates.map { it.category.lowercase() }.distinct().size < 2) { cardsStartMessage = "Para mezclar temas necesitas tarjetas activas de al menos dos categorías."; return }
+        val quotaId = ExerciseQuotaRepository.id("cards", difficulty)
+        val hasExercises = pairs.count { it.active && it.difficulty.equals(difficulty, true) } >= questionCount
+        val quota = ExerciseQuotaRepository.status(preferences, quotaId, hasExercises)
+        if (!quota.available) { cardsStartMessage = quota.reason ?: "Has agotado los intentos de esta dificultad."; return }
         if (requestedMode == "Elegir") {
             val uses = manualCategoryUsesToday + 1
             manualCategoryUsesToday = uses
@@ -1589,6 +1645,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         preferences.edit().putInt("learning_turn_v1", learningTurn).apply()
         saveLearningStats(preferences, learningStats)
         cardsGameState.begin(activeExercisePairs)
+        ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
         feedback = ""; screen = "exercise"
     }
 
