@@ -5689,7 +5689,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         val categoryCounts = activeCards.groupingBy { it.category.lowercase() }.eachCount()
         ExerciseOptionsScreen(title = "Tarjetas", difficulty = difficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = cardsStartMessage,
             surpriseDescription = "Tarjetas de cualquier tema de esta dificultad.", mixDescription = "Combina tarjetas de diferentes temas en la misma partida.",
-            surpriseAvailable = activeCards.size >= questionCount, chooseAvailable = categoryCounts.values.any { it >= questionCount }, mixAvailable = activeCards.size >= questionCount && categoryCounts.size >= 2,
+            surpriseAvailable = activeCards.size >= questionCount, chooseAvailable = categoryCounts.values.any { it >= questionCount }, mixAvailable = questionCount >= 2 && activeCards.size >= questionCount && categoryCounts.size >= 2,
             manualChoiceLocked = manualCategoryLimitReached, manualLimitMessage = if (manualCategoryLimitReached) "Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit)." else "",
             onBack = { screen = "home"; cardsStartMessage = "" }, onDifficultyChange = { difficulty = it; cardsStartMessage = "" },
             onSurprise = { startCardsGame("Al azar") }, onChooseTheme = { cardsStartMessage = ""; screen = "category-select" }, onMixThemes = { startCardsGame("Mezcladas") }

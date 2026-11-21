@@ -47,6 +47,7 @@ internal class WordGameState {
 
         val varied = if (category == null && !avoidCategory.isNullOrBlank()) eligible.filterNot { it.category.equals(avoidCategory, true) }.ifEmpty { eligible } else eligible
         val chosen = varied.random()
+        currentCategory.value = chosen.category
         target.value = chosen
         letterOrder.value = chosen.word.indices.toList().shuffled().let { order ->
             if (chosen.word.length > 1 && order == chosen.word.indices.toList()) order.drop(1) + order.first()
