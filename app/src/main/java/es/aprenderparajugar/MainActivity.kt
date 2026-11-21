@@ -1547,7 +1547,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     fun quotaMessage(status: ExerciseQuotaRepository.QuotaStatus): String =
         when {
             status.limit == null -> "Sin límite de intentos."
-            status.available -> "Intentos restantes hoy: ${status.remaining}/${status.limit}."
+            status.available -> "Intentos restantes: ${status.remaining}/${status.limit}."
             else -> status.reason ?: "Dificultad bloqueada."
         }
 
