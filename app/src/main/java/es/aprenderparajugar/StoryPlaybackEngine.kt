@@ -34,6 +34,7 @@ internal class StoryPlaybackEngine(
     private var currentSceneFolder: String = story.metadata.startScene
     private val newlyAwardedNormalObjects = linkedMapOf<String, StoredObject>()
     private val pendingRewards = linkedMapOf<String, Reward>()
+    private val pendingCollectibleNotices = linkedMapOf<String, StoredObject>()
     private var pendingTransition: Transition? = null
     private var exitRewardsPrepared = false
     private var started = false
@@ -94,6 +95,12 @@ internal class StoryPlaybackEngine(
         val result = pendingRewards.values.toList()
         pendingRewards.clear()
         newlyAwardedNormalObjects.clear()
+        return result
+    }
+
+    fun claimPendingCollectibleNotices(): List<StoredObject> {
+        val result = pendingCollectibleNotices.values.toList()
+        pendingCollectibleNotices.clear()
         return result
     }
 
@@ -293,7 +300,8 @@ internal class StoryPlaybackEngine(
             .mapNotNull { folder -> ObjectRepository.list(context).firstOrNull { it.folderName == folder } }
             .firstOrNull { it.metadata.collectible && !InventoryRepository.contains(context, it.folderName) }
         if (collectible != null) {
-            runCatching { InventoryRepository.add(context, collectible.folderName) }
+            val added = runCatching { InventoryRepository.add(context, collectible.folderName) }.getOrNull()
+            if (added != null && collectible.folderName in added) pendingCollectibleNotices[collectible.folderName] = collectible
             return collectible
         }
         return null
@@ -319,8 +327,11 @@ internal class StoryPlaybackEngine(
             if (!alreadyOwned) {
                 val added = runCatching { InventoryRepository.add(context, objectFolder) }.getOrNull()
                 if (added != null && objectFolder in added) {
-                    pendingRewards[objectFolder] = Reward(storedObject, storedObject.metadata.collectible)
-                    if (!storedObject.metadata.collectible) newlyAwardedNormalObjects[objectFolder] = storedObject
+                    if (storedObject.metadata.collectible) pendingCollectibleNotices[objectFolder] = storedObject
+                    else {
+                        pendingRewards[objectFolder] = Reward(storedObject, false)
+                        newlyAwardedNormalObjects[objectFolder] = storedObject
+                    }
                 }
             }
         }

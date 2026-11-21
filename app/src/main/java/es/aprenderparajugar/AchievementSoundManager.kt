@@ -15,7 +15,7 @@ internal enum class AchievementSoundEvent(val key: String, val title: String, va
     STORY_COMPLETED("story_completed", "Cuento completado", R.raw.sound_story_completed),
     REWARD_GRANTED("reward_granted", "Recompensa conseguida", R.raw.sound_reward_granted),
     ITEM_PURCHASED("item_purchased", "Objeto comprado", R.raw.sound_item_purchased),
-    STORY_UNLOCKED("story_unlocked", "Objeto desbloqueado en la tienda", R.raw.sound_story_unlocked)
+    STORY_UNLOCKED("story_unlocked", "Cuento desbloqueado", R.raw.sound_story_unlocked)
 }
 
 internal object AchievementSoundManager {

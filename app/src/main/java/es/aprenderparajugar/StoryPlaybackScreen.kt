@@ -140,10 +140,15 @@ internal fun StoryPlayerScreen(
     var decisionSelectionInProgress by remember { mutableStateOf(false) }
     val decisionOptionsListState = remember(snapshot.scene.folderName) { LazyListState() }
     var rewardQueue by remember(engine) { mutableStateOf(engine.claimPendingRewards()) }
+    var collectibleNoticeQueue by remember(engine) { mutableStateOf(engine.claimPendingCollectibleNotices()) }
     var pendingRewardAction by remember { mutableStateOf(if (rewardQueue.isNotEmpty()) "enter" else null) }
     var rewardFlowHadPresentation by remember { mutableStateOf(rewardQueue.isNotEmpty()) }
     DisposableEffect(Unit) {
-        onDispose { NotificationQueueRepository.setPaused(false) }
+        StoryUnlockNotificationRepository.setInterpreterActive(context, true)
+        onDispose {
+            StoryUnlockNotificationRepository.setInterpreterActive(context, false)
+            NotificationQueueRepository.setPaused(false)
+        }
     }
     var narrationFinished by remember { mutableStateOf(false) }
     var narrationIsPlaying by remember { mutableStateOf(false) }
@@ -156,6 +161,18 @@ internal fun StoryPlayerScreen(
     var narrationPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     val portraitWarning = LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
 
+    fun collectPendingCollectibleNotices() {
+        val newlyCollected = engine.claimPendingCollectibleNotices()
+        if (newlyCollected.isNotEmpty()) collectibleNoticeQueue = (collectibleNoticeQueue + newlyCollected).distinctBy { it.folderName }
+    }
+
+    LaunchedEffect(collectibleNoticeQueue.firstOrNull()?.folderName) {
+        if (collectibleNoticeQueue.isNotEmpty()) {
+            delay(2400)
+            collectibleNoticeQueue = collectibleNoticeQueue.drop(1)
+        }
+    }
+
     LaunchedEffect(rewardQueue.isNotEmpty(), pendingRewardAction) {
         if (rewardQueue.isNotEmpty()) {
             NotificationQueueRepository.setPaused(true)
@@ -164,6 +181,7 @@ internal fun StoryPlayerScreen(
         when (pendingRewardAction) {
             "transition" -> {
                 snapshot = engine.completePendingTransition()
+                collectPendingCollectibleNotices()
                 rewardQueue = engine.claimPendingRewards()
                 if (rewardQueue.isNotEmpty()) pendingRewardAction = "enter"
                 else {
@@ -330,11 +348,7 @@ internal fun StoryPlayerScreen(
         val reward = rewardQueue.firstOrNull() ?: return@LaunchedEffect
         notificationAudioInProgress = true
         try {
-            AchievementSoundManager.play(
-                context,
-                if (reward.collectible) AchievementSoundEvent.COLLECTIBLE_ACQUIRED
-                else AchievementSoundEvent.OBJECT_ACQUIRED
-            )
+            AchievementSoundManager.play(context, AchievementSoundEvent.OBJECT_ACQUIRED)
         } catch (_: Exception) {
             // Un efecto fallido nunca debe interrumpir el cuento.
         } finally {
@@ -410,6 +424,10 @@ internal fun StoryPlayerScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("📖", color = Color.White, fontSize = 54.sp)
                     }
+                }
+
+                collectibleNoticeQueue.firstOrNull()?.let { collectible ->
+                    CollectibleFoundBanner(collectible, Modifier.align(Alignment.TopCenter).padding(12.dp))
                 }
 
                 rewardQueue.firstOrNull()?.takeIf { !it.collectible }?.let { reward ->
@@ -494,6 +512,7 @@ internal fun StoryPlayerScreen(
                         Button(
                             onClick = {
                                 if (pendingRewardAction == null && engine.prepareFinish()) {
+                                    collectPendingCollectibleNotices()
                                     NotificationQueueRepository.setPaused(true)
                                     pendingRewardAction = "finish"
                                     rewardQueue = engine.claimPendingRewards()
@@ -509,6 +528,7 @@ internal fun StoryPlayerScreen(
                                 if (pendingRewardAction == null) {
                                     if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
                                     else if (engine.prepareFreeAdvance()) {
+                                        collectPendingCollectibleNotices()
                                         NotificationAudioCoordinator.prepareSceneTransition()
                                         narrationIsPlaying = false
                                         NotificationQueueRepository.setPaused(true)
@@ -571,6 +591,7 @@ internal fun StoryPlayerScreen(
                                             if (!decisionSelectionInProgress) {
                                                 decisionSelectionInProgress = true
                                                 if (engine.prepareDecisionTransition(option.key)) {
+                                                    collectPendingCollectibleNotices()
                                                     NotificationAudioCoordinator.prepareSceneTransition()
                                                     narrationIsPlaying = false
                                                     NotificationQueueRepository.setPaused(true)
@@ -637,14 +658,6 @@ internal fun StoryPlayerScreen(
         }
     }
 
-    rewardQueue.firstOrNull()?.let { reward ->
-        if (reward.collectible) {
-            CollectibleCelebrationDialog(reward.storedObject, fontFamily) {
-                rewardQueue = rewardQueue.drop(1)
-            }
-        }
-    }
-
     if (exitConfirmation) {
         AlertDialog(
             onDismissRequest = { exitConfirmation = false },
@@ -671,6 +684,7 @@ internal fun StoryPlayerScreen(
             fontFamily = fontFamily,
             onUseObject = { item ->
                 if (pendingRewardAction == null && engine.prepareObjectTransition(item.folderName)) {
+                    collectPendingCollectibleNotices()
                     NotificationAudioCoordinator.prepareSceneTransition()
                     narrationIsPlaying = false
                     backpackOpen = false
@@ -837,6 +851,26 @@ internal fun StorySceneTestDialog(
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun CollectibleFoundBanner(stored: StoredObject, modifier: Modifier = Modifier) {
+    val image = remember(stored.directory.absolutePath, stored.metadata.image) {
+        BitmapFactory.decodeFile(File(stored.directory, stored.metadata.image).absolutePath)
+    }
+    Row(
+        modifier = modifier.background(Color(0xF2FFF8E8), RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        if (image != null) Image(image.asImageBitmap(), stored.metadata.name, Modifier.size(48.dp), contentScale = ContentScale.Fit)
+        else Text("✨", fontSize = 32.sp)
+        Column {
+            Text("¡Has encontrado un tesoro!", color = Color(0xFF49316F), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("Añadido a tu colección", color = Color(0xFF344054), fontSize = 12.sp)
         }
     }
 }

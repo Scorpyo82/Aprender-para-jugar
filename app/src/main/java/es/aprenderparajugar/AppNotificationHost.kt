@@ -1,5 +1,4 @@
 package es.aprenderparajugar
-
 import android.media.AudioManager
 import android.media.ToneGenerator
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,52 +16,31 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-
-/**
- * Presenta avisos globales por encima de la pantalla activa, sin depender
- * de AprenderApp ni del intérprete de cuentos.
- */
-@Composable
-internal fun AppNotificationHost(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val pending = NotificationQueueRepository.pendingFolderNames
-    val paused = NotificationQueueRepository.isPaused
-    val folderName = pending.firstOrNull().takeUnless { paused }
-    val stored = folderName?.let { folder ->
-        ObjectRepository.list(context).firstOrNull { it.folderName == folder }
-    }
-
-    LaunchedEffect(folderName) {
-        if (folderName == null) return@LaunchedEffect
-        if (stored == null) {
-            NotificationQueueRepository.complete(context, folderName)
-            return@LaunchedEffect
-        }
-
-        val tone = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 65) }.getOrNull()
-        try {
-            tone?.startTone(ToneGenerator.TONE_PROP_ACK, 260)
-            delay(3200)
-            NotificationQueueRepository.complete(context, folderName)
-        } finally {
-            tone?.release()
-        }
-    }
-
-    if (stored != null) {
-        val isOwned = InventoryRepository.contains(context, stored.folderName)
-        val alpha by animateFloatAsState(
-            targetValue = 1f,
-            animationSpec = tween(220),
-            label = "global-notification-fade"
-        )
-        Box(
-            modifier = modifier.fillMaxSize().padding(12.dp),
-            contentAlignment = Alignment.TopEnd
-        ) {
-            Box(Modifier.graphicsLayer { this.alpha = alpha }) {
-                StoreUnlockNotification(stored, FontFamily.Default, isOwned)
-            }
-        }
-    }
+@Composable internal fun AppNotificationHost(modifier:Modifier=Modifier){
+ val context=LocalContext.current
+ val objectFolder=NotificationQueueRepository.pendingFolderNames.firstOrNull()
+ val storedObject=objectFolder?.let{folder->ObjectRepository.list(context).firstOrNull{it.folderName==folder}}
+ val storyPaths=StoryUnlockNotificationRepository.pendingStoryPaths
+ val interpreterActive=StoryUnlockNotificationRepository.isInterpreterActive
+ val storyPath=storyPaths.firstOrNull().takeUnless{interpreterActive}
+ val storedStory=storyPath?.let{path->StoryRepository.list(context).firstOrNull{it.directory.absolutePath==path}}
+ LaunchedEffect(objectFolder,storyPath,interpreterActive){
+  if(objectFolder!=null){
+   if(storedObject==null){NotificationQueueRepository.complete(context,objectFolder);return@LaunchedEffect}
+   val tone=runCatching{ToneGenerator(AudioManager.STREAM_MUSIC,65)}.getOrNull()
+   try{tone?.startTone(ToneGenerator.TONE_PROP_ACK,180);delay(3000);NotificationQueueRepository.complete(context,objectFolder)}finally{tone?.release()}
+  }else if(storyPath!=null){
+   if(storedStory==null){StoryUnlockNotificationRepository.complete(context,storyPath);return@LaunchedEffect}
+   delay(2000);if(StoryUnlockNotificationRepository.isInterpreterActive)return@LaunchedEffect
+   if(AchievementSoundManager.isEnabled(context))runCatching{AchievementSoundManager.play(context,AchievementSoundEvent.STORY_UNLOCKED)}else delay(3000)
+   StoryUnlockNotificationRepository.complete(context,storyPath)
+  }
+ }
+ if(objectFolder!=null&&storedObject!=null){
+  val owned=InventoryRepository.contains(context,storedObject.folderName)
+  val alpha by animateFloatAsState(1f,animationSpec=tween(220),label="global-notification-fade")
+  Box(modifier.fillMaxSize().padding(12.dp),contentAlignment=Alignment.TopEnd){Box(Modifier.graphicsLayer{this.alpha=alpha}){StoreUnlockNotification(storedObject,FontFamily.Default,owned)}}
+ }else if(storyPath!=null&&storedStory!=null&&!interpreterActive){
+  Box(modifier.fillMaxSize().padding(12.dp),contentAlignment=Alignment.TopEnd){StoryUnlockNotification(storedStory)}
+ }
 }

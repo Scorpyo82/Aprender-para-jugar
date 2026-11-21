@@ -30,6 +30,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Inventario infantil unificado: mezcla objetos conseguidos y objetos comprables.
@@ -60,10 +62,27 @@ internal fun StoryObjectInventoryScreen(
     fontFamily: FontFamily,
     onBack: () -> Unit,
     onPurchase: (StoredObject) -> Boolean
-) {
+ ) {
+    val context = LocalContext.current
     var selectedCollectible by remember { mutableStateOf<StoredObject?>(null) }
     var pendingPurchase by remember { mutableStateOf<StoredObject?>(null) }
     var celebrationObject by remember { mutableStateOf<StoredObject?>(null) }
+    var celebrationQueue by remember { mutableStateOf<List<StoredObject>>(emptyList()) }
+
+    LaunchedEffect(ownedFolders, objects) {
+        val pending = objects.filter { stored ->
+            stored.metadata.collectible && stored.folderName in ownedFolders &&
+                !InventoryRepository.isFirstPresentationShown(context, stored.folderName)
+        }
+        celebrationQueue = (celebrationQueue + pending).distinctBy { it.folderName }
+        if (celebrationObject == null) celebrationObject = celebrationQueue.firstOrNull() ?: pending.firstOrNull()
+    }
+
+    LaunchedEffect(celebrationObject?.folderName) {
+        if (celebrationObject != null) runCatching {
+            AchievementSoundManager.play(context, AchievementSoundEvent.COLLECTIBLE_ACQUIRED)
+        }
+    }
     val visibleObjects = objects.filter { it.folderName in ownedFolders || (it.metadata.availableInStore && (!it.metadata.requiresUnlock || it.folderName in unlockedFolders)) }.sortedBy { it.metadata.name.lowercase() }
     val ordinaryObjects = visibleObjects.filterNot { it.metadata.collectible }
     val collectibles = visibleObjects.filter { it.metadata.collectible }
@@ -194,14 +213,21 @@ internal fun StoryObjectInventoryScreen(
                 Button(onClick = {
                     pendingPurchase = null
                     val purchased = onPurchase(pending)
-                    if (purchased && pending.metadata.collectible) celebrationObject = pending
+                    if (purchased && pending.metadata.collectible) {
+                        celebrationQueue = (celebrationQueue + pending).distinctBy { it.folderName }
+                        celebrationObject = pending
+                    }
                 }, enabled = enoughBalance) { Text("Comprar", fontFamily = fontFamily) }
             },
             dismissButton = { OutlinedButton(onClick = { pendingPurchase = null }) { Text("Cancelar", fontFamily = fontFamily) } }
         )
     }
     celebrationObject?.let { awarded ->
-        CollectibleCelebrationDialog(awarded, fontFamily) { celebrationObject = null }
+        CollectibleCelebrationDialog(awarded, fontFamily) {
+            InventoryRepository.markFirstPresentationShown(context, awarded.folderName)
+            celebrationQueue = celebrationQueue.filterNot { it.folderName == awarded.folderName }
+            celebrationObject = celebrationQueue.firstOrNull()
+        }
     }
     selectedCollectible?.let { selected ->
         AlertDialog(

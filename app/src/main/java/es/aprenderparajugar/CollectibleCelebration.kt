@@ -41,7 +41,7 @@ internal fun CollectibleCelebrationDialog(
     onContinue: () -> Unit
 ) {
     val imageFile = File(stored.directory, stored.metadata.image)
-    LaunchedEffect(stored.folderName) { delay(2800); onContinue() }
+    LaunchedEffect(stored.folderName) { delay(3800); onContinue() }
 
     Dialog(
         onDismissRequest = { /* La celebración se cierra automáticamente. */ },

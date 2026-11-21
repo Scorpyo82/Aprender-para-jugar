@@ -217,6 +217,7 @@ class MainActivity : ComponentActivity() {
         // Inicializa las raíces privadas para las bibliotecas de contenido.
         ContentStorage.initialize(this)
         NotificationQueueRepository.initialize(this)
+        StoryUnlockNotificationRepository.initialize(this)
         // A manual launch re-arms the focus guard after a parent-authorized exit.
         getSharedPreferences("aprender_para_jugar", MODE_PRIVATE)
             .edit().putBoolean("manual_exit_allowed", false).apply()
@@ -5683,7 +5684,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 balanceSeconds = result.balanceSeconds
                 storyObjectInventoryState.refresh(context)
                 storyInventoryMessage = result.message
-                if (result.success) {
+                if (result.success && !stored.metadata.collectible) {
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                         try { AchievementSoundManager.play(context, AchievementSoundEvent.ITEM_PURCHASED) } catch (_: Exception) { }
                     }

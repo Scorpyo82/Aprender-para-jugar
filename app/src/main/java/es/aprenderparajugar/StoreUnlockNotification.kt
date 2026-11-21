@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,10 +30,6 @@ internal fun StoreUnlockNotification(
     fontFamily: FontFamily,
     isOwned: Boolean
 ) {
-    val context = LocalContext.current
-    LaunchedEffect(stored.folderName) {
-        try { AchievementSoundManager.play(context, AchievementSoundEvent.STORY_UNLOCKED) } catch (_: Exception) { }
-    }
     val bitmap = remember(stored.directory.absolutePath, stored.metadata.image) {
         File(stored.directory, stored.metadata.image).takeIf { it.isFile }
             ?.let { BitmapFactory.decodeFile(it.absolutePath) }
