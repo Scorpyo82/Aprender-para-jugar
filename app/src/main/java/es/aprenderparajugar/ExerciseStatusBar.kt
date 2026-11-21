@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.sp
 @Composable
 internal fun ExerciseStatusBar(
     balance: String,
-    isStarsMode: Boolean,
     roundsRemaining: Int?,
     roundsLimit: Int?,
     difficulty: String
@@ -32,7 +31,7 @@ internal fun ExerciseStatusBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        StatusItem("SALDO", "$balance ${if (isStarsMode) "⭐" else "min"}", Modifier.weight(1f))
+        StatusItem("SALDO", balance, Modifier.weight(1f))
         StatusItem("RONDAS", rounds, Modifier.weight(1f))
         StatusItem("DIFICULTAD", difficulty, Modifier.weight(1f))
     }
