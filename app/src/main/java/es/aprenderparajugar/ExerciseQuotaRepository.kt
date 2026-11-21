@@ -3,7 +3,6 @@ package es.aprenderparajugar
 import android.content.SharedPreferences
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 
 /**
@@ -19,7 +18,6 @@ internal object ExerciseQuotaRepository {
     )
 
     private const val PREFIX = "quota_"
-    private const val PERIOD_KEY = "quota_active_period"
     private const val CYCLE_KEY = "quota_exhausted_cycle"
     private const val RESET_LATCH_KEY = "quota_exhausted_reset_latch"
 
@@ -76,14 +74,15 @@ internal object ExerciseQuotaRepository {
 
     fun status(preferences: SharedPreferences, id: String, hasExercises: Boolean): QuotaStatus {
         val period = period(preferences)
+        val limit = configuredLimit(preferences, id)
         if (!hasExercises) {
-            preferences.edit().putBoolean(unavailableKey(id, period), true).apply()
-            return QuotaStatus(false, 0, configuredLimit(preferences, id), "No hay ejercicios suficientes para esta dificultad.")
+            if (limit != null) preferences.edit().putBoolean(unavailableKey(id, period), true).apply()
+            return QuotaStatus(false, 0, limit, "No hay ejercicios suficientes para esta dificultad.")
         }
+        if (limit == null) return QuotaStatus(true, null, null)
         if (preferences.getBoolean(unavailableKey(id, period), false)) {
-            return QuotaStatus(false, 0, configuredLimit(preferences, id), "Esta dificultad ya se ha dado por consumida en la jornada actual.")
+            return QuotaStatus(false, 0, limit, "Esta dificultad ya se ha dado por consumida en la jornada actual.")
         }
-        val limit = configuredLimit(preferences, id) ?: return QuotaStatus(true, null, null)
         val used = preferences.getInt(usedKey(id, period), 0).coerceAtLeast(0)
         val remaining = (limit - used).coerceAtLeast(0)
         return QuotaStatus(remaining > 0, remaining, limit, if (remaining == 0) "Has agotado los intentos de esta dificultad." else null)
@@ -114,7 +113,7 @@ internal object ExerciseQuotaRepository {
         if (!anyPlayable) return
         val allConsumed = finite.all { id ->
             val unavailable = availability[id] != true || preferences.getBoolean(unavailableKey(id, currentPeriod), false)
-            val limit = configuredLimit(preferences, id) ?: return@all
+            val limit = configuredLimit(preferences, id) ?: return@all true
             unavailable || preferences.getInt(usedKey(id, currentPeriod), 0) >= limit
         }
         if (allConsumed) {
