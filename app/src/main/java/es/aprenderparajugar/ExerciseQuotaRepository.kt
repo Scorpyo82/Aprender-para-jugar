@@ -118,7 +118,8 @@ internal object ExerciseQuotaRepository {
             unavailable || preferences.getInt(usedKey(id, currentPeriod), 0) >= limit
         }
         if (allConsumed) {
-            val latch = currentPeriod + "|" + finite.filter { availability[it] == true }.joinToString("|") { id -> id }
+            val availableIds = finite.filter { availability[it] == true }.joinToString("|") { id -> id }
+            val latch = if (mode == "exhausted") availableIds else currentPeriod + "|" + availableIds
             if (preferences.getString(RESET_LATCH_KEY, "") != latch) {
                 preferences.edit()
                     .putString(RESET_LATCH_KEY, latch)
