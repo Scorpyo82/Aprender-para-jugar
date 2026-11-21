@@ -22,6 +22,7 @@ internal fun ExerciseOptionsScreen(
     title: String, difficulty: String, easyReward: Int, normalReward: Int, hardReward: Int,
     isStarsMode: Boolean, message: String, surpriseDescription: String, mixDescription: String,
     surpriseAvailable: Boolean, chooseAvailable: Boolean, mixAvailable: Boolean,
+    lockedDifficulties: Set<String> = emptySet(),
     manualChoiceLocked: Boolean = false, manualLimitMessage: String = "",
     onBack: () -> Unit, onDifficultyChange: (String) -> Unit,
     onSurprise: () -> Unit, onChooseTheme: () -> Unit, onMixThemes: () -> Unit
@@ -40,7 +41,10 @@ internal fun ExerciseOptionsScreen(
                         colors = CardDefaults.cardColors(containerColor = if (difficulty == level) Color(0xFFEAF2FF) else Color.White),
                         border = BorderStroke(if (difficulty == level) 2.dp else 1.dp, if (difficulty == level) Color(0xFF3567A8) else Color(0xFFE8E0D2))) {
                         Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(level, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                Text(level, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                if (level in lockedDifficulties) Text(" ⏱️", fontSize = 14.sp)
+                            }
                             Text("$reward ${if (isStarsMode) "⭐" else "min"}", fontSize = 12.sp, color = Color(0xFF667085))
                         }
                     }
@@ -61,7 +65,7 @@ private fun ModeOption(emoji: String, title: String, description: String, bg: Co
         border = BorderStroke(1.dp, if (enabled) edge else Color(0xFFD7D7D7))) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(58.dp).background(if (enabled) edge.copy(alpha = .35f) else Color(0xFFE0E0E0), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                Text(if (enabled) emoji else "🔒", fontSize = if (emoji.length > 3) 21.sp else 30.sp)
+                Text(emoji, fontSize = if (emoji.length > 3) 21.sp else 30.sp, color = if (enabled) fg else Color(0xFF9A9A9A))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = if (enabled) fg else Color(0xFF777777))
