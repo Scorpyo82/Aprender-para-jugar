@@ -16,7 +16,7 @@ internal fun parentBackSection(
     "stories-editor" -> "stories-library"
     "stories-structure", "stories-scene-editor" -> "stories-editor"
     "stories-object-create", "stories-object-library", "stories-object-store", "stories-object-collection", "stories-object-inventory" -> "stories-objects"
-    "active-games", "sound-settings", "rewards", "security", "device-setup", "about",
+    "active-games", "sound-settings", "rewards", "quota-system", "security", "device-setup", "about",
     "basic-library", "library-transfer", "statistics-menu", "typography", "game-modes" -> "menu"
     "music", "stories-audio" -> "sound-settings"
     "library-export", "library-delete" -> "library-transfer"
