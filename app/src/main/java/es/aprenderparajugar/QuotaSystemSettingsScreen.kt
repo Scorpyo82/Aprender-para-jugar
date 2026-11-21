@@ -148,7 +148,7 @@ internal fun QuotaSystemSettingsScreen(preferences: SharedPreferences) {
                     label = { Text("Hora (HH:mm)") },
                     placeholder = { Text("00:00") },
                     isError = timeError,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
                 )
                 Text(
                     "Se utiliza la hora local del dispositivo. El valor inicial es 00:00.",
