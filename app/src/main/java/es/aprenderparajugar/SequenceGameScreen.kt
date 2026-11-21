@@ -37,6 +37,9 @@ import androidx.compose.runtime.Composable
 
 @Composable
 internal fun SequenceGameScreen(
+    balance: String,
+    isStarsMode: Boolean,
+    roundsStatus: ExerciseQuotaRepository.QuotaStatus?,
     exercise: SequenceExercise?,
     selectedOrder: List<Int>,
     playOrder: List<Int>,
@@ -62,6 +65,13 @@ internal fun SequenceGameScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
+            ExerciseStatusBar(
+                balance = balance,
+                isStarsMode = isStarsMode,
+                roundsRemaining = roundsStatus?.remaining,
+                roundsLimit = roundsStatus?.limit,
+                difficulty = exercise.difficulty
+            )
             OutlinedButton(onClick = onBack) { Text("← Volver a ejercicios") }
             Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
             Text(
