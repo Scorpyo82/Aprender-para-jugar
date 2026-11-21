@@ -5187,7 +5187,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         val availableWords = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
         val wordCategories = availableWords.map { it.category }.distinct()
         val wordQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", wordSelectedDifficulty), availableWords.isNotEmpty())
+        val lockedWordDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
+            val hasExercises = wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(level, true) }
+            val status = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", level), hasExercises)
+            hasExercises && status.limit != null && !status.available
+        }.toSet()
         ExerciseOptionsScreen(title = "Palabras", difficulty = wordSelectedDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = wordStartMessage.ifBlank { quotaMessage(wordQuota) },
+            lockedDifficulties = lockedWordDifficulties,
             surpriseDescription = "La app elige una palabra entre todos los temas disponibles.", mixDescription = "La app busca cambiar de tema entre una palabra y la siguiente.",
             surpriseAvailable = availableWords.isNotEmpty() && wordQuota.available, chooseAvailable = availableWords.isNotEmpty() && wordQuota.available, mixAvailable = wordCategories.size >= 2 && wordQuota.available,
             onBack = { screen = "home"; wordStartMessage = "" }, onDifficultyChange = { wordSelectedDifficulty = it; wordStartMessage = "" },
@@ -5367,7 +5373,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         val sequenceCandidates = eligibleSequenceExercises(sequenceChosenCategory, sequenceChosenDifficulty)
         val sequenceCategories = sequenceCandidates.map { it.category }.distinct()
         val sequenceQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", sequenceChosenDifficulty, sequenceChosenCategory), sequenceCandidates.isNotEmpty())
+        val lockedSequenceDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
+            val hasExercises = eligibleSequenceExercises(sequenceChosenCategory, level).isNotEmpty()
+            val status = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, sequenceChosenCategory), hasExercises)
+            hasExercises && status.limit != null && !status.available
+        }.toSet()
         ExerciseOptionsScreen(title = sequenceChosenCategory, difficulty = sequenceChosenDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = sequencePlayMessage.ifBlank { quotaMessage(sequenceQuota) },
+            lockedDifficulties = lockedSequenceDifficulties,
             surpriseDescription = "La app elige una secuencia entre todos los temas disponibles.", mixDescription = "La app busca cambiar de tema entre una secuencia y la siguiente.",
             surpriseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available, chooseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available, mixAvailable = sequenceCategories.size >= 2 && sequenceQuota.available,
             onBack = { screen = "sequences"; sequencePlayMessage = "" }, onDifficultyChange = { sequenceChosenDifficulty = it; sequencePlayMessage = "" },
@@ -5757,7 +5769,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         val activeCards = pairs.filter { it.active && it.difficulty == difficulty }
         val categoryCounts = activeCards.groupingBy { it.category.lowercase() }.eachCount()
         val cardsQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", difficulty), activeCards.size >= questionCount)
+        val lockedCardDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
+            val hasExercises = pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
+            val status = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", level), hasExercises)
+            hasExercises && status.limit != null && !status.available
+        }.toSet()
         ExerciseOptionsScreen(title = "Tarjetas", difficulty = difficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = cardsStartMessage.ifBlank { quotaMessage(cardsQuota) },
+            lockedDifficulties = lockedCardDifficulties,
             surpriseDescription = "Tarjetas de cualquier tema de esta dificultad.", mixDescription = "Combina tarjetas de diferentes temas en la misma partida.",
             surpriseAvailable = activeCards.size >= questionCount && cardsQuota.available, chooseAvailable = categoryCounts.values.any { it >= questionCount } && cardsQuota.available, mixAvailable = questionCount >= 2 && activeCards.size >= questionCount && categoryCounts.size >= 2 && cardsQuota.available,
             manualChoiceLocked = manualCategoryLimitReached, manualLimitMessage = if (manualCategoryLimitReached) "Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit)." else "",
@@ -5779,6 +5797,23 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             onSelectCategory = { name -> startCardsGame("Elegir", name) }
         )
     } else {
+        val cardsQuotaStates = listOf("Fácil", "Normal", "Difícil").map { level ->
+            val hasExercises = pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
+            ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", level), hasExercises).let { hasExercises && it.limit != null && !it.available }
+        }
+        val wordsQuotaStates = listOf("Fácil", "Normal", "Difícil").map { level ->
+            val hasExercises = wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(level, true) }
+            ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", level), hasExercises).let { hasExercises && it.limit != null && !it.available }
+        }
+        val sequencesQuotaStates = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").flatMap { type ->
+            listOf("Fácil", "Normal", "Difícil").map { level ->
+                val hasExercises = eligibleSequenceExercises(type, level).isNotEmpty()
+                ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, type), hasExercises).let { hasExercises && it.limit != null && !it.available }
+            }
+        }
+        val cardsAllQuotaLocked = cardsQuotaStates.all { it }
+        val wordsAllQuotaLocked = wordsQuotaStates.all { it }
+        val sequencesAllQuotaLocked = sequencesQuotaStates.all { it }
         val homeWidth = LocalConfiguration.current.screenWidthDp
         val modeImageSize = if (homeWidth >= 700) 210.dp else if (homeWidth >= 500) 165.dp else 118.dp
         val modeCardPadding = if (homeWidth >= 700) 20.dp else 12.dp
@@ -5826,9 +5861,12 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     ) {
                         ModeCardImage(0, "Ilustración de Tarjetas", Modifier.width(modeImageSize).height(modeImageSize))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Tarjetas", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("Tarjetas", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
+                                if (gameActiveCards && cardsQuotaStates.any { it }) Text("⏱️", fontSize = 17.sp)
+                            }
                             Text("Aprender con imágenes", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
-                            Text(if (gameActiveCards) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveCards) Color(0xFF754411) else Color(0xFFB3261E))
+                            Text(when { !gameActiveCards -> "🔒 BLOQUEADO"; cardsAllQuotaLocked -> "⏱️ BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveCards) Color(0xFF754411) else Color(0xFFB3261E))
                         }
                     }
                 }
@@ -5847,9 +5885,12 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     ) {
                         ModeCardImage(1, "Ilustración de Secuencias", Modifier.width(modeImageSize).height(modeImageSize))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Secuencias", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("Secuencias", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
+                                if (gameActiveSequences && sequencesQuotaStates.any { it }) Text("⏱️", fontSize = 17.sp)
+                            }
                             Text("Ordenar y razonar", fontSize = modeDescriptionSize, color = Color(0xFF476C51))
-                            Text(if (gameActiveSequences) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveSequences) Color(0xFF39713A) else Color(0xFFB3261E))
+                            Text(when { !gameActiveSequences -> "🔒 BLOQUEADO"; sequencesAllQuotaLocked -> "⏱️ BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveSequences) Color(0xFF39713A) else Color(0xFFB3261E))
                         }
                     }
                 }
@@ -5872,9 +5913,12 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     ) {
                         ModeCardImage(2, "Ilustración de Palabras", Modifier.width(modeImageSize).height(modeImageSize))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Palabras", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text("Palabras", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+                                if (gameActiveWords && wordsQuotaStates.any { it }) Text("⏱️", fontSize = 17.sp)
+                            }
                             Text("Ordenar letras y completar palabras", fontSize = modeDescriptionSize, color = Color(0xFF42647D))
-                            Text(if (gameActiveWords) "¡JUGAR!" else "🔒 BLOQUEADO", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveWords) Color(0xFF285F94) else Color(0xFFB3261E))
+                            Text(when { !gameActiveWords -> "🔒 BLOQUEADO"; wordsAllQuotaLocked -> "⏱️ BLOQUEADO TEMPORALMENTE"; else -> "¡JUGAR!" }, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveWords) Color(0xFF285F94) else Color(0xFFB3261E))
                         }
                     }
                 }
