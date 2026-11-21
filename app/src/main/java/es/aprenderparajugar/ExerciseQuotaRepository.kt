@@ -60,7 +60,15 @@ internal object ExerciseQuotaRepository {
             val nowMinutes = get(Calendar.HOUR_OF_DAY) * 60 + get(Calendar.MINUTE)
             if (nowMinutes < hour * 60 + minute) add(Calendar.DAY_OF_YEAR, -1)
         }
-        return "day_" + SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(calendar.time)
+        val day = SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(calendar.time)
+        if (mode == "either") {
+            val previousDay = preferences.getString("quota_either_day", "")
+            if (previousDay != day) {
+                preferences.edit().putString("quota_either_day", day).putLong(CYCLE_KEY, 0L).remove(RESET_LATCH_KEY).apply()
+            }
+            return "either_" + day + "_cycle_" + preferences.getLong(CYCLE_KEY, 0L)
+        }
+        return "day_" + day
     }
 
     private fun usedKey(id: String, period: String) = "${PREFIX}used_${period}_${id}"
@@ -110,8 +118,7 @@ internal object ExerciseQuotaRepository {
             unavailable || preferences.getInt(usedKey(id, currentPeriod), 0) >= limit
         }
         if (allConsumed) {
-            val latch = finite.filter { availability[it] == true }
-                .joinToString("|") { id -> id }
+            val latch = currentPeriod + "|" + finite.filter { availability[it] == true }.joinToString("|") { id -> id }
             if (preferences.getString(RESET_LATCH_KEY, "") != latch) {
                 preferences.edit()
                     .putString(RESET_LATCH_KEY, latch)
