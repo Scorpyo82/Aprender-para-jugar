@@ -180,6 +180,9 @@ internal fun StoryPlayerScreen(
             "enter" -> {
                 if (rewardFlowHadPresentation) delay(2000)
                 while (notificationAudioInProgress) delay(50)
+                NotificationAudioCoordinator.completeSceneTransition(
+                    resumeAmbient = snapshot.scene.metadata.keepPreviousAmbient
+                )
                 pendingRewardAction = null
                 rewardFlowHadPresentation = false
                 NotificationQueueRepository.setPaused(false)
