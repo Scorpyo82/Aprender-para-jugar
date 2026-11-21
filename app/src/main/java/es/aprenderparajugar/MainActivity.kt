@@ -869,6 +869,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
         )
     }
+    var activeExerciseMode by remember { mutableStateOf("cards") }
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
     var soundEnabled by remember { mutableStateOf(if (firstLaunchNeedsSetup) false else preferences.getBoolean("sound_enabled", true)) }
     androidx.compose.runtime.LaunchedEffect(screen) {
@@ -1570,6 +1571,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
             ExerciseQuotaRepository.refreshExhaustedCycle(preferences, quotaAvailability)
             quotaRevision++
+            activeExerciseMode = "words"
+            sequencePlayingExercise = null
+            sequenceSelectedOrder = emptyList()
             screen = "word-exercise"
         }
     }
@@ -1592,6 +1596,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
             ExerciseQuotaRepository.refreshExhaustedCycle(preferences, quotaAvailability)
             quotaRevision++
+            activeExerciseMode = "sequences"
+            wordExerciseTarget = null
+            wordExercisePlaced = emptyList()
             screen = "sequence-game"
         }
         return started
@@ -1648,7 +1655,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             while (mixed.size < questionCount && groups.any { it.isNotEmpty() }) groups.shuffled().forEach { group -> if (group.isNotEmpty() && mixed.size < questionCount) mixed += group.removeAt(0) }
             mixed
         } else rankedCandidates.take(questionCount)
+        activeExerciseMode = "cards"
         wordExerciseTarget = null
+        wordExercisePlaced = emptyList()
+        sequencePlayingExercise = null
+        sequenceSelectedOrder = emptyList()
         activeExercisePairs = chosenPairs
         chosenPairs.forEach { pair ->
             learningTurn += 1
@@ -5382,10 +5393,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                         if (!startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty, category)) screen = "sequence-difficulty"
                     }
                     else -> {
-                        if (wordExerciseTarget != null) {
-                            startWordExercise(if (wordSelectionMode == "Elegir tema") wordCurrentCategory else null)
-                        } else {
-                            startCardsGame(mode, if (mode == "Elegir") selectedExerciseCategory else null)
+                        when (activeExerciseMode) {
+                            "words" -> startWordExercise(if (wordSelectionMode == "Elegir tema") wordCurrentCategory else null)
+                            "sequences" -> {
+                                val category = if (sequenceSelectionMode == "Elegir tema") sequencePlayingExercise?.category else null
+                                if (!startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty, category)) screen = "sequence-difficulty"
+                            }
+                            else -> startCardsGame(mode, if (mode == "Elegir") selectedExerciseCategory else null)
                         }
                     }
                 }
