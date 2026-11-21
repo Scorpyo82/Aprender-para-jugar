@@ -5123,8 +5123,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             ExerciseStatusBar(
-                balance = formatRewardBalance(balanceSeconds, rewardMode),
-                isStarsMode = rewardMode.isStars,
+                balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
                 roundsRemaining = cardsQuotaStatus.remaining,
                 roundsLimit = cardsQuotaStatus.limit,
                 difficulty = difficulty
@@ -5243,8 +5242,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             )
             Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 ExerciseStatusBar(
-                    balance = formatRewardBalance(balanceSeconds, rewardMode),
-                    isStarsMode = rewardMode.isStars,
+                    balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
                     roundsRemaining = wordQuotaStatus.remaining,
                     roundsLimit = wordQuotaStatus.limit,
                     difficulty = target.difficulty
@@ -5417,8 +5415,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         )
     } else if (screen == "sequence-game") {
         SequenceGameScreen(
-            balance = formatRewardBalance(balanceSeconds, rewardMode),
-            isStarsMode = rewardMode.isStars,
+            balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
             roundsStatus = sequencePlayingExercise?.let { exercise ->
                 ExerciseQuotaRepository.status(
                     preferences,
