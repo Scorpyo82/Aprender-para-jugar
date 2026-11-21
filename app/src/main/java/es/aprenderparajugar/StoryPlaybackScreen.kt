@@ -207,6 +207,7 @@ internal fun StoryPlayerScreen(
             }
             "finish" -> {
                 engine.completeFinish()
+                while (collectibleNoticeQueue.isNotEmpty()) delay(50)
                 val player = narrationPlayer
                 val wasNarrating = runCatching { player?.isPlaying == true }.getOrDefault(false)
                 if (wasNarrating) {

@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -24,6 +27,7 @@ import kotlinx.coroutines.delay
  val interpreterActive=StoryUnlockNotificationRepository.isInterpreterActive
  val storyPath=storyPaths.firstOrNull().takeUnless{interpreterActive}
  val storedStory=storyPath?.let{path->StoryRepository.list(context).firstOrNull{it.directory.absolutePath==path}}
+ var storyNotificationReady by remember(storyPath,interpreterActive){mutableStateOf(false)}
  LaunchedEffect(objectFolder,storyPath,interpreterActive){
   if(objectFolder!=null){
    if(storedObject==null){NotificationQueueRepository.complete(context,objectFolder);return@LaunchedEffect}
@@ -32,6 +36,7 @@ import kotlinx.coroutines.delay
   }else if(storyPath!=null){
    if(storedStory==null){StoryUnlockNotificationRepository.complete(context,storyPath);return@LaunchedEffect}
    delay(2000);if(StoryUnlockNotificationRepository.isInterpreterActive)return@LaunchedEffect
+   storyNotificationReady=true
    if(AchievementSoundManager.isEnabled(context))runCatching{AchievementSoundManager.play(context,AchievementSoundEvent.STORY_UNLOCKED)}else delay(3000)
    StoryUnlockNotificationRepository.complete(context,storyPath)
   }
@@ -40,7 +45,7 @@ import kotlinx.coroutines.delay
   val owned=InventoryRepository.contains(context,storedObject.folderName)
   val alpha by animateFloatAsState(1f,animationSpec=tween(220),label="global-notification-fade")
   Box(modifier.fillMaxSize().padding(12.dp),contentAlignment=Alignment.TopEnd){Box(Modifier.graphicsLayer{this.alpha=alpha}){StoreUnlockNotification(storedObject,FontFamily.Default,owned)}}
- }else if(storyPath!=null&&storedStory!=null&&!interpreterActive){
+ }else if(storyPath!=null&&storedStory!=null&&!interpreterActive&&storyNotificationReady){
   Box(modifier.fillMaxSize().padding(12.dp),contentAlignment=Alignment.TopEnd){StoryUnlockNotification(storedStory)}
  }
 }
