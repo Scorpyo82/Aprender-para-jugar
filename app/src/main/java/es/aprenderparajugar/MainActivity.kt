@@ -1480,7 +1480,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
             }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
-            "stories" -> { screen = "home" }
+            "stories" -> { screen = "home"; selectedStoriesCollection = null; selectedStoryPath = null }
+            "story-cover", "story-access", "story-player" -> { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
             "story-inventory" -> { screen = "home"; storyInventoryMessage = "" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
@@ -4693,7 +4694,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         Text("Recompensas y límites", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text("Cada bloque agrupa una opción concreta. Los cambios se guardan automáticamente.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text("1. Acceso al tiempo de juego", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (rewardMode.isStars) Color.Gray else Color.Unspecified)
+                        Text("Acceso al tiempo de juego", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (rewardMode.isStars) Color.Gray else Color.Unspecified)
                         Text(if (rewardMode.isStars) "Solo disponible en modo Tiempo: saldo mínimo para salir a jugar fuera de la aplicación." else "Tiempo mínimo de saldo necesario para iniciar una nueva sesión.", fontSize = 14.sp, color = Color(0xFF667085))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = {
@@ -4708,7 +4709,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         Text("Entre 0 y 60 minutos. Con 0, cualquier saldo positivo permite empezar.", fontSize = 13.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        Text("2. Penalización por respuestas falladas", fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text("Penalización por respuestas falladas", fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         Text("Elige cuánto descuentan los errores de la recompensa de esta partida. El saldo acumulado nunca se reduce.", fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.foundation.layout.Box {
                             OutlinedButton(onClick = { penaltyMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
@@ -4722,7 +4723,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         Text(when (wrongAnswerPenalty) { "none" -> "Los errores no reducen la recompensa de esta partida."; "full" -> "Cada respuesta incorrecta resta el equivalente a un acierto."; else -> "Cada respuesta incorrecta resta la mitad de la recompensa de un acierto." }, fontSize = 14.sp, color = Color(0xFF667085))
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                        Text("3. Recompensa por dificultad", fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text("Recompensa por dificultad", fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         Text("Minutos/Estrellas que se añaden al saldo según la dificultad del ejercicio.", fontSize = 14.sp, color = Color(0xFF667085))
                         listOf("Fácil", "Normal", "Difícil").forEach { level ->
                             val minutes = when (level) { "Normal" -> normalRewardMinutes; "Difícil" -> hardRewardMinutes; else -> easyRewardMinutes }
