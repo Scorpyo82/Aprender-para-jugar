@@ -45,6 +45,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -146,6 +147,7 @@ internal fun StoryPlayerScreen(
     }
     var narrationFinished by remember { mutableStateOf(false) }
     var narrationIsPlaying by remember { mutableStateOf(false) }
+    var notificationAudioInProgress by remember { mutableStateOf(false) }
     var ambientVolume by remember { mutableStateOf(1f) }
     var exitConfirmation by remember { mutableStateOf(false) }
     var resumeAmbientOnReturn by remember { mutableStateOf(false) }
@@ -166,6 +168,10 @@ internal fun StoryPlayerScreen(
                 if (rewardQueue.isNotEmpty()) pendingRewardAction = "enter"
                 else {
                     if (rewardFlowHadPresentation) delay(2000)
+                    while (notificationAudioInProgress) delay(50)
+                    NotificationAudioCoordinator.completeSceneTransition(
+                        resumeAmbient = snapshot.scene.metadata.keepPreviousAmbient
+                    )
                     pendingRewardAction = null
                     rewardFlowHadPresentation = false
                     NotificationQueueRepository.setPaused(false)
@@ -173,6 +179,7 @@ internal fun StoryPlayerScreen(
             }
             "enter" -> {
                 if (rewardFlowHadPresentation) delay(2000)
+                while (notificationAudioInProgress) delay(50)
                 pendingRewardAction = null
                 rewardFlowHadPresentation = false
                 NotificationQueueRepository.setPaused(false)
@@ -248,7 +255,17 @@ internal fun StoryPlayerScreen(
         }
     }
 
-    LaunchedEffect(snapshot.scene.folderName, snapshot.scene.metadata.keepPreviousAmbient, snapshot.scene.metadata.ambientAudio) {
+    LaunchedEffect(
+        snapshot.scene.folderName,
+        snapshot.scene.metadata.keepPreviousAmbient,
+        snapshot.scene.metadata.ambientAudio,
+        pendingRewardAction,
+        rewardQueue.isEmpty(),
+        notificationAudioInProgress
+    ) {
+        if (pendingRewardAction != null || rewardQueue.isNotEmpty() || notificationAudioInProgress) {
+            return@LaunchedEffect
+        }
         if (!snapshot.scene.metadata.keepPreviousAmbient) {
             safelyStopAndRelease(ambientPlayer)
             ambientPlayer = null
@@ -267,7 +284,16 @@ internal fun StoryPlayerScreen(
         }
     }
 
-    LaunchedEffect(snapshot.scene.folderName, snapshot.scene.metadata.narrationAudio) {
+    LaunchedEffect(
+        snapshot.scene.folderName,
+        snapshot.scene.metadata.narrationAudio,
+        pendingRewardAction,
+        rewardQueue.isEmpty(),
+        notificationAudioInProgress
+    ) {
+        if (pendingRewardAction != null || rewardQueue.isNotEmpty() || notificationAudioInProgress) {
+            return@LaunchedEffect
+        }
         safelyStopAndRelease(narrationPlayer)
         narrationPlayer = null
         narrationIsPlaying = false
@@ -290,13 +316,16 @@ internal fun StoryPlayerScreen(
         } else narrationFinished = true
     }
 
-    DisposableEffect(narrationPlayer, ambientPlayer) {
+    SideEffect {
         NotificationAudioCoordinator.registerStoryPlayers(narrationPlayer, ambientPlayer)
+    }
+    DisposableEffect(Unit) {
         onDispose { NotificationAudioCoordinator.registerStoryPlayers(null, null) }
     }
 
-    LaunchedEffect(rewardQueue.firstOrNull()?.storedObject?.folderName, narrationPlayer) {
+    LaunchedEffect(rewardQueue.firstOrNull()?.storedObject?.folderName) {
         val reward = rewardQueue.firstOrNull() ?: return@LaunchedEffect
+        notificationAudioInProgress = true
         try {
             AchievementSoundManager.play(
                 context,
@@ -305,6 +334,8 @@ internal fun StoryPlayerScreen(
             )
         } catch (_: Exception) {
             // Un efecto fallido nunca debe interrumpir el cuento.
+        } finally {
+            notificationAudioInProgress = false
         }
     }
 
@@ -475,6 +506,8 @@ internal fun StoryPlayerScreen(
                                 if (pendingRewardAction == null) {
                                     if (snapshot.decisionOptions.isNotEmpty()) decisionDialogOpen = true
                                     else if (engine.prepareFreeAdvance()) {
+                                        NotificationAudioCoordinator.prepareSceneTransition()
+                                        narrationIsPlaying = false
                                         NotificationQueueRepository.setPaused(true)
                                         pendingRewardAction = "transition"
                                         rewardQueue = engine.claimPendingRewards()
@@ -535,6 +568,8 @@ internal fun StoryPlayerScreen(
                                             if (!decisionSelectionInProgress) {
                                                 decisionSelectionInProgress = true
                                                 if (engine.prepareDecisionTransition(option.key)) {
+                                                    NotificationAudioCoordinator.prepareSceneTransition()
+                                                    narrationIsPlaying = false
                                                     NotificationQueueRepository.setPaused(true)
                                                     pendingRewardAction = "transition"
                                                     rewardQueue = engine.claimPendingRewards()
@@ -633,6 +668,8 @@ internal fun StoryPlayerScreen(
             fontFamily = fontFamily,
             onUseObject = { item ->
                 if (pendingRewardAction == null && engine.prepareObjectTransition(item.folderName)) {
+                    NotificationAudioCoordinator.prepareSceneTransition()
+                    narrationIsPlaying = false
                     backpackOpen = false
                     NotificationQueueRepository.setPaused(true)
                     pendingRewardAction = "transition"
