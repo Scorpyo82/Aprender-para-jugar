@@ -48,8 +48,11 @@ internal object AchievementSoundManager {
     }
     suspend fun play(context: Context, event: AchievementSoundEvent, preview: Boolean = false) {
         if (!preview && !isEnabled(context)) return
-        mutex.withLock {
-            suspendCancellableCoroutine { continuation ->
+        NotificationAudioCoordinator.withNotificationFocus(
+            resumeStoryAudio = event != AchievementSoundEvent.STORY_COMPLETED
+        ) {
+            mutex.withLock {
+                suspendCancellableCoroutine { continuation ->
                 val finished = AtomicBoolean(false)
                 var player: MediaPlayer? = null
                 fun complete(error: Throwable? = null) {
@@ -79,6 +82,7 @@ internal object AchievementSoundManager {
                         player?.prepareAsync()
                     }
                 } catch (error: Throwable) { complete(error) }
+                }
             }
         }
     }

@@ -290,23 +290,13 @@ internal fun StoryPlayerScreen(
         } else narrationFinished = true
     }
 
+    DisposableEffect(narrationPlayer, ambientPlayer) {
+        NotificationAudioCoordinator.registerStoryPlayers(narrationPlayer, ambientPlayer)
+        onDispose { NotificationAudioCoordinator.registerStoryPlayers(null, null) }
+    }
+
     LaunchedEffect(rewardQueue.firstOrNull()?.storedObject?.folderName, narrationPlayer) {
         val reward = rewardQueue.firstOrNull() ?: return@LaunchedEffect
-        val player = narrationPlayer
-        val wasNarrating = runCatching { player?.isPlaying == true }.getOrDefault(false)
-        val ambient = ambientPlayer
-        val wasAmbientPlaying = runCatching { ambient?.isPlaying == true }.getOrDefault(false)
-
-        // La locución del objeto debe escucharse aislada: se detienen tanto
-        // la narración como el ambiente y solo se reanudan si estaban sonando.
-        if (wasNarrating) {
-            runCatching { player?.pause() }
-            narrationIsPlaying = false
-        }
-        if (wasAmbientPlaying) {
-            runCatching { ambient?.pause() }
-        }
-
         try {
             AchievementSoundManager.play(
                 context,
@@ -315,14 +305,6 @@ internal fun StoryPlayerScreen(
             )
         } catch (_: Exception) {
             // Un efecto fallido nunca debe interrumpir el cuento.
-        } finally {
-            if (wasAmbientPlaying) {
-                runCatching { ambient?.start() }
-            }
-            if (wasNarrating && !narrationFinished) {
-                runCatching { player?.start() }
-                narrationIsPlaying = runCatching { player?.isPlaying == true }.getOrDefault(false)
-            }
         }
     }
 
