@@ -5176,9 +5176,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
     } else if (screen == "word-options") {
         val availableWords = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
         val wordCategories = availableWords.map { it.category }.distinct()
-        ExerciseOptionsScreen(title = "Palabras", difficulty = wordSelectedDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = wordStartMessage,
+        val wordQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", wordSelectedDifficulty), availableWords.isNotEmpty())
+        ExerciseOptionsScreen(title = "Palabras", difficulty = wordSelectedDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = wordStartMessage.ifBlank { quotaMessage(wordQuota) },
             surpriseDescription = "La app elige una palabra entre todos los temas disponibles.", mixDescription = "La app busca cambiar de tema entre una palabra y la siguiente.",
-            surpriseAvailable = availableWords.isNotEmpty(), chooseAvailable = availableWords.isNotEmpty(), mixAvailable = wordCategories.size >= 2,
+            surpriseAvailable = availableWords.isNotEmpty() && wordQuota.available, chooseAvailable = availableWords.isNotEmpty() && wordQuota.available, mixAvailable = wordCategories.size >= 2 && wordQuota.available,
             onBack = { screen = "home"; wordStartMessage = "" }, onDifficultyChange = { wordSelectedDifficulty = it; wordStartMessage = "" },
             onSurprise = { wordSelectionMode = "Sorpresa"; startWordExercise(null) },
             onChooseTheme = { wordSelectionMode = "Elegir tema"; wordCategoryCandidates = wordCategories.sorted(); wordStartMessage = ""; screen = "word-category-select" },
@@ -5355,9 +5356,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
     } else if (screen == "sequence-difficulty") {
         val sequenceCandidates = eligibleSequenceExercises(sequenceChosenCategory, sequenceChosenDifficulty)
         val sequenceCategories = sequenceCandidates.map { it.category }.distinct()
-        ExerciseOptionsScreen(title = sequenceChosenCategory, difficulty = sequenceChosenDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = sequencePlayMessage,
+        val sequenceQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", sequenceChosenDifficulty, sequenceChosenCategory), sequenceCandidates.isNotEmpty())
+        ExerciseOptionsScreen(title = sequenceChosenCategory, difficulty = sequenceChosenDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = sequencePlayMessage.ifBlank { quotaMessage(sequenceQuota) },
             surpriseDescription = "La app elige una secuencia entre todos los temas disponibles.", mixDescription = "La app busca cambiar de tema entre una secuencia y la siguiente.",
-            surpriseAvailable = sequenceCandidates.isNotEmpty(), chooseAvailable = sequenceCandidates.isNotEmpty(), mixAvailable = sequenceCategories.size >= 2,
+            surpriseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available, chooseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available, mixAvailable = sequenceCategories.size >= 2 && sequenceQuota.available,
             onBack = { screen = "sequences"; sequencePlayMessage = "" }, onDifficultyChange = { sequenceChosenDifficulty = it; sequencePlayMessage = "" },
             onSurprise = { sequenceSelectionMode = "Sorpresa"; startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty) },
             onChooseTheme = { sequenceSelectionMode = "Elegir tema"; screen = "sequence-category-select" },
@@ -5744,9 +5746,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
     } else if (screen == "cards-options") {
         val activeCards = pairs.filter { it.active && it.difficulty == difficulty }
         val categoryCounts = activeCards.groupingBy { it.category.lowercase() }.eachCount()
-        ExerciseOptionsScreen(title = "Tarjetas", difficulty = difficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = cardsStartMessage,
+        val cardsQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", difficulty), activeCards.size >= questionCount)
+        ExerciseOptionsScreen(title = "Tarjetas", difficulty = difficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = cardsStartMessage.ifBlank { quotaMessage(cardsQuota) },
             surpriseDescription = "Tarjetas de cualquier tema de esta dificultad.", mixDescription = "Combina tarjetas de diferentes temas en la misma partida.",
-            surpriseAvailable = activeCards.size >= questionCount, chooseAvailable = categoryCounts.values.any { it >= questionCount }, mixAvailable = questionCount >= 2 && activeCards.size >= questionCount && categoryCounts.size >= 2,
+            surpriseAvailable = activeCards.size >= questionCount && cardsQuota.available, chooseAvailable = categoryCounts.values.any { it >= questionCount } && cardsQuota.available, mixAvailable = questionCount >= 2 && activeCards.size >= questionCount && categoryCounts.size >= 2 && cardsQuota.available,
             manualChoiceLocked = manualCategoryLimitReached, manualLimitMessage = if (manualCategoryLimitReached) "Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit)." else "",
             onBack = { screen = "home"; cardsStartMessage = "" }, onDifficultyChange = { difficulty = it; cardsStartMessage = "" },
             onSurprise = { startCardsGame("Al azar") }, onChooseTheme = { cardsStartMessage = ""; screen = "category-select" }, onMixThemes = { startCardsGame("Mezcladas") }
