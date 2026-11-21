@@ -42,6 +42,7 @@ internal fun AchievementSoundSettingsScreen() {
     var refresh by remember { mutableStateOf(0) }
     var pendingImport by remember { mutableStateOf<AchievementSoundEvent?>(null) }
     var pendingRecord by remember { mutableStateOf<AchievementSoundEvent?>(null) }
+    var preparedRecordEvent by remember { mutableStateOf<AchievementSoundEvent?>(null) }
     var recordingEvent by remember { mutableStateOf<AchievementSoundEvent?>(null) }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var recordingFile by remember { mutableStateOf<File?>(null) }
@@ -80,6 +81,7 @@ internal fun AchievementSoundSettingsScreen() {
         val event = pendingRecord
         pendingRecord = null
         if (!granted || event == null) {
+            preparedRecordEvent = null
             message = "No se ha concedido permiso para usar el micrófono."
         } else {
             val file = File(context.filesDir, "achievement_sounds").apply { mkdirs() }
@@ -106,10 +108,12 @@ internal fun AchievementSoundSettingsScreen() {
                 recorder = createdRecorder
                 recordingFile = file
                 recordingEvent = event
+                preparedRecordEvent = null
                 message = "Grabando para «${event.title}»…"
             } catch (error: Exception) {
                 runCatching { newRecorder?.release() }
                 file.delete()
+                preparedRecordEvent = null
                 message = "No se pudo iniciar la grabación: ${error.message ?: "error de audio"}"
             }
         }
@@ -189,15 +193,36 @@ internal fun AchievementSoundSettingsScreen() {
                                 onClick = { stopRecording(false) }
                             ) { Text("Descartar grabación") }
                         }
+                    } else if (preparedRecordEvent == event) {
+                        Text(
+                            "Preparar grabación",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            "Cuando estés preparado, pulsa «Iniciar grabación». El micrófono no se activará hasta entonces.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                pendingRecord = event
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        ) { Text("Iniciar grabación") }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                preparedRecordEvent = null
+                                message = "Grabación cancelada."
+                            }
+                        ) { Text("Cancelar") }
                     } else {
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = recordingEvent == null,
+                            enabled = recordingEvent == null && preparedRecordEvent == null,
                             onClick = {
-                                pendingRecord = event
-                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                } else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                preparedRecordEvent = event
+                                message = ""
                             }
                         ) { Text("Grabar voz") }
                         OutlinedButton(
