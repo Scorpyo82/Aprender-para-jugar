@@ -21,6 +21,7 @@ internal object ExerciseQuotaRepository {
     private const val PREFIX = "quota_"
     private const val PERIOD_KEY = "quota_active_period"
     private const val CYCLE_KEY = "quota_exhausted_cycle"
+    private const val RESET_LATCH_KEY = "quota_exhausted_reset_latch"
 
     private val difficultyIds = listOf("easy", "normal", "hard")
     private val sequenceTypes = listOf("temporal", "procesos", "causa", "ciclos")
@@ -85,7 +86,7 @@ internal object ExerciseQuotaRepository {
         if (!before.available) return before
         if (before.limit != null) {
             val period = period(preferences)
-            preferences.edit().putInt(usedKey(id, period), (preferences.getInt(usedKey(id, period), 0) + 1)).apply()
+            preferences.edit().remove(RESET_LATCH_KEY).putInt(usedKey(id, period), preferences.getInt(usedKey(id, period), 0) + 1).apply()
         }
         return status(preferences, id, hasExercises)
     }
@@ -109,7 +110,14 @@ internal object ExerciseQuotaRepository {
             unavailable || preferences.getInt(usedKey(id, currentPeriod), 0) >= limit
         }
         if (allConsumed) {
-            preferences.edit().putLong(CYCLE_KEY, preferences.getLong(CYCLE_KEY, 0L) + 1L).apply()
+            val latch = finite.filter { availability[it] == true }
+                .joinToString("|") { id -> id + ":" + preferences.getInt(usedKey(id, currentPeriod), 0) }
+            if (preferences.getString(RESET_LATCH_KEY, "") != latch) {
+                preferences.edit()
+                    .putString(RESET_LATCH_KEY, latch)
+                    .putLong(CYCLE_KEY, preferences.getLong(CYCLE_KEY, 0L) + 1L)
+                    .apply()
+            }
         }
     }
 
