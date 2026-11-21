@@ -1512,6 +1512,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         }
     }
 
+    var quotaRevision by remember { mutableIntStateOf(0) }
+
     fun eligibleSequenceExercises(type: String, level: String? = null): List<SequenceExercise> =
         sequenceGameState.eligibleExercises(
             sequenceExercises, type, sequenceMaxCards, disabledSequenceCategories, level
@@ -1538,7 +1540,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             ExerciseQuotaRepository.status(preferences, id, quotaAvailability[id] == true)
         }
         ExerciseQuotaRepository.refreshExhaustedCycle(preferences, quotaAvailability)
+        quotaRevision++
     }
+    val observedQuotaRevision = quotaRevision
 
     fun quotaMessage(status: ExerciseQuotaRepository.QuotaStatus): String =
         when {
@@ -1617,7 +1621,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         val quotaId = ExerciseQuotaRepository.id("cards", difficulty)
         val hasExercises = pairs.count { it.active && it.difficulty.equals(difficulty, true) } >= questionCount
         val quota = ExerciseQuotaRepository.status(preferences, quotaId, hasExercises)
-        if (!quota.available) { cardsStartMessage = quota.reason ?: "Has agotado los intentos de esta dificultad."; return }
+        if (!quota.available) { cardsStartMessage = quota.reason ?: "Has agotado los intentos de esta dificultad."; screen = "cards-options"; return }
         if (requestedMode == "Elegir") {
             val uses = manualCategoryUsesToday + 1
             manualCategoryUsesToday = uses
