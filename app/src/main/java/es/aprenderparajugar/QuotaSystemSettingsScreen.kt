@@ -159,7 +159,7 @@ internal fun QuotaSystemSettingsScreen(preferences: SharedPreferences) {
         }
 
         Text(
-            "Los ajustes se guardan automáticamente en este dispositivo. La aplicación de las cuotas y sus bloqueos se conectará en una fase posterior.",
+            "Los intentos se descuentan al iniciar cada partida. Las dificultades sin ejercicios suficientes también se consideran consumidas hasta el próximo reinicio.",
             fontSize = 13.sp,
             color = Color(0xFF667085)
         )
