@@ -1481,7 +1481,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
             "cards-options" -> { screen = "home"; cardsStartMessage = "" }
             "stories" -> { screen = "home"; selectedStoriesCollection = null; selectedStoryPath = null }
-            "story-cover", "story-access", "story-player" -> { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
+            "story-cover" -> {
+                if (showStoryAccessRequirements) {
+                    showStoryAccessRequirements = false
+                } else {
+                    screen = "stories"
+                    selectedStoryPath = null
+                }
+            }
+            "story-access", "story-player" -> { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
             "story-inventory" -> { screen = "home"; storyInventoryMessage = "" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
