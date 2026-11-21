@@ -111,7 +111,7 @@ internal object ExerciseQuotaRepository {
         }
         if (allConsumed) {
             val latch = finite.filter { availability[it] == true }
-                .joinToString("|") { id -> id + ":" + preferences.getInt(usedKey(id, currentPeriod), 0) }
+                .joinToString("|") { id -> id }
             if (preferences.getString(RESET_LATCH_KEY, "") != latch) {
                 preferences.edit()
                     .putString(RESET_LATCH_KEY, latch)
