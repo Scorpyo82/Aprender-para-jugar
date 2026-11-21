@@ -1564,6 +1564,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         }
         if (wordGameState.start(wordExercises, disabledWordExerciseCategories, category, avoidCategory)) {
             ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
+            ExerciseQuotaRepository.refreshExhaustedCycle(preferences, quotaAvailability)
+            quotaRevision++
             screen = "word-exercise"
         }
     }
@@ -1584,6 +1586,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         val started = sequenceGameState.startExercise(candidates, type, level, sequenceMaxCards, disabledSequenceCategories, avoidCategory)
         if (started) {
             ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
+            ExerciseQuotaRepository.refreshExhaustedCycle(preferences, quotaAvailability)
+            quotaRevision++
             screen = "sequence-game"
         }
         return started
@@ -1650,6 +1654,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         saveLearningStats(preferences, learningStats)
         cardsGameState.begin(activeExercisePairs)
         ExerciseQuotaRepository.consume(preferences, quotaId, hasExercises)
+        ExerciseQuotaRepository.refreshExhaustedCycle(preferences, quotaAvailability)
+        quotaRevision++
         feedback = ""; screen = "exercise"
     }
 
