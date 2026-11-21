@@ -24,7 +24,8 @@ internal class WordGameState {
     fun start(
         exercises: List<PairItem>,
         disabledCategories: Set<String>,
-        category: String?
+        category: String?,
+        avoidCategory: String? = null
     ): Boolean {
         currentCategory.value = category
         val level = selectedDifficulty.value
@@ -44,7 +45,8 @@ internal class WordGameState {
             return false
         }
 
-        val chosen = eligible.random()
+        val varied = if (category == null && !avoidCategory.isNullOrBlank()) eligible.filterNot { it.category.equals(avoidCategory, true) }.ifEmpty { eligible } else eligible
+        val chosen = varied.random()
         target.value = chosen
         letterOrder.value = chosen.word.indices.toList().shuffled().let { order ->
             if (chosen.word.length > 1 && order == chosen.word.indices.toList()) order.drop(1) + order.first()

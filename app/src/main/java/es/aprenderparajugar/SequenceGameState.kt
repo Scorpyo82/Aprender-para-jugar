@@ -44,7 +44,8 @@ internal class SequenceGameState(
         type: String,
         level: String,
         maxCards: Int,
-        disabledCategories: Set<String>
+        disabledCategories: Set<String>,
+        avoidCategory: String? = null
     ): Boolean {
         val candidates = eligibleExercises(exercises, type, maxCards, disabledCategories, level)
         if (candidates.isEmpty()) {
@@ -52,10 +53,9 @@ internal class SequenceGameState(
             return false
         }
 
-        val leastCompleted = candidates.minOf { preferences.getInt(dailyUsagePreferenceKey(it), 0) }
-        val leastUsed = candidates.filter {
-            preferences.getInt(dailyUsagePreferenceKey(it), 0) == leastCompleted
-        }
+        val variedCandidates = if (!avoidCategory.isNullOrBlank()) candidates.filterNot { it.category.equals(avoidCategory, true) }.ifEmpty { candidates } else candidates
+        val leastCompleted = variedCandidates.minOf { preferences.getInt(dailyUsagePreferenceKey(it), 0) }
+        val leastUsed = variedCandidates.filter { preferences.getInt(dailyUsagePreferenceKey(it), 0) == leastCompleted }
         val exercise = leastUsed.random()
         playingExercise.value = exercise
         val indexes = exercise.cards.indices.toList()
