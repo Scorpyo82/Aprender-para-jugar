@@ -870,8 +870,8 @@ private fun CollectibleFoundBanner(stored: StoredObject, modifier: Modifier = Mo
         if (image != null) Image(image.asImageBitmap(), stored.metadata.name, Modifier.size(48.dp), contentScale = ContentScale.Fit)
         else Text("✨", fontSize = 32.sp)
         Column {
-            Text("¡Has encontrado un tesoro!", color = Color(0xFF49316F), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text("Añadido a tu colección", color = Color(0xFF344054), fontSize = 12.sp)
+            Text("¡Has conseguido un coleccionable nuevo!", color = Color(0xFF49316F), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("Se ha añadido a tu colección", color = Color(0xFF344054), fontSize = 12.sp)
         }
     }
 }
