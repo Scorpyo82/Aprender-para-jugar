@@ -81,7 +81,7 @@ internal object ExerciseQuotaRepository {
         }
         if (limit == null) return QuotaStatus(true, null, null)
         if (preferences.getBoolean(unavailableKey(id, period), false)) {
-            return QuotaStatus(false, 0, limit, "Esta dificultad ya se ha dado por consumida en la jornada actual.")
+            return QuotaStatus(false, 0, limit, "Esta dificultad ya se ha dado por consumida en el ciclo actual.")
         }
         val used = preferences.getInt(usedKey(id, period), 0).coerceAtLeast(0)
         val remaining = (limit - used).coerceAtLeast(0)
