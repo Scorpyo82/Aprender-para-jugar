@@ -5838,16 +5838,16 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
     } else {
         val cardsQuotaStates = listOf("Fácil", "Normal", "Difícil").map { level ->
             val hasExercises = pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
-            ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", level), hasExercises).let { hasExercises && it.limit != null && !it.available }
+            !ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", level), hasExercises).available
         }
         val wordsQuotaStates = listOf("Fácil", "Normal", "Difícil").map { level ->
             val hasExercises = wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(level, true) }
-            ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", level), hasExercises).let { hasExercises && it.limit != null && !it.available }
+            !ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", level), hasExercises).available
         }
         val sequencesQuotaStates = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").flatMap { type ->
             listOf("Fácil", "Normal", "Difícil").map { level ->
                 val hasExercises = eligibleSequenceExercises(type, level).isNotEmpty()
-                ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, type), hasExercises).let { hasExercises && it.limit != null && !it.available }
+                !ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, type), hasExercises).available
             }
         }
         val cardsAllQuotaLocked = cardsQuotaStates.all { it }
