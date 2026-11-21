@@ -29,6 +29,7 @@ internal fun SequenceSelectionScreen(
     message: String,
     maxCards: Int,
     availableCounts: Map<String, Int>,
+    lockedTypes: Set<String> = emptySet(),
     rewardLabels: Map<String, String>,
     onBack: () -> Unit,
     onChooseType: (String, Boolean) -> Unit,
@@ -45,13 +46,13 @@ internal fun SequenceSelectionScreen(
             if (message.startsWith("No hay ejercicios")) item { Text(message, color = Color(0xFFB3261E), fontSize = 15.sp) }
             items(sequenceTypes) { type ->
                 val availableCount = availableCounts[type] ?: 0
-                val available = availableCount > 0
-                Card(Modifier.fillMaxWidth().clickable { onChooseType(type, available) }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (available) Color(0xFFF1F8EC) else Color(0xFFF0F0F0)), border = androidx.compose.foundation.BorderStroke(1.dp, if (available) Color(0xFFA9D79A) else Color(0xFFD0D0D0))) {
+                val available = availableCount > 0 && type !in lockedTypes
+                Card(Modifier.fillMaxWidth().clickable(enabled = available) { onChooseType(type, available) }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = if (available) Color(0xFFF1F8EC) else Color(0xFFF0F0F0)), border = androidx.compose.foundation.BorderStroke(1.dp, if (available) Color(0xFFA9D79A) else Color(0xFFD0D0D0))) {
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(when(type) { "Orden temporal" -> "⏳"; "Procesos" -> "⚙️"; "Causa y consecuencia" -> "🔗"; else -> "🔄" }, fontSize = 30.sp)
                         Column(Modifier.weight(1f)) {
                             Text(type, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (available) Color(0xFF245C2A) else Color(0xFF777777))
-                            Text(if (available) "$availableCount ejercicios disponibles" else "No hay ejercicios que cumplan la configuración", fontSize = 13.sp, color = Color(0xFF667085))
+                            Text(if (available) "$availableCount ejercicios disponibles" else if (availableCount > 0) "Intentos agotados en todas las dificultades" else "No hay ejercicios que cumplan la configuración", fontSize = 13.sp, color = Color(0xFF667085))
                         }
                         Text(if (available) "›" else "—", fontSize = 26.sp, color = Color(0xFF667085))
                     }
