@@ -38,7 +38,6 @@ import androidx.compose.runtime.Composable
 @Composable
 internal fun SequenceGameScreen(
     balance: String,
-    isStarsMode: Boolean,
     roundsStatus: ExerciseQuotaRepository.QuotaStatus?,
     exercise: SequenceExercise?,
     selectedOrder: List<Int>,
@@ -67,7 +66,6 @@ internal fun SequenceGameScreen(
         item {
             ExerciseStatusBar(
                 balance = balance,
-                isStarsMode = isStarsMode,
                 roundsRemaining = roundsStatus?.remaining,
                 roundsLimit = roundsStatus?.limit,
                 difficulty = exercise.difficulty
