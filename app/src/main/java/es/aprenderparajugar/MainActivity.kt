@@ -1544,6 +1544,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
     val observedQuotaRevision = quotaRevision
 
+    LaunchedEffect(appInForeground, quotaAvailability) {
+        if (appInForeground) while (true) { delay(15_000L); quotaRevision++ }
+    }
+
     fun quotaMessage(status: ExerciseQuotaRepository.QuotaStatus): String =
         when {
             status.limit == null -> "Sin límite de intentos."
@@ -1644,6 +1648,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             while (mixed.size < questionCount && groups.any { it.isNotEmpty() }) groups.shuffled().forEach { group -> if (group.isNotEmpty() && mixed.size < questionCount) mixed += group.removeAt(0) }
             mixed
         } else rankedCandidates.take(questionCount)
+        wordExerciseTarget = null
         activeExercisePairs = chosenPairs
         chosenPairs.forEach { pair ->
             learningTurn += 1
@@ -5124,7 +5129,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         ) {
             ExerciseStatusBar(
                 balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
-                roundsRemaining = cardsQuotaStatus.remaining,
+                roundsUsed = cardsQuotaStatus.used,
                 roundsLimit = cardsQuotaStatus.limit,
                 difficulty = difficulty
             )
@@ -5243,7 +5248,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 ExerciseStatusBar(
                     balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
-                    roundsRemaining = wordQuotaStatus.remaining,
+                    roundsUsed = wordQuotaStatus.used,
                     roundsLimit = wordQuotaStatus.limit,
                     difficulty = target.difficulty
                 )
@@ -5388,7 +5393,11 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
         )
     } else if (screen == "sequences") {
         SequenceSelectionScreen(isDifficultyScreen = false, chosenCategory = sequenceChosenCategory, message = sequencePlayMessage, maxCards = sequenceMaxCards,
-            availableCounts = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").associateWith { eligibleSequenceExercises(it).size }, rewardLabels = emptyMap(),
+            availableCounts = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").associateWith { type -> eligibleSequenceExercises(type).size },
+            lockedTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").filter { type -> listOf("Fácil", "Normal", "Difícil").none { level ->
+                val hasExercises = eligibleSequenceExercises(type, level).isNotEmpty()
+                ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, type), hasExercises).available
+            } }.toSet(), rewardLabels = emptyMap(),
             onBack = { screen = "home" }, onChooseType = { type, available -> sequenceChosenCategory = type; sequenceChosenDifficulty = "Fácil"; sequencePlayMessage = if (available) "" else "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."; if (available) screen = "sequence-difficulty" }, onChooseDifficulty = { }
         )
     } else if (screen == "sequence-difficulty") {
@@ -5878,7 +5887,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             item { HomeSectionTitle("Elige cómo aprender") }
             item {
                 Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveCards) { screen = "cards-options"; cardsStartMessage = "" },
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveCards && !cardsAllQuotaLocked) { screen = "cards-options"; cardsStartMessage = "" },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0B8)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B95D)),
@@ -5893,17 +5902,17 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                 Text("Tarjetas", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
-                                if (gameActiveCards && cardsQuotaStates.any { it }) Text("⏱️", fontSize = 17.sp)
+                                if (cardsAllQuotaLocked) Text("⌛", fontSize = 17.sp)
                             }
                             Text("Aprender con imágenes", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
-                            Text(when { !gameActiveCards -> "🔒 BLOQUEADO"; cardsAllQuotaLocked -> "⏱️ BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveCards) Color(0xFF754411) else Color(0xFFB3261E))
+                            Text(when { !gameActiveCards -> "🔒 BLOQUEADO"; cardsAllQuotaLocked -> "BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveCards) Color(0xFF754411) else Color(0xFFB3261E))
                         }
                     }
                 }
             }
             item {
                 Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveSequences) { if (gameActiveSequences) screen = "sequences" },
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveSequences && !sequencesAllQuotaLocked) { if (gameActiveSequences && !sequencesAllQuotaLocked) screen = "sequences" },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFDDF3D3)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
@@ -5917,17 +5926,17 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                 Text("Secuencias", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
-                                if (gameActiveSequences && sequencesQuotaStates.any { it }) Text("⏱️", fontSize = 17.sp)
+                                if (sequencesAllQuotaLocked) Text("⌛", fontSize = 17.sp)
                             }
                             Text("Ordenar y razonar", fontSize = modeDescriptionSize, color = Color(0xFF476C51))
-                            Text(when { !gameActiveSequences -> "🔒 BLOQUEADO"; sequencesAllQuotaLocked -> "⏱️ BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveSequences) Color(0xFF39713A) else Color(0xFFB3261E))
+                            Text(when { !gameActiveSequences -> "🔒 BLOQUEADO"; sequencesAllQuotaLocked -> "BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveSequences) Color(0xFF39713A) else Color(0xFFB3261E))
                         }
                     }
                 }
             }
             item {
                 Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveWords) {
+                    Modifier.fillMaxWidth().clickable(enabled = gameActiveWords && !wordsAllQuotaLocked) {
                         wordSelectedDifficulty = "Fácil"
                         wordStartMessage = ""
                         screen = "word-options"
@@ -5945,10 +5954,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                 Text("Palabras", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
-                                if (gameActiveWords && wordsQuotaStates.any { it }) Text("⏱️", fontSize = 17.sp)
+                                if (wordsAllQuotaLocked) Text("⌛", fontSize = 17.sp)
                             }
                             Text("Ordenar letras y completar palabras", fontSize = modeDescriptionSize, color = Color(0xFF42647D))
-                            Text(when { !gameActiveWords -> "🔒 BLOQUEADO"; wordsAllQuotaLocked -> "⏱️ BLOQUEADO TEMPORALMENTE"; else -> "¡JUGAR!" }, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveWords) Color(0xFF285F94) else Color(0xFFB3261E))
+                            Text(when { !gameActiveWords -> "🔒 BLOQUEADO"; wordsAllQuotaLocked -> "BLOQUEADO TEMPORALMENTE"; else -> "¡JUGAR!" }, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveWords) Color(0xFF285F94) else Color(0xFFB3261E))
                         }
                     }
                 }
