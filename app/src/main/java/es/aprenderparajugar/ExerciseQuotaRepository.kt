@@ -14,6 +14,7 @@ internal object ExerciseQuotaRepository {
         val available: Boolean,
         val remaining: Int?,
         val limit: Int?,
+        val used: Int = 0,
         val reason: String? = null
     )
 
@@ -77,15 +78,15 @@ internal object ExerciseQuotaRepository {
         val limit = configuredLimit(preferences, id)
         if (!hasExercises) {
             if (limit != null) preferences.edit().putBoolean(unavailableKey(id, period), true).apply()
-            return QuotaStatus(false, 0, limit, "No hay ejercicios suficientes para esta dificultad.")
+            return QuotaStatus(false, 0, limit, preferences.getInt(usedKey(id, period), 0).coerceAtLeast(0), "No hay ejercicios suficientes para esta dificultad.")
         }
-        if (limit == null) return QuotaStatus(true, null, null)
+        if (limit == null) return QuotaStatus(true, null, null, 0)
         if (preferences.getBoolean(unavailableKey(id, period), false)) {
-            return QuotaStatus(false, 0, limit, "Esta dificultad ya se ha dado por consumida en el ciclo actual.")
+            return QuotaStatus(false, 0, limit, limit, "Esta dificultad ya se ha dado por consumida en el ciclo actual.")
         }
         val used = preferences.getInt(usedKey(id, period), 0).coerceAtLeast(0)
         val remaining = (limit - used).coerceAtLeast(0)
-        return QuotaStatus(remaining > 0, remaining, limit, if (remaining == 0) "Has agotado los intentos de esta dificultad." else null)
+        return QuotaStatus(remaining > 0, remaining, limit, used.coerceAtMost(limit), if (remaining == 0) "Has agotado los intentos de esta dificultad." else null)
     }
 
     fun consume(preferences: SharedPreferences, id: String, hasExercises: Boolean): QuotaStatus {
