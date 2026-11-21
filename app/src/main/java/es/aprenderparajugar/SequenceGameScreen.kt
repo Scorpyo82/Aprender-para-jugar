@@ -66,7 +66,7 @@ internal fun SequenceGameScreen(
         item {
             ExerciseStatusBar(
                 balance = balance,
-                roundsRemaining = roundsStatus?.remaining,
+                roundsUsed = roundsStatus?.used,
                 roundsLimit = roundsStatus?.limit,
                 difficulty = exercise.difficulty
             )
