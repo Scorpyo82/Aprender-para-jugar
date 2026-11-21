@@ -25,12 +25,14 @@ import kotlinx.coroutines.delay
  val storedObject=objectFolder?.let{folder->ObjectRepository.list(context).firstOrNull{it.folderName==folder}}
  val storyPaths=StoryUnlockNotificationRepository.pendingStoryPaths
  val interpreterActive=StoryUnlockNotificationRepository.isInterpreterActive
+ val notificationsPaused=NotificationQueueRepository.isPaused
  val storyPath=storyPaths.firstOrNull().takeUnless{interpreterActive}
  val storedStory=storyPath?.let{path->StoryRepository.list(context).firstOrNull{it.directory.absolutePath==path}}
  var storyNotificationReady by remember(storyPath,interpreterActive){mutableStateOf(false)}
- LaunchedEffect(objectFolder,storyPath,interpreterActive){
+ LaunchedEffect(objectFolder,storyPath,interpreterActive,notificationsPaused){
   if(objectFolder!=null){
    if(storedObject==null){NotificationQueueRepository.complete(context,objectFolder);return@LaunchedEffect}
+   if(notificationsPaused)return@LaunchedEffect
    val tone=runCatching{ToneGenerator(AudioManager.STREAM_MUSIC,65)}.getOrNull()
    try{tone?.startTone(ToneGenerator.TONE_PROP_ACK,180);delay(3000);NotificationQueueRepository.complete(context,objectFolder)}finally{tone?.release()}
   }else if(storyPath!=null){
@@ -41,7 +43,7 @@ import kotlinx.coroutines.delay
    StoryUnlockNotificationRepository.complete(context,storyPath)
   }
  }
- if(objectFolder!=null&&storedObject!=null){
+ if(objectFolder!=null&&storedObject!=null&&!notificationsPaused){
   val owned=InventoryRepository.contains(context,storedObject.folderName)
   val alpha by animateFloatAsState(1f,animationSpec=tween(220),label="global-notification-fade")
   Box(modifier.fillMaxSize().padding(12.dp),contentAlignment=Alignment.TopEnd){Box(Modifier.graphicsLayer{this.alpha=alpha}){StoreUnlockNotification(storedObject,FontFamily.Default,owned)}}
