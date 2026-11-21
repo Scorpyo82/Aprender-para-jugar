@@ -4671,7 +4671,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         Text("Saldo de recompensas", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                         Text(if (rewardMode.isStars) "Saldo actual: ${formatRewardBalance(balanceSeconds, rewardMode)} estrellas" else "Saldo actual: ${balanceSeconds / 60} min ${balanceSeconds % 60} s", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                         Text("Unidad: Minutos/Estrellas (equivalencia 1:1)", fontSize = 14.sp, color = Color(0xFF667085))
-                        ParentMenuNavigationCard("🔄", "Sistemas de cuotas", "Configura los intentos y el reinicio de las actividades") { parentSection = "quota-system" }
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedButton(onClick = {
                                 val updated = (balanceSeconds + 60).coerceAtMost(24 * 60 * 60)
@@ -4752,6 +4751,10 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text("Los cambios se guardan en este dispositivo.", fontSize = 13.sp, color = Color(0xFF667085))
+                        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                        Text("Control de intentos", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("Configura cuántas veces se puede jugar cada dificultad y cuándo se reinician los intentos.", fontSize = 14.sp, color = Color(0xFF667085))
+                        ParentMenuNavigationCard("🔄", "Sistemas de cuotas", "Configurar intentos y reinicios") { parentSection = "quota-system" }
                     }
                     "quota-system" -> item {
                         QuotaSystemSettingsScreen(preferences = preferences)
