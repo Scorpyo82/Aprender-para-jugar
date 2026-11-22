@@ -60,6 +60,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -4590,10 +4591,17 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             Text("Dificultad", fontWeight = FontWeight.SemiBold)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 listOf("Todas", "Fácil", "Normal", "Difícil").forEach { level ->
+                                    val selected = libraryDifficultyFilter == level
                                     OutlinedButton(
                                         onClick = { libraryDifficultyFilter = level },
-                                        modifier = Modifier.weight(1f)
-                                    ) { Text(if (libraryDifficultyFilter == level) "✓ $level" else level, fontSize = 11.sp) }
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                            containerColor = if (selected) Color(0xFFEBDDF8) else Color.Transparent
+                                        )
+                                    ) {
+                                        Text(level, fontSize = 11.sp, maxLines = 1, softWrap = false)
+                                    }
                                 }
                             }
                             val filteredLibraryPairs = pairs.filter { pair ->
