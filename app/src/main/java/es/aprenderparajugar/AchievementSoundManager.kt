@@ -12,14 +12,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal enum class AchievementSoundEvent(
     val key: String,
     val title: String,
-    val defaultResource: Int
+    val defaultResource: Int,
+    val defaultSpeech: String? = null
 ) {
     OBJECT_ACQUIRED("object_acquired", "Objeto conseguido", R.raw.sound_object_acquired),
     COLLECTIBLE_ACQUIRED("collectible_acquired", "Coleccionable conseguido", R.raw.sound_collectible_acquired),
     STORY_COMPLETED("story_completed", "Cuento completado", R.raw.sound_story_completed),
-    REWARD_GRANTED("reward_granted", "Resultado perfecto", R.raw.sound_reward_granted),
-    RESULT_PARTIAL("result_partial", "Resultado parcial", R.raw.sound_result_partial),
-    RESULT_TRY_AGAIN("result_try_again", "Resultado por mejorar", R.raw.sound_result_try_again),
+    REWARD_GRANTED("reward_granted", "Resultado perfecto", R.raw.sound_reward_granted, "¡Lo has hecho genial!"),
+    RESULT_PARTIAL("result_partial", "Resultado parcial", R.raw.sound_result_partial, "¡Buen trabajo! ¡Sigue así!"),
+    RESULT_TRY_AGAIN("result_try_again", "Resultado por mejorar", R.raw.sound_result_try_again, "¡Buen intento! ¡Vamos a practicar juntos!"),
     ITEM_PURCHASED("item_purchased", "Objeto comprado", R.raw.sound_item_purchased),
     STORY_UNLOCKED("story_unlocked", "Cuento desbloqueado", R.raw.sound_story_unlocked)
 }
