@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -5256,7 +5257,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 ExerciseQuotaRepository.id("words", target.difficulty),
                 wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(target.difficulty, true) }
             )
-            Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 ExerciseStatusBar(
                     balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
                     roundsUsed = wordQuotaStatus.used,
@@ -5278,10 +5279,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                     Text(target.picture, fontSize = 76.sp)
                 }
                 Text("Toca las letras en el orden correcto.", fontSize = 15.sp, color = Color(0xFF667085))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     targetWord.indices.forEach { position ->
                         Card(
-                            modifier = Modifier.weight(1f).height(54.dp),
+                            modifier = Modifier.width(42.dp).height(54.dp),
                             colors = CardDefaults.cardColors(containerColor = if (position < wordExercisePlaced.size) Color(0xFFE2F4DF) else Color.White),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB7C8B2))
                         ) {
