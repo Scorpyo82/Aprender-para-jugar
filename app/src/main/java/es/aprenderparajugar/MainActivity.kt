@@ -4498,7 +4498,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     val cleanWord = wordLibraryWordDraft.trim()
                                     when {
                                         cleanWord.isBlank() -> wordLibraryMessage = "Escribe una palabra."
-                                        cleanWord.any { it.isWhitespace() } -> wordLibraryMessage = "Para empezar, introduce una sola palabra sin espacios."
                                         wordLibraryPictureDraft.isBlank() -> wordLibraryMessage = "Selecciona una imagen de pista."
                                         wordLibraryCategoryDraft.isBlank() || wordLibraryCategoryDraft !in wordExerciseCategories -> wordLibraryMessage = "Selecciona una categoría creada en el menú Categorías."
                                         wordExercises.withIndex().any { (i, e) -> i != wordLibraryEditingIndex && e.word.equals(cleanWord, true) } -> wordLibraryMessage = "Ya existe un ejercicio con esa palabra."
