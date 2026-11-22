@@ -190,10 +190,6 @@ internal fun AchievementSoundSettingsScreen() {
             )
         }
 
-        AchievementSoundEvent.values().filterNot { it in resultEvents }.forEach { event ->
-            renderSoundCard(event)
-        }
-
         Card(
             Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
@@ -207,6 +203,10 @@ internal fun AchievementSoundSettingsScreen() {
                 )
                 resultEvents.forEach { event -> renderSoundCard(event) }
             }
+        }
+
+        AchievementSoundEvent.values().filterNot { it in resultEvents }.forEach { event ->
+            renderSoundCard(event)
         }
     }
 }
@@ -237,6 +237,9 @@ private fun AchievementSoundEventCard(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(event.title, style = MaterialTheme.typography.titleMedium)
             Text(if (custom) "Audio personalizado" else "Sonido predeterminado", style = MaterialTheme.typography.bodySmall)
+            if (!custom && event.defaultSpeech != null) {
+                Text("«${event.defaultSpeech}»", style = MaterialTheme.typography.bodyMedium)
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(modifier = Modifier.weight(1f), onClick = onListen) { Text("▶ Escuchar", maxLines = 1) }
                 OutlinedButton(modifier = Modifier.weight(1f), onClick = onRepeat) { Text("↻ Repetir", maxLines = 1) }
