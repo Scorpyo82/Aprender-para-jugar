@@ -22,7 +22,7 @@ internal enum class AchievementSoundEvent(
     OBJECT_ACQUIRED("object_acquired", "Objeto conseguido", R.raw.sound_object_acquired),
     COLLECTIBLE_ACQUIRED("collectible_acquired", "Coleccionable conseguido", R.raw.sound_collectible_acquired),
     STORY_COMPLETED("story_completed", "Cuento completado", R.raw.sound_story_completed),
-    REWARD_GRANTED("reward_granted", "Resultado perfecto", R.raw.sound_reward_granted),
+    REWARD_GRANTED("reward_granted", "Resultado perfecto", R.raw.sound_reward_granted, "¡Lo has hecho genial!"),
     RESULT_PARTIAL("result_partial", "Resultado parcial", null, "¡Buen trabajo! ¡Sigue así!"),
     RESULT_TRY_AGAIN("result_try_again", "Resultado por mejorar", null, "¡Buen intento! ¡Vamos a practicar juntos!"),
     ITEM_PURCHASED("item_purchased", "Objeto comprado", R.raw.sound_item_purchased),
@@ -81,7 +81,7 @@ internal object AchievementSoundManager {
                 continuation.invokeOnCancellation { complete(CancellationException("Audio cancelado")) }
                 try {
                     val path = customPath(context, event)
-                    if (path == null && event.defaultSpeech != null) {
+                    if (path == null && event.defaultResource == null && event.defaultSpeech != null) {
                         val utteranceId = UUID.randomUUID().toString()
                         speech = TextToSpeech(context.applicationContext) { status ->
                             if (status != TextToSpeech.SUCCESS) {
