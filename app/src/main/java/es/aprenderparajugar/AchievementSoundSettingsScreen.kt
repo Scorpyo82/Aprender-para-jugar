@@ -137,105 +137,126 @@ internal fun AchievementSoundSettingsScreen() {
             }
         }
         if (message.isNotBlank()) Text(message, color = MaterialTheme.colorScheme.primary)
-        AchievementSoundEvent.values().forEach { event ->
+        val resultEvents = listOf(
+            AchievementSoundEvent.REWARD_GRANTED,
+            AchievementSoundEvent.RESULT_PARTIAL,
+            AchievementSoundEvent.RESULT_TRY_AGAIN
+        )
+        val renderSoundCard: @Composable (AchievementSoundEvent) -> Unit = { event ->
             val custom = remember(event, refresh) { AchievementSoundManager.customPath(context, event) }
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(event.title, style = MaterialTheme.typography.titleMedium)
-                    Text(if (custom == null) "Sonido predeterminado" else "Audio personalizado", style = MaterialTheme.typography.bodySmall)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    runCatching { AchievementSoundManager.play(context, event, preview = true) }
-                                        .onFailure { message = "No se pudo reproducir: ${it.message}" }
-                                }
-                            }
-                        ) { Text("▶ Escuchar", maxLines = 1) }
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    repeat(2) {
-                                        runCatching { AchievementSoundManager.play(context, event, preview = true) }
-                                            .onFailure { message = "No se pudo reproducir: ${it.message}" }
-                                    }
-                                }
-                            }
-                        ) { Text("↻ Repetir", maxLines = 1) }
+            AchievementSoundEventCard(
+                event = event,
+                custom = custom != null,
+                recording = recordingEvent == event,
+                preparing = preparedRecordEvent == event,
+                canPrepare = recordingEvent == null && preparedRecordEvent == null,
+                onListen = {
+                    scope.launch {
+                        runCatching { AchievementSoundManager.play(context, event, preview = true) }
+                            .onFailure { message = "No se pudo reproducir: ${it.message}" }
                     }
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            pendingImport = event
-                            importLauncher.launch(arrayOf("audio/*"))
+                },
+                onRepeat = {
+                    scope.launch {
+                        repeat(2) {
+                            runCatching { AchievementSoundManager.play(context, event, preview = true) }
+                                .onFailure { message = "No se pudo reproducir: ${it.message}" }
                         }
-                    ) { Text("Importar audio") }
-
-                    if (recordingEvent == event) {
-                        Text(
-                            "● GRABACIÓN EN CURSO",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                        Text(
-                            "Cuando termines de hablar, pulsa «Parar y guardar».",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                modifier = Modifier.weight(1f),
-                                onClick = { stopRecording(true) }
-                            ) { Text("Parar y guardar") }
-                            OutlinedButton(
-                                modifier = Modifier.weight(1f),
-                                onClick = { stopRecording(false) }
-                            ) { Text("Descartar grabación") }
-                        }
-                    } else if (preparedRecordEvent == event) {
-                        Text(
-                            "Preparar grabación",
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Text(
-                            "Cuando estés preparado, pulsa «Iniciar grabación». El micrófono no se activará hasta entonces.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                pendingRecord = event
-                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        ) { Text("Iniciar grabación") }
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                preparedRecordEvent = null
-                                message = "Grabación cancelada."
-                            }
-                        ) { Text("Cancelar") }
-                    } else {
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = recordingEvent == null && preparedRecordEvent == null,
-                            onClick = {
-                                preparedRecordEvent = event
-                                message = ""
-                            }
-                        ) { Text("Grabar voz") }
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = custom != null,
-                            onClick = {
-                                AchievementSoundManager.restoreDefault(context, event)
-                                message = "Se ha restaurado el sonido original."
-                                refresh++
-                            }
-                        ) { Text("Restaurar sonido original") }
                     }
+                },
+                onImport = {
+                    pendingImport = event
+                    importLauncher.launch(arrayOf("audio/*"))
+                },
+                onPrepareRecord = {
+                    preparedRecordEvent = event
+                    message = ""
+                },
+                onStopSave = { stopRecording(true) },
+                onStopDiscard = { stopRecording(false) },
+                onStartRecording = {
+                    pendingRecord = event
+                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                },
+                onCancelPreparation = {
+                    preparedRecordEvent = null
+                    message = "Grabación cancelada."
+                },
+                onRestore = {
+                    AchievementSoundManager.restoreDefault(context, event)
+                    message = "Se ha restaurado el sonido original."
+                    refresh++
                 }
+            )
+        }
+
+        AchievementSoundEvent.values().filterNot { it in resultEvents }.forEach { event ->
+            renderSoundCard(event)
+        }
+
+        Card(
+            Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Locuciones de resultados", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "La voz cambia según cómo haya ido el ejercicio. Puedes personalizar cada mensaje por separado.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                resultEvents.forEach { event -> renderSoundCard(event) }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun AchievementSoundEventCard(
+    event: AchievementSoundEvent,
+    custom: Boolean,
+    recording: Boolean,
+    preparing: Boolean,
+    canPrepare: Boolean,
+    onListen: () -> Unit,
+    onRepeat: () -> Unit,
+    onImport: () -> Unit,
+    onPrepareRecord: () -> Unit,
+    onStopSave: () -> Unit,
+    onStopDiscard: () -> Unit,
+    onStartRecording: () -> Unit,
+    onCancelPreparation: () -> Unit,
+    onRestore: () -> Unit
+) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(event.title, style = MaterialTheme.typography.titleMedium)
+            Text(if (custom) "Audio personalizado" else "Sonido predeterminado", style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(modifier = Modifier.weight(1f), onClick = onListen) { Text("▶ Escuchar", maxLines = 1) }
+                OutlinedButton(modifier = Modifier.weight(1f), onClick = onRepeat) { Text("↻ Repetir", maxLines = 1) }
+            }
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onImport) { Text("Importar audio") }
+            if (recording) {
+                Text("● GRABACIÓN EN CURSO", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelLarge)
+                Text("Cuando termines de hablar, pulsa «Parar y guardar».", style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(modifier = Modifier.weight(1f), onClick = onStopSave) { Text("Parar y guardar") }
+                    OutlinedButton(modifier = Modifier.weight(1f), onClick = onStopDiscard) { Text("Descartar grabación") }
+                }
+            } else if (preparing) {
+                Text("Preparar grabación", style = MaterialTheme.typography.titleSmall)
+                Text("Cuando estés preparado, pulsa «Iniciar grabación». El micrófono no se activará hasta entonces.", style = MaterialTheme.typography.bodySmall)
+                Button(modifier = Modifier.fillMaxWidth(), onClick = onStartRecording) { Text("Iniciar grabación") }
+                OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = onCancelPreparation) { Text("Cancelar") }
+            } else {
+                OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = canPrepare, onClick = onPrepareRecord) { Text("Grabar voz") }
+                OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = custom, onClick = onRestore) { Text("Restaurar sonido original") }
             }
         }
     }
