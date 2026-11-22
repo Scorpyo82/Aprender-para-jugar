@@ -43,8 +43,13 @@ internal fun ExerciseResultScreen(
     onNextExercise: () -> Unit
 ) {
     val context = LocalContext.current
-    LaunchedEffect(rewardStars, rewardIcon, rewardAmountText, correctCount, totalCount) {
-        try { AchievementSoundManager.play(context, AchievementSoundEvent.REWARD_GRANTED) } catch (_: Exception) { }
+    val resultSound = when {
+        totalCount > 0 && correctCount >= totalCount -> AchievementSoundEvent.REWARD_GRANTED
+        correctCount > 0 -> AchievementSoundEvent.RESULT_PARTIAL
+        else -> AchievementSoundEvent.RESULT_TRY_AGAIN
+    }
+    LaunchedEffect(resultSound, rewardStars, rewardIcon, rewardAmountText, correctCount, totalCount) {
+        try { AchievementSoundManager.play(context, resultSound) } catch (_: Exception) { }
     }
     val celebration = rememberInfiniteTransition(label = "celebracion")
     val iconScale by celebration.animateFloat(initialValue = 0.88f, targetValue = 1.12f, animationSpec = infiniteRepeatable(animation = tween(650), repeatMode = RepeatMode.Reverse), label = "rebote")
