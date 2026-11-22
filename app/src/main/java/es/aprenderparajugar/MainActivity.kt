@@ -5291,7 +5291,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                         }
                     }
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), maxItemsInEachRow = 5) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     wordExerciseLetterOrder.forEach { letterIndex ->
                         val alreadyPlaced = letterIndex in wordExercisePlaced
                         OutlinedButton(
