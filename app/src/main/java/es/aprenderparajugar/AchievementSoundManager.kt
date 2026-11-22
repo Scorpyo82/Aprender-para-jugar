@@ -2,18 +2,29 @@ package es.aprenderparajugar
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
+import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal enum class AchievementSoundEvent(val key: String, val title: String, val defaultResource: Int) {
+internal enum class AchievementSoundEvent(
+    val key: String,
+    val title: String,
+    val defaultResource: Int?,
+    val defaultSpeech: String? = null
+) {
     OBJECT_ACQUIRED("object_acquired", "Objeto conseguido", R.raw.sound_object_acquired),
     COLLECTIBLE_ACQUIRED("collectible_acquired", "Coleccionable conseguido", R.raw.sound_collectible_acquired),
     STORY_COMPLETED("story_completed", "Cuento completado", R.raw.sound_story_completed),
-    REWARD_GRANTED("reward_granted", "Recompensa conseguida", R.raw.sound_reward_granted),
+    REWARD_GRANTED("reward_granted", "Resultado perfecto", R.raw.sound_reward_granted),
+    RESULT_PARTIAL("result_partial", "Resultado parcial", null, "¡Buen trabajo! ¡Sigue así!"),
+    RESULT_TRY_AGAIN("result_try_again", "Resultado por mejorar", null, "¡Buen intento! ¡Vamos a practicar juntos!"),
     ITEM_PURCHASED("item_purchased", "Objeto comprado", R.raw.sound_item_purchased),
     STORY_UNLOCKED("story_unlocked", "Cuento desbloqueado", R.raw.sound_story_unlocked)
 }
@@ -55,10 +66,13 @@ internal object AchievementSoundManager {
                 suspendCancellableCoroutine { continuation ->
                 val finished = AtomicBoolean(false)
                 var player: MediaPlayer? = null
+                var speech: TextToSpeech? = null
                 fun complete(error: Throwable? = null) {
                     if (!finished.compareAndSet(false, true)) return
                     runCatching { player?.release() }
                     player = null
+                    runCatching { speech?.stop(); speech?.shutdown() }
+                    speech = null
                     if (continuation.isActive) {
                         if (error == null) continuation.resumeWith(Result.success(Unit))
                         else continuation.resumeWith(Result.failure(error))
@@ -67,8 +81,31 @@ internal object AchievementSoundManager {
                 continuation.invokeOnCancellation { complete(CancellationException("Audio cancelado")) }
                 try {
                     val path = customPath(context, event)
-                    if (path == null) {
-                        player = MediaPlayer.create(context.applicationContext, event.defaultResource)
+                    if (path == null && event.defaultSpeech != null) {
+                        val utteranceId = UUID.randomUUID().toString()
+                        speech = TextToSpeech(context.applicationContext) { status ->
+                            if (status != TextToSpeech.SUCCESS) {
+                                complete(IllegalStateException("No se pudo iniciar la voz predeterminada."))
+                            } else {
+                                val engine = speech
+                                if (engine == null) {
+                                    complete(IllegalStateException("No se pudo preparar la voz predeterminada."))
+                                } else {
+                                    engine.language = Locale("es", "ES")
+                                    engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                                        override fun onStart(id: String?) = Unit
+                                        override fun onDone(id: String?) { complete() }
+                                        override fun onError(id: String?) { complete(IllegalStateException("Error al reproducir la locución.")) }
+                                    })
+                                    val result = engine.speak(event.defaultSpeech, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                                    if (result == TextToSpeech.ERROR) complete(IllegalStateException("No se pudo reproducir la locución."))
+                                }
+                            }
+                        }
+                    } else if (path == null) {
+                        val resource = event.defaultResource
+                        if (resource == null) { complete(IllegalStateException("No hay un audio predeterminado configurado.")); return@suspendCancellableCoroutine }
+                        player = MediaPlayer.create(context.applicationContext, resource)
                         if (player == null) { complete(IllegalStateException("No se pudo cargar el efecto.")); return@suspendCancellableCoroutine }
                         player?.setOnCompletionListener { complete() }
                         player?.setOnErrorListener { _, what, extra -> complete(IllegalStateException("Error de audio $what/$extra")); true }
