@@ -2820,19 +2820,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             onBack = { screen = "home" }, onChooseType = { type, available -> sequenceChosenCategory = type; sequenceChosenDifficulty = "Fácil"; sequencePlayMessage = if (available) "" else "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."; if (available) screen = "sequence-difficulty" }, onChooseDifficulty = { }
         )
     } else if (screen == "sequence-difficulty") {
-        val sequenceCandidates = eligibleSequenceExercises(sequenceChosenCategory, sequenceChosenDifficulty)
-        val sequenceCategories = sequenceCandidates.map { it.category }.distinct()
-        val sequenceQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", sequenceChosenDifficulty, sequenceChosenCategory), sequenceCandidates.isNotEmpty())
-        val lockedSequenceDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
-            val hasExercises = eligibleSequenceExercises(sequenceChosenCategory, level).isNotEmpty()
-            val status = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, sequenceChosenCategory), hasExercises)
-            hasExercises && status.limit != null && !status.available
-        }.toSet()
-        ExerciseOptionsScreen(title = sequenceChosenCategory, difficulty = sequenceChosenDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = sequencePlayMessage.ifBlank { quotaMessage(sequenceQuota) },
-            lockedDifficulties = lockedSequenceDifficulties,
-            surpriseDescription = "La app elige una secuencia entre todos los temas disponibles.", mixDescription = "La app busca cambiar de tema entre una secuencia y la siguiente.",
-            surpriseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available, chooseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available, mixAvailable = sequenceCategories.size >= 2 && sequenceQuota.available,
-            onBack = { screen = "sequences"; sequencePlayMessage = "" }, onDifficultyChange = { sequenceChosenDifficulty = it; sequencePlayMessage = "" },
+        SequenceDifficultyRoute(
+            chosenCategory = sequenceChosenCategory,
+            chosenDifficulty = sequenceChosenDifficulty,
+            message = sequencePlayMessage,
+            preferences = preferences,
+            sequenceGameState = sequenceGameState,
+            sequenceExercises = sequenceExercises,
+            maxCards = sequenceMaxCards,
+            disabledCategories = disabledSequenceCategories,
+            easyReward = easyRewardMinutes,
+            normalReward = normalRewardMinutes,
+            hardReward = hardRewardMinutes,
+            isStarsMode = rewardMode.isStars,
+            onBack = { screen = "sequences"; sequencePlayMessage = "" },
+            onDifficultyChange = { sequenceChosenDifficulty = it; sequencePlayMessage = "" },
             onSurprise = { sequenceSelectionMode = "Sorpresa"; startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty) },
             onChooseTheme = { sequenceSelectionMode = "Elegir tema"; screen = "sequence-category-select" },
             onMixThemes = { sequenceSelectionMode = "Mezclar temas"; startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty) }
@@ -3779,4 +3781,69 @@ private fun buildQuotaAvailabilitySnapshot(
         }
     }
     return result
+}
+
+@Composable
+private fun SequenceDifficultyRoute(
+    chosenCategory: String,
+    chosenDifficulty: String,
+    message: String,
+    preferences: android.content.SharedPreferences,
+    sequenceGameState: SequenceGameState,
+    sequenceExercises: List<SequenceExercise>,
+    maxCards: Int,
+    disabledCategories: Set<String>,
+    easyReward: Int,
+    normalReward: Int,
+    hardReward: Int,
+    isStarsMode: Boolean,
+    onBack: () -> Unit,
+    onDifficultyChange: (String) -> Unit,
+    onSurprise: () -> Unit,
+    onChooseTheme: () -> Unit,
+    onMixThemes: () -> Unit
+) {
+    val sequenceCandidates = sequenceGameState.eligibleExercises(
+        sequenceExercises, chosenCategory, maxCards, disabledCategories, chosenDifficulty
+    )
+    val sequenceCategories = sequenceCandidates.map { it.category }.distinct()
+    val sequenceQuota = ExerciseQuotaRepository.status(
+        preferences,
+        ExerciseQuotaRepository.id("sequences", chosenDifficulty, chosenCategory),
+        sequenceCandidates.isNotEmpty()
+    )
+    val lockedSequenceDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
+        val hasExercises = sequenceGameState.eligibleExercises(
+            sequenceExercises, chosenCategory, maxCards, disabledCategories, level
+        ).isNotEmpty()
+        val status = ExerciseQuotaRepository.status(
+            preferences, ExerciseQuotaRepository.id("sequences", level, chosenCategory), hasExercises
+        )
+        hasExercises && status.limit != null && !status.available
+    }.toSet()
+    val quotaText = when {
+        sequenceQuota.limit == null -> "Sin límite de intentos."
+        sequenceQuota.available -> "Intentos restantes: ${sequenceQuota.remaining}/${sequenceQuota.limit}."
+        else -> sequenceQuota.reason ?: "Dificultad bloqueada."
+    }
+    ExerciseOptionsScreen(
+        title = chosenCategory,
+        difficulty = chosenDifficulty,
+        easyReward = easyReward,
+        normalReward = normalReward,
+        hardReward = hardReward,
+        isStarsMode = isStarsMode,
+        message = message.ifBlank { quotaText },
+        lockedDifficulties = lockedSequenceDifficulties,
+        surpriseDescription = "La app elige una secuencia entre todos los temas disponibles.",
+        mixDescription = "La app busca cambiar de tema entre una secuencia y la siguiente.",
+        surpriseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available,
+        chooseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available,
+        mixAvailable = sequenceCategories.size >= 2 && sequenceQuota.available,
+        onBack = onBack,
+        onDifficultyChange = onDifficultyChange,
+        onSurprise = onSurprise,
+        onChooseTheme = onChooseTheme,
+        onMixThemes = onMixThemes
+    )
 }
