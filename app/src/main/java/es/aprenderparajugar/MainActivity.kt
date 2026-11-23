@@ -1020,8 +1020,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferExportCategories by transferExportCategoriesState
     val expandedExportSequenceCategoriesState = remember { mutableStateOf<Set<String>>(emptySet()) }
     var expandedExportSequenceCategories by expandedExportSequenceCategoriesState
-    val expandedImportSequenceCategoriesState = remember { mutableStateOf<Set<String>>(emptySet()) }
-    var expandedImportSequenceCategories by expandedImportSequenceCategoriesState
+    var expandedImportSequenceCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
     val transferExportStatisticsState = remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferExportStatistics by transferExportStatisticsState
     val transferExportUsageStatisticsState = remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
@@ -1031,25 +1030,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     val transferExportObjectsState = remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferExportObjects by transferExportObjectsState
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
-    val transferImportCategoriesState = remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
-    var transferImportCategories by transferImportCategoriesState
-    val transferImportStoriesState = remember { mutableStateOf<Set<String>>(emptySet()) }
-    var transferImportStories by transferImportStoriesState
-    val transferImportObjectsState = remember { mutableStateOf<Set<String>>(emptySet()) }
-    var transferImportObjects by transferImportObjectsState
-    val transferObjectConflictDecisionsState = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var transferObjectConflictDecisions by transferObjectConflictDecisionsState
-    val transferStoryConflictDecisionsState = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var transferStoryConflictDecisions by transferStoryConflictDecisionsState
-    val transferExerciseConflictDecisionsState = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var transferExerciseConflictDecisions by transferExerciseConflictDecisionsState
-    val transferConflictIndexState = remember { mutableIntStateOf(0) }
-    var transferConflictIndex by transferConflictIndexState
+    var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
+    var transferImportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var transferImportObjects by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var transferObjectConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferStoryConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferExerciseConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferConflictIndex by remember { mutableIntStateOf(0) }
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
-    val transferImportStatisticsState = remember { mutableStateOf(false) }
-    var transferImportStatistics by transferImportStatisticsState
-    val transferImportUsageStatisticsState = remember { mutableStateOf(false) }
-    var transferImportUsageStatistics by transferImportUsageStatisticsState
+    var transferImportStatistics by remember { mutableStateOf(false) }
+    var transferImportUsageStatistics by remember { mutableStateOf(false) }
     var transferMessage by remember { mutableStateOf("") }
     var remoteLibraryPackages by remember { mutableStateOf<List<RemoteLibraryPackage>>(emptyList()) }
     var remoteLibraryLoading by remember { mutableStateOf(false) }
@@ -1063,24 +1053,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var libraryTaskMessage by remember { mutableStateOf("") }
     var libraryTaskProgress by remember { mutableStateOf(0f) }
     var libraryTaskIndeterminate by remember { mutableStateOf(true) }
-    val transferImportPreparationLoadingState = remember { mutableStateOf(false) }
-    var transferImportPreparationLoading by transferImportPreparationLoadingState
-    val transferImportPreparationErrorState = remember { mutableStateOf(false) }
-    var transferImportPreparationError by transferImportPreparationErrorState
-    val transferExerciseConflictsState = remember { mutableStateOf<List<LibraryPackageManager.ExerciseConflictInfo>>(emptyList()) }
-    var transferExerciseConflicts by transferExerciseConflictsState
-    val transferObjectConflictsState = remember { mutableStateOf<List<LibraryPackageManager.ObjectConflictInfo>>(emptyList()) }
-    var transferObjectConflicts by transferObjectConflictsState
-    val transferStoryNameConflictsState = remember { mutableStateOf<List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>>(emptyList()) }
-    var transferStoryNameConflicts by transferStoryNameConflictsState
-    val transferImportObjectEntriesState = remember { mutableStateOf<List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>>(emptyList()) }
-    var transferImportObjectEntries by transferImportObjectEntriesState
-    val transferRequiredImportObjectsState = remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
-    var transferRequiredImportObjects by transferRequiredImportObjectsState
-    val transferLocalObjectsState = remember { mutableStateOf<List<StoredObject>>(emptyList()) }
-    var transferLocalObjects by transferLocalObjectsState
-    val transferObjectConflictThumbnailsState = remember { mutableStateOf<Map<String, Pair<Bitmap?, Bitmap?>>>(emptyMap()) }
-    var transferObjectConflictThumbnails by transferObjectConflictThumbnailsState
+    var transferImportPreparationLoading by remember { mutableStateOf(false) }
+    var transferImportPreparationError by remember { mutableStateOf(false) }
+    var transferExerciseConflicts by remember { mutableStateOf<List<LibraryPackageManager.ExerciseConflictInfo>>(emptyList()) }
+    var transferObjectConflicts by remember { mutableStateOf<List<LibraryPackageManager.ObjectConflictInfo>>(emptyList()) }
+    var transferStoryNameConflicts by remember { mutableStateOf<List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>>(emptyList()) }
+    var transferImportObjectEntries by remember { mutableStateOf<List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>>(emptyList()) }
+    var transferRequiredImportObjects by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
+    var transferLocalObjects by remember { mutableStateOf<List<StoredObject>>(emptyList()) }
+    var transferObjectConflictThumbnails by remember { mutableStateOf<Map<String, Pair<Bitmap?, Bitmap?>>>(emptyMap()) }
     val remoteLibraryScope = rememberCoroutineScope()
     val updateLibraryTaskProgress: (String, Int, Int) -> Unit = { message, current, total ->
         libraryTaskMessage = message
@@ -2490,30 +2471,156 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                     }
                     "library-import" -> {
-                        libraryImportContent(
-                            context = context,
-                            transferPackage = transferPackage,
-                            expandedImportSequenceCategoriesState = expandedImportSequenceCategoriesState,
-                            transferImportCategoriesState = transferImportCategoriesState,
-                            transferImportStoriesState = transferImportStoriesState,
-                            transferImportObjectsState = transferImportObjectsState,
-                            transferObjectConflictDecisionsState = transferObjectConflictDecisionsState,
-                            transferStoryConflictDecisionsState = transferStoryConflictDecisionsState,
-                            transferExerciseConflictDecisionsState = transferExerciseConflictDecisionsState,
-                            transferConflictIndexState = transferConflictIndexState,
-                            transferImportStatisticsState = transferImportStatisticsState,
-                            transferImportUsageStatisticsState = transferImportUsageStatisticsState,
-                            transferImportPreparationLoadingState = transferImportPreparationLoadingState,
-                            transferImportPreparationErrorState = transferImportPreparationErrorState,
-                            transferExerciseConflictsState = transferExerciseConflictsState,
-                            transferObjectConflictsState = transferObjectConflictsState,
-                            transferStoryNameConflictsState = transferStoryNameConflictsState,
-                            transferImportObjectEntriesState = transferImportObjectEntriesState,
-                            transferRequiredImportObjectsState = transferRequiredImportObjectsState,
-                            transferLocalObjectsState = transferLocalObjectsState,
-                            transferObjectConflictThumbnailsState = transferObjectConflictThumbnailsState,
-                            transferMessage = transferMessage,
-                            onImportSelection = { transferConflictIndex = (conflictIndex - 1).coerceAtLeast(0) }, enabled = conflictIndex > 0) { Text("Anterior") }
+                        val info = transferPackage
+                        item { Text("Contenido del archivo", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                        if (transferImportPreparationLoading) {
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Comprobando coincidencias y dependencias…", fontSize = 13.sp, color = Color(0xFF667085))
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                            }
+                        }
+                        if (info == null) {
+                            item { Text("No hay ningún paquete validado. Vuelve atrás y selecciona un archivo.") }
+                        } else {
+                            val storyNameConflicts = transferStoryNameConflicts
+                            if (info.stories.isNotEmpty()) {
+                                item {
+                                    Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text("Se importan completos, con escenas, conexiones y recursos.", fontSize = 12.sp, color = Color(0xFF667085))
+                                }
+                                item {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = info.stories.all { it.key in transferImportStories },
+                                            onCheckedChange = { checked -> transferImportStories = if (checked) info.stories.map { it.key }.toSet() else emptySet() }
+                                        )
+                                        Text("Seleccionar todos los cuentos")
+                                    }
+                                }
+                                info.stories.forEach { story ->
+                                    item {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(
+                                                checked = story.key in transferImportStories,
+                                                onCheckedChange = { checked ->
+                                                    transferImportStories = transferImportStories.toMutableSet().also {
+                                                        if (checked) it.add(story.key) else it.remove(story.key)
+                                                    }
+                                                }
+                                            )
+                                            Column {
+                                                Text(story.title, fontWeight = FontWeight.SemiBold)
+                                                Text("${story.collection} · ${story.sceneCount} escenas", fontSize = 12.sp, color = Color(0xFF667085))
+                                            }
+                                        }
+                                    }
+                                }
+                                val conflictDetails = transferObjectConflicts
+                                if (storyNameConflicts.isNotEmpty()) {
+                                    item {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text("Cuentos con el mismo nombre", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                            Text("Un cuento nunca se fusiona ni se adapta. Si confirmas, el cuento local se sustituirá por completo, con todas sus escenas, conexiones, imágenes y audios. Si no quieres sustituirlo, cancela toda la importación.", fontSize = 12.sp, color = Color(0xFF667085))
+                                        }
+                                    }
+                                    storyNameConflicts.forEach { (incomingStory, existingStory) ->
+                                        item {
+                                            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4E5))) {
+                                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                    Text(incomingStory.title, fontWeight = FontWeight.Bold)
+                                                    Text("Colección: ${incomingStory.collection}", fontSize = 12.sp)
+                                                    Text("Local: ${existingStory.metadata.scenes.size} escenas · ZIP: ${incomingStory.sceneCount} escenas", fontSize = 12.sp, color = Color(0xFF667085))
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Checkbox(
+                                                            checked = transferStoryConflictDecisions[incomingStory.key] == "overwrite",
+                                                            onCheckedChange = { checked ->
+                                                                transferStoryConflictDecisions = if (checked) {
+                                                                    transferStoryConflictDecisions + (incomingStory.key to "overwrite")
+                                                                } else {
+                                                                    transferStoryConflictDecisions - incomingStory.key
+                                                                }
+                                                            }
+                                                        )
+                                                        Column {
+                                                            Text("Confirmo sobrescribir el cuento completo", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                                            Text("Puedes desmarcarlo en cualquier momento. Sin confirmación no se permitirá importar.", fontSize = 11.sp, color = Color(0xFF667085))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                val conflictIndex = transferConflictIndex.coerceIn(0, (conflictDetails.size - 1).coerceAtLeast(0))
+                                item {
+                                    Text(if (conflictDetails.isEmpty()) "Revisión de objetos: sin conflictos" else "Conflicto ${conflictIndex + 1} de ${conflictDetails.size}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    if (conflictDetails.isNotEmpty()) {
+                                        androidx.compose.material3.LinearProgressIndicator(progress = { (conflictIndex + 1).toFloat() / conflictDetails.size.toFloat() }, modifier = Modifier.fillMaxWidth())
+                                        Text("Resuelve las coincidencias una a una. Se comparan las imágenes reales y los datos de cada objeto.", fontSize = 12.sp, color = Color(0xFF667085))
+                                    }
+                                }
+                                val localObjects = transferLocalObjects
+                                val requiredObjectKeys = transferRequiredImportObjects.keys
+                                info.objects.filter { it.key in requiredObjectKeys }.forEach { dependency ->
+                                    val incoming = transferImportObjectEntries.firstOrNull { it.first.key == dependency.key }?.second
+                                        ?: return@forEach
+                                    val existing = localObjects.firstOrNull {
+                                        it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
+                                    }
+                                    if (existing != null) {
+                                        if (conflictDetails.indexOfFirst { it.incoming.folderName == dependency.directory } == conflictIndex) {
+                                            item {
+                                                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                        Text("Conflicto de objeto: ${dependency.name}", fontWeight = FontWeight.Bold)
+                                                        Text("Comparación de las dos definiciones:", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                                                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                Text("En el ZIP", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                                val incomingBitmap = transferObjectConflictThumbnails[dependency.directory]?.first
+                                                                if (incomingBitmap != null) Image(incomingBitmap.asImageBitmap(), contentDescription = "Objeto del ZIP", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
+                                                                Text(incoming.metadata.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                                Text("Aparece en la tienda: ${if (incoming.metadata.availableInStore) "Sí" else "No"}", fontSize = 11.sp, color = Color(0xFF667085))
+                                                            }
+                                                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                                Text("En este dispositivo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                                val existingBitmap = transferObjectConflictThumbnails[dependency.directory]?.second
+                                                                if (existingBitmap != null) Image(existingBitmap.asImageBitmap(), contentDescription = "Objeto existente", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
+                                                                Text(existing.metadata.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                                Text("Aparece en la tienda: ${if (existing.metadata.availableInStore) "Sí" else "No"}", fontSize = 11.sp, color = Color(0xFF667085))
+                                                            }
+                                                        }
+                                                        val detail = conflictDetails.firstOrNull { it.incoming.folderName == dependency.directory }
+                                                        detail?.differences?.forEach { difference -> Text("• $difference", fontSize = 11.sp, color = Color(0xFF475467)) }
+                                                        Text("Ya existe un objeto con la misma identidad, pero sus datos o imagen son diferentes.", fontSize = 12.sp, color = Color(0xFF667085))
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            androidx.compose.material3.RadioButton(
+                                                                selected = transferObjectConflictDecisions[dependency.directory] == "reuse",
+                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (dependency.directory to "reuse") }
+                                                            )
+                                                            Text("Conservar el objeto de este dispositivo")
+                                                        }
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            androidx.compose.material3.RadioButton(
+                                                                selected = transferObjectConflictDecisions[dependency.directory] == "overwrite",
+                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (dependency.directory to "overwrite") }
+                                                            )
+                                                            Text("Sobrescribir el objeto existente")
+                                                        }
+                                                        if (transferObjectConflictDecisions[dependency.directory] == "overwrite") {
+                                                            val affectedStories = detail?.referencingStories.orEmpty()
+                                                            Text(
+                                                                if (affectedStories.isEmpty()) "No se han encontrado otros cuentos locales que utilicen este objeto."
+                                                                else "ATENCIÓN: ${affectedStories.size} cuento(s) local(es) también lo utilizan: ${affectedStories.joinToString(", ")}.",
+                                                                fontSize = 11.sp,
+                                                                color = Color(0xFFB3261E)
+                                                            )
+                                                            Text("La definición compartida cambiará para todos ellos. El inventario no se modifica.", fontSize = 11.sp, color = Color(0xFFB3261E))
+                                                        }
+                                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                            OutlinedButton(onClick = { transferConflictIndex = (conflictIndex - 1).coerceAtLeast(0) }, enabled = conflictIndex > 0) { Text("Anterior") }
                                                             OutlinedButton(onClick = { transferConflictIndex = (conflictIndex + 1).coerceAtMost(conflictDetails.lastIndex) }, enabled = conflictIndex < conflictDetails.lastIndex) { Text("Siguiente") }
                                                         }
                                                     }
@@ -3043,18 +3150,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         libraryTaskRunning = false
                                     }
                                     }
-                                
-                            },
-                            onCancelImport = {
+                                }, enabled = !transferImportPreparationLoading && !transferImportPreparationError &&
+                                    (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
+                                    transferExerciseConflicts.all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
+                                    transferObjectConflicts.all { it.incoming.folderName in transferObjectConflictDecisions } &&
+                                    transferStoryNameConflicts.all { transferStoryConflictDecisions[it.first.key] == "overwrite" },
+                                    modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
+                            }
+                            item { OutlinedButton(onClick = {
                                 transferPackage = null
                                 remoteLibraryScope.launch {
                                     withContext(Dispatchers.IO) { LibraryPackageManager.discard(info) }
                                 }
                                 parentSection = if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"
                                 transferRemoteLibraryName = null
-                            
-                            }
-                        )
+                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
+                        }
+                        if (transferMessage.isNotBlank()) item { Text(transferMessage, fontSize = 14.sp, color = if (transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)) }
                     }
                     "active-games" -> {
                         item { Text("Actividades activas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
