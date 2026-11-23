@@ -1990,96 +1990,30 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onExpandedCategoriesChanged = { deleteExpandedCategories = it },
                             onConfirmArmedChanged = { deleteConfirmArmed = it },
                             onDeleteConfirmed = {
-                                remoteLibraryScope.launch {
-                                try {
-                                    val selectedStoryPaths = deleteSelectedItems
-                                        .filter { it.startsWith("T|") }
-                                        .map { it.removePrefix("T|") }
-                                        .toSet()
-                                    val selectedObjectFolders = deleteSelectedItems
-                                        .filter { it.startsWith("O|") }
-                                        .map { it.removePrefix("O|") }
-                                        .toSet()
-                                    val removedStoryAndObjectCounts = withContext(Dispatchers.IO) {
-                                        val latestDependencies = StoryObjectDependencyRepository.scan(context)
-                                        val currentStories = StoryRepository.list(context)
-                                        val currentObjects = ObjectRepository.list(context)
-                                        check(selectedObjectFolders.isEmpty() || latestDependencies.scanErrors.isEmpty()) {
-                                            "No se pueden borrar objetos porque no se han podido comprobar todas las dependencias de cuentos."
-                                        }
-                                        selectedObjectFolders.forEach { folder ->
-                                            val dependentStories = latestDependencies.storyFoldersByObject[folder].orEmpty()
-                                            check(dependentStories.size == 1 && dependentStories.single() in selectedStoryPaths) {
-                                                "El objeto «$folder» está compartido o ya no pertenece exclusivamente a un cuento seleccionado. No se ha eliminado."
-                                            }
-                                            check(currentObjects.any { it.folderName == folder }) {
-                                                "El objeto «$folder» ya no está disponible."
-                                            }
-                                        }
-                                        selectedStoryPaths.forEach { storyPath ->
-                                            val story = currentStories.firstOrNull { it.directory.canonicalPath == storyPath }
-                                                ?: throw IllegalStateException("Uno de los cuentos seleccionados ya no está disponible.")
-                                            StoryRepository.deleteStory(context, story)
-                                        }
-                                        selectedObjectFolders.forEach { folder ->
-                                            val stored = currentObjects.first { it.folderName == folder }
-                                            ObjectRepository.delete(context, stored)
-                                            InventoryRepository.remove(context, folder)
-                                            ObjectUnlockRepository.remove(context, folder)
-                                        }
-                                        selectedStoryPaths.size to selectedObjectFolders.size
-                                    }
-                                    var removedExercises = 0
-                                    var removedStatistics = 0
-                                    ContentStorage.Modality.entries.forEach { modality ->
-                                        val exercises = ExerciseRepository.list(context, modality)
-                                        val categoriesToRemove = deleteSelectedItems.filter { it.startsWith("C|" + modality.name + "|") }
-                                            .map { it.removePrefix("C|" + modality.name + "|") }.toSet()
-                                        exercises.forEach { stored ->
-                                            val path = stored.directory.absolutePath
-                                            if (stored.metadata.category in categoriesToRemove || ("E|" + path) in deleteSelectedItems) {
-                                                ExerciseRepository.delete(context, modality, stored.directory)
-                                                removedExercises++
-                                            } else if (("S|" + path) in deleteSelectedItems) {
-                                                if (ExerciseRepository.deleteStatistics(stored.directory)) removedStatistics++
-                                            }
-                                        }
-                                        if (categoriesToRemove.isNotEmpty()) {
-                                            categoriesToRemove.forEach { category ->
-                                                val categoryDirectory = ContentStorage.categoryDirectory(context, modality, category)
-                                                if (categoryDirectory.list()?.isEmpty() == true) categoryDirectory.delete()
-                                            }
-                                            val prefKey = when (modality) {
-                                                ContentStorage.Modality.TARJETAS -> "categories"
-                                                ContentStorage.Modality.PALABRAS -> "letter_word_categories_v1"
-                                                ContentStorage.Modality.SECUENCIAS -> "sequence_categories_v1"
-                                            }
-                                            val current = (preferences.getString(prefKey, "") ?: "").split("|").filter { it.isNotBlank() }
-                                            preferences.edit().putString(prefKey, current.filterNot { name -> categoriesToRemove.any { it.equals(name, true) } }.joinToString("|")).apply()
-                                        }
-                                    }
-                                    categoryNames = (preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }
-                                    wordLibraryState.saveCategories((preferences.getString("letter_word_categories_v1", "") ?: "").split("|").map { it.trim() }.filter { it.isNotBlank() })
-                                    sequenceCategoryNames = (preferences.getString("sequence_categories_v1", "") ?: "").split("|").filter { it.isNotBlank() }
-                                    pairs = ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)
-                                    wordExercises = wordLibraryState.reloadExercises()
-                                    sequenceExercises = sequenceLibraryState.reloadExercises()
-                                    storedStories = withContext(Dispatchers.IO) { StoryRepository.list(context) }
-                                    storedStoryObjects = withContext(Dispatchers.IO) { ObjectRepository.list(context) }
+                            launchLibraryDeletion(
+                                scope = remoteLibraryScope,
+                                context = context,
+                                preferences = preferences,
+                                selectedItems = deleteSelectedItems,
+                                onConfirmArmedChanged = { deleteConfirmArmed = it },
+                                onMessageChanged = { transferMessage = it },
+                                onParentSectionChanged = { parentSection = it },
+                                onCategoryNamesChanged = { categoryNames = it },
+                                onSaveWordCategories = { wordLibraryState.saveCategories(it) },
+                                onSequenceCategoriesChanged = { sequenceCategoryNames = it },
+                                onPairsChanged = { pairs = it },
+                                onReloadWordExercises = { wordExercises = wordLibraryState.reloadExercises() },
+                                onReloadSequenceExercises = { sequenceExercises = sequenceLibraryState.reloadExercises() },
+                                onStoriesChanged = { storedStories = it },
+                                onObjectsChanged = { storedStoryObjects = it },
+                                onResetSelection = {
                                     deleteDependencySnapshot = null
                                     deleteSelectedItems = emptySet()
                                     deleteExpandedCategories = emptySet()
                                     deleteConfirmArmed = false
-                                    transferMessage = "Eliminación completada: " + removedExercises + " ejercicios, " + removedStatistics +
-                                        " estadísticas, " + removedStoryAndObjectCounts.first + " cuentos y " +
-                                        removedStoryAndObjectCounts.second + " objetos eliminados."
-                                    parentSection = "library-transfer"
-                                } catch (e: Exception) {
-                                    deleteConfirmArmed = false
-                                    transferMessage = "No se pudo completar la eliminación: " + (e.message ?: "error")
                                 }
-                                }
-                            }
+                            )
+                        }
                         )
                     }
                     "learning-stats" -> {
