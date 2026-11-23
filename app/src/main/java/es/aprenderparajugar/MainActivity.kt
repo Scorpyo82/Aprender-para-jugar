@@ -874,19 +874,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         )
     }
     var activeExerciseMode by remember { mutableStateOf("cards") }
-    var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
-    var musicMessage by remember { mutableStateOf("") }
-    var soundEnabled by remember { mutableStateOf(if (firstLaunchNeedsSetup) false else preferences.getBoolean("sound_enabled", true)) }
-    androidx.compose.runtime.LaunchedEffect(screen) {
-        if (screen == "home" && firstLaunchNeedsSetup) {
-            soundEnabled = true
-            preferences.edit()
-                .putBoolean("sound_enabled", true)
-                .putBoolean("first_home_sound_activation_done", true)
-                .putBoolean("first_launch_setup_seen", true)
-                .apply()
-            firstLaunchNeedsSetup = false
-        }
+    val appAudioState = remember(context, firstLaunchNeedsSetup) {
+        AppAudioState(context, firstLaunchNeedsSetup)
     }
     var appInForeground by remember { mutableStateOf(true) }
     var setupAccessibilityEnabled by remember { mutableStateOf(false) }
@@ -919,13 +908,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         lifecycleOwner?.lifecycle?.addObserver(observer)
         onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
     }
-    BackgroundMusicController(
-        musicUri = musicUri,
-        soundEnabled = soundEnabled,
-        appInForeground = appInForeground,
-        screen = screen,
-        onError = { musicMessage = it }
-    )
     var mode by remember { mutableStateOf("Al azar") }
     var cardsStartMessage by remember { mutableStateOf("") }
     var difficulty by remember { mutableStateOf("Fácil") }
@@ -1663,17 +1645,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         feedback = ""; screen = "exercise"
     }
 
-    ExerciseVoicePlaybackCoordinator(
-        context = context,
-        preferences = preferences,
-        screen = screen,
-        difficulty = difficulty,
-        wordSelectedDifficulty = wordSelectedDifficulty,
-        sequenceChosenCategory = sequenceChosenCategory,
-        sequenceChosenDifficulty = sequenceChosenDifficulty,
-        sequenceType = sequencePlayingExercise?.type,
-        appInForeground = appInForeground
-    )
 
     fun resolveCardsPair(word: String, picture: String) {
         val resolution = cardsGameState.resolve(word, picture, exercisePairs, learningStats, learningTurn)
@@ -3904,12 +3875,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     }
                     "music" -> item {
                         MusicSettingsScreen(
-                            musicUri = musicUri,
-                            onMusicUriChange = { musicUri = it },
-                            soundEnabled = soundEnabled,
-                            onSoundEnabledChange = { soundEnabled = it },
-                            message = musicMessage,
-                            onMessageChange = { musicMessage = it }
+                            musicUri = appAudioState.musicUri,
+                            onMusicUriChange = { appAudioState.musicUri = it },
+                            soundEnabled = appAudioState.soundEnabled,
+                            onSoundEnabledChange = { appAudioState.soundEnabled = it },
+                            message = appAudioState.musicMessage,
+                            onMessageChange = { appAudioState.musicMessage = it }
                         )
                     }
                     "device-setup-wizard" -> item {
@@ -4855,7 +4826,7 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             balanceSeconds = balanceSeconds,
             balanceMinutes = balanceMinutes,
             balanceRemainderSeconds = balanceRemainderSeconds,
-            soundEnabled = soundEnabled,
+            soundEnabled = appAudioState.soundEnabled,
             gameActiveCards = gameActiveCards,
             gameActiveSequences = gameActiveSequences,
             gameActiveWords = gameActiveWords,
@@ -4868,8 +4839,8 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
             showParentPlaceholder = screen == "parent",
             onOpenSettings = { pinEntry = ""; pinError = false; screen = "parent-pin" },
             onToggleSound = {
-                soundEnabled = !soundEnabled
-                preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
+                appAudioState.soundEnabled = !appAudioState.soundEnabled
+                preferences.edit().putBoolean("sound_enabled", appAudioState.soundEnabled).apply()
             },
             onOpenHelp = { screen = "help" },
             onOpenCards = { screen = "cards-options"; cardsStartMessage = "" },
