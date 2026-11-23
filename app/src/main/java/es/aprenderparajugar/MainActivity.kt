@@ -658,12 +658,17 @@ private fun AprenderApp() {
     var storyCollectionToDelete by storyCollectionsState.collectionToDelete
     var disabledStoryCollections by storyCollectionsState.disabledCollections
     var pendingStoryCollectionCover by remember { mutableStateOf<String?>(null) }
-    var storyCollectionCoverRevision by remember { mutableIntStateOf(0) }
-    var storyEditorCoverRevision by remember { mutableIntStateOf(0) }
-    var storyEditorIllustrationRevision by remember { mutableIntStateOf(0) }
-    var editingStoryCollection by remember { mutableStateOf<String?>(null) }
+    val storyCollectionCoverRevisionState = remember { mutableIntStateOf(0) }
+    var storyCollectionCoverRevision by storyCollectionCoverRevisionState
+    val storyEditorCoverRevisionState = remember { mutableIntStateOf(0) }
+    var storyEditorCoverRevision by storyEditorCoverRevisionState
+    val storyEditorIllustrationRevisionState = remember { mutableIntStateOf(0) }
+    var storyEditorIllustrationRevision by storyEditorIllustrationRevisionState
+    val editingStoryCollectionState = remember { mutableStateOf<String?>(null) }
+    var editingStoryCollection by editingStoryCollectionState
     var storiesBoardTab by remember { mutableStateOf("all") }
-    var selectedStoriesCollection by remember { mutableStateOf<String?>(null) }
+    val selectedStoriesCollectionState = remember { mutableStateOf<String?>(null) }
+    var selectedStoriesCollection by selectedStoriesCollectionState
     var selectedStoryPath by remember { mutableStateOf<String?>(null) }
 
     fun persistStoryDraft(): StoredStory? = storyEditorState.persist()
@@ -732,6 +737,19 @@ private fun AprenderApp() {
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
             storyObjectEditorState.markImageSelected(uri)
         }
+    }
+    val onPickStoryCover: () -> Unit = {
+        preferences.edit().putBoolean("content_picker_active", true).apply()
+        storyCoverPicker.launch(arrayOf("image/*"))
+    }
+    val onPickStoryIllustration: () -> Unit = {
+        preferences.edit().putBoolean("content_picker_active", true).apply()
+        storyIllustrationPicker.launch(arrayOf("image/*"))
+    }
+    val onChooseStoryCollectionCover: (String) -> Unit = { name ->
+        pendingStoryCollectionCover = name
+        preferences.edit().putBoolean("content_picker_active", true).apply()
+        storyCollectionCoverPicker.launch(arrayOf("image/*"))
     }
     val storyCollectionCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -2168,180 +2186,27 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onOpenCollections = { parentSection = "stories-collections" }
                         )
                     }
-                    "stories-library" -> {
-                        StoryLibraryScreen(
-                            stories = storedStories,
-                            collectionName = { collection ->
-                                storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == collection }
-                                    ?: collection.replace('_', ' ')
-                            },
-                            onStorySelected = { stored ->
-                                storyEditorState.loadStructure(stored.metadata)
-                                storyEditorState.requiredAccessObjects.value = stored.metadata.requiredAccessObjects
-                                storyEditorTitle = stored.metadata.title
-                                storyEditorCover = stored.metadata.cover
-                                storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
-                                storyEditorAudioActions.load(stored)
-                                storyEditorState.loadDecisions(stored)
-                                storyEditorAwardedObjectByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObject }.getOrNull() }
-                                storyEditorAwardedObjectsByScene = stored.metadata.scenes.associate { scene ->
-                                    scene to runCatching {
-                                        val metadata = StoryRepository.readScene(stored, scene).metadata
-                                        (listOfNotNull(metadata.awardedObject) + metadata.awardedObjects).distinct()
-                                    }.getOrDefault(emptyList())
-                                }
-                                storyEditorUnlockedObjectsByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.unlockedObjects }.getOrDefault(emptyList()) }
-                                storedStoryObjects = ObjectRepository.list(context)
-                                storyEditorCollection = storyCollections.firstOrNull { StoryRepository.collectionFolderName(it) == stored.collection } ?: stored.collection
-                                storyEditorScenes = stored.metadata.scenes.map { it.replace('_', ' ') }
-                                editingStoryFolder = stored.folderName
-                                editingStoryCollectionFolder = stored.collection
-                                storyEditorSelectedScene = ""
-                                storyEditorMessage = ""
-                                parentSection = "stories-editor"
-                            },
-                            onCreateStory = {
-                                storyEditorState.resetStructure(listOf("Escena 1"))
-                                storyEditorState.requiredAccessObjects.value = emptyList()
-                                storyEditorTitle = ""
-                                storyEditorCover = null
-                                storyEditorIllustrations = emptyMap()
-                                storyEditorAudioActions.reset()
-                                storyEditorState.resetDecisions()
-                                storyEditorAwardedObjectByScene = emptyMap()
-                                storyEditorAwardedObjectsByScene = emptyMap()
-                                storyEditorUnlockedObjectsByScene = emptyMap()
-                                storedStoryObjects = ObjectRepository.list(context)
-                                storyEditorCollection = ""
-                                storyEditorSummary = ""
-                                storyEditorSceneText = ""
-                                storyEditorScenes = listOf("Escena 1")
-                                storyEditorSelectedScene = ""
-                                editingStoryFolder = null
-                                editingStoryCollectionFolder = null
-                                storyEditorMessage = ""
-                                parentSection = "stories-editor"
-                            }
+                    "stories-library", "stories-editor", "stories-structure", "stories-scene-editor", "stories-collections" -> {
+                        storyManagementItems(
+                            section = parentSection,
+                            context = context,
+                            preferences = preferences,
+                            parentSectionState = parentSectionState,
+                            storedStoryObjectsState = storedStoryObjectsState,
+                            storyCollectionsState = storyCollectionsState,
+                            storyEditorState = storyEditorState,
+                            storyEditorAudioActions = storyEditorAudioActions,
+                            storyAudioSettingsState = storyAudioSettingsState,
+                            storyEditorCoverRevisionState = storyEditorCoverRevisionState,
+                            storyEditorIllustrationRevisionState = storyEditorIllustrationRevisionState,
+                            storyCollectionCoverRevisionState = storyCollectionCoverRevisionState,
+                            editingStoryCollectionState = editingStoryCollectionState,
+                            selectedStoriesCollectionState = selectedStoriesCollectionState,
+                            onPickStoryCover = onPickStoryCover,
+                            onPickStoryIllustration = onPickStoryIllustration,
+                            onChooseStoryCollectionCover = onChooseStoryCollectionCover,
+                            persistStoryDraft = { persistStoryDraft() }
                         )
-                    }
-                    "stories-editor" -> {
-                        item {
-                            StoryEditorScreen(
-                                state = storyEditorState,
-                                collections = storyCollections,
-                                objects = storedStoryObjects,
-                                coverRevision = storyEditorCoverRevision,
-                                onPickCover = {
-                                    preferences.edit().putBoolean("content_picker_active", true).apply()
-                                    storyCoverPicker.launch(arrayOf("image/*"))
-                                },
-                                onOpenScene = { scene ->
-                                    storedStoryObjects = ObjectRepository.list(context)
-                                    parentSection = "stories-scene-editor"
-                                },
-                                onOpenStructure = { parentSection = "stories-structure" },
-                                onBackToLibrary = { parentSection = "stories-library" }
-                            )
-                        }
-                    }
-                    "stories-structure" -> {
-                        item {
-                            StoryStructureScreen(
-                                scenes = storyEditorScenes,
-                                sceneSummaries = storyEditorScenes.associateWith { scene ->
-                                    if (scene == storyEditorSelectedScene) {
-                                        storyEditorSummary
-                                    } else {
-                                        val folder = runCatching { StoryRepository.sceneFolderName(scene) }.getOrNull()
-                                        val stored = storedStories.firstOrNull {
-                                            it.folderName == editingStoryFolder && it.collection == editingStoryCollectionFolder
-                                        }
-                                        if (folder != null && stored != null) {
-                                            runCatching { StoryRepository.readScene(stored, folder).metadata.illustrationSummary }.getOrNull().orEmpty()
-                                        } else ""
-                                    }
-                                },
-                                initialConnections = storyEditorState.connections.value,
-                                initialConditions = storyEditorState.connectionConditions.value,
-                                initialAlternatives = storyEditorState.connectionAlternatives.value,
-                                decisionOptionsByScene = storyEditorState.decisionOptionsByScene.value,
-                                decisionPromptsByScene = storyEditorState.decisionPromptByScene.value,
-                                initialStartScene = storyEditorState.startScene.value,
-                                availableObjects = storedStoryObjects,
-                                message = storyEditorMessage,
-                                onSave = { connections, conditions, alternatives, startScene ->
-                                    storyEditorState.connections.value = connections
-                                    storyEditorState.connectionConditions.value = conditions
-                                    storyEditorState.connectionAlternatives.value = alternatives
-                                    storyEditorState.startScene.value = startScene
-                                    if (persistStoryDraft() != null) {
-                                        parentSection = "stories-editor"
-                                        true
-                                    } else false
-                                },
-                                onCancel = { parentSection = "stories-editor" }
-                            )
-                        }
-                    }
-                    "stories-scene-editor" -> {
-                        item {
-                            StorySceneEditorContent(
-                                state = storyEditorState,
-                                storyAmbientDuringNarration = storyAudioSettingsState.volume,
-                                illustrationRevision = storyEditorIllustrationRevision,
-                                onPickIllustration = {
-                                    preferences.edit().putBoolean("content_picker_active", true).apply()
-                                    storyIllustrationPicker.launch(arrayOf("image/*"))
-                                },
-                                onPickAmbient = storyEditorAudioActions.onPickAmbient,
-                                onPickNarration = storyEditorAudioActions.onPickNarration,
-                                onBackToMap = { parentSection = "stories-editor" }
-                            )
-                        }
-                    }
-                    "stories-collections" -> {
-                        item {
-                            StoryCollectionsScreen(
-                                context = context,
-                                collections = storyCollections,
-                                draft = storyCollectionDraft,
-                                message = storyCollectionMessage,
-                                editingCollection = editingStoryCollection,
-                                disabledCollections = disabledStoryCollections,
-                                coverRevision = storyCollectionCoverRevision,
-                                collectionToDelete = storyCollectionToDelete,
-                                onDraftChange = { storyCollectionDraft = NameRules.filterInput(it) },
-                                onAddCollection = { storyCollectionsState.addCollection() },
-                                onToggleEditing = { name ->
-                                    editingStoryCollection = if (editingStoryCollection == name) null else name
-                                },
-                                onToggleCollection = { name -> storyCollectionsState.toggleCollection(name) },
-                                onChooseCover = { name ->
-                                    pendingStoryCollectionCover = name
-                                    preferences.edit().putBoolean("content_picker_active", true).apply()
-                                    storyCollectionCoverPicker.launch(arrayOf("image/*"))
-                                },
-                                onRemoveCover = { name ->
-                                    StoryRepository.removeCollectionCover(context, StoryRepository.collectionFolderName(name))
-                                    storyCollectionCoverRevision++
-                                    storyCollectionMessage = "Portada de «$name» eliminada."
-                                },
-                                onDeleteAndStories = { name ->
-                                    runCatching {
-                                        storyCollectionsState.deleteCollection(name)
-                                        storedStories = StoryRepository.list(context)
-                                        if (selectedStoriesCollection == StoryRepository.collectionFolderName(name)) {
-                                            selectedStoriesCollection = null
-                                        }
-                                        editingStoryCollection = null
-                                    }.onFailure {
-                                        storyCollectionMessage = it.message ?: "No se pudo eliminar la colección."
-                                    }
-                                },
-                                onRequestDelete = { name -> storyCollectionsState.requestDelete(name) },
-                                onCancelDelete = { storyCollectionsState.cancelDelete() }
-                            )
-                        }
                     }
                     "stories-objects", "stories-object-library", "stories-object-store",
                     "stories-object-create", "stories-object-collection", "stories-object-inventory" -> {
