@@ -1737,8 +1737,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 else -> null
             }
             if (instruction != null && ExerciseVoiceManager.shouldPlay(context, instruction) &&
-                ExerciseVoiceManager.markInstructionPlayed(context, instruction)
-            ) ExerciseVoiceManager.playLatest(context, instruction)
+                !ExerciseVoiceManager.hasPlayedInstruction(context, instruction) &&
+                ExerciseVoiceManager.playLatest(context, instruction)
+            ) ExerciseVoiceManager.markInstructionPlayed(context, instruction)
         }
     }
 
