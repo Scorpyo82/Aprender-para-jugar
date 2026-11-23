@@ -24,7 +24,7 @@ def read_u4(data, pos):
 
 def parse_class(path):
     data = path.read_bytes()
-    if data[:4] != b"\\xca\\xfe\\xba\\xbe":
+    if data[:4] != b"\xca\xfe\xba\xbe":
         raise ValueError(f"Not a JVM class file: {path}")
     pos = 8
     cp_count, pos = read_u2(data, pos)
