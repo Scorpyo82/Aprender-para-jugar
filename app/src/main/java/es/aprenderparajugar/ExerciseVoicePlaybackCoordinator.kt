@@ -60,6 +60,10 @@ internal fun ExerciseVoicePlaybackCoordinator(
                         ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_difficulty_${sequenceChosenDifficulty.toVoiceDifficultyKey()}" }
                     else ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_sequences_${sequenceChosenCategory.toVoiceKey()}" }
                 }
+                "stories" -> {
+                    decision = "stories"
+                    voice = ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_stories" }
+                }
                 else -> { decision = null; voice = null }
             }
 
