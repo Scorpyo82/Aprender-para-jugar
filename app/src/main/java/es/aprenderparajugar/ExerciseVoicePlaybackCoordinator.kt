@@ -22,10 +22,12 @@ internal fun ExerciseVoicePlaybackCoordinator(
     sequenceType: String?,
     appInForeground: Boolean
 ) {
-    // Locuciones de decisión: una nueva elección sustituye inmediatamente a la anterior.
+    // Un único efecto ordena las locuciones de navegación y las instrucciones.
+    // Así, el stop() al abandonar un menú no puede cancelar la instrucción que
+    // acaba de iniciarse al entrar en el ejercicio.
     LaunchedEffect(
-        screen, difficulty, wordSelectedDifficulty, sequenceChosenCategory, sequenceChosenDifficulty,
-        appInForeground
+        screen, difficulty, wordSelectedDifficulty, sequenceChosenCategory,
+        sequenceChosenDifficulty, sequenceType, appInForeground
     ) {
         if (!appInForeground || screen == "story-player") {
             ExerciseVoiceManager.stop()
@@ -60,31 +62,30 @@ internal fun ExerciseVoicePlaybackCoordinator(
                 }
                 else -> { decision = null; voice = null }
             }
-            if (decision != null && decision != previous) {
-                preferences.edit().putString("exercise_voice_last_decision", decision).apply()
-                if (voice != null) ExerciseVoiceManager.playLatest(context, voice)
-            } else if (decision == null) {
-                ExerciseVoiceManager.stop()
-            }
-        }
-    }
 
-    // Cada instrucción se reproduce automáticamente una sola vez por modalidad/tipo.
-    LaunchedEffect(screen, sequenceType, appInForeground) {
-        if (appInForeground) {
-            val instruction = when (screen) {
-                "exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }
-                "word-exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }
-                "sequence-game" -> {
-                    val typeKey = sequenceType?.toVoiceKey()
-                    ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_sequences_$typeKey" }
+            if (decision != null) {
+                if (decision != previous) {
+                    preferences.edit().putString("exercise_voice_last_decision", decision).apply()
+                    if (voice != null) ExerciseVoiceManager.playLatest(context, voice)
                 }
-                else -> null
+            } else {
+                // Al entrar en un ejercicio, detener el mensaje de selección anterior
+                // antes de intentar reproducir la instrucción correspondiente.
+                ExerciseVoiceManager.stop()
+                val instruction = when (screen) {
+                    "exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }
+                    "word-exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }
+                    "sequence-game" -> {
+                        val typeKey = sequenceType?.toVoiceKey()
+                        ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_sequences_$typeKey" }
+                    }
+                    else -> null
+                }
+                if (instruction != null && ExerciseVoiceManager.shouldPlay(context, instruction) &&
+                    !ExerciseVoiceManager.hasPlayedInstruction(context, instruction) &&
+                    ExerciseVoiceManager.playLatest(context, instruction)
+                ) ExerciseVoiceManager.markInstructionPlayed(context, instruction)
             }
-            if (instruction != null && ExerciseVoiceManager.shouldPlay(context, instruction) &&
-                !ExerciseVoiceManager.hasPlayedInstruction(context, instruction) &&
-                ExerciseVoiceManager.playLatest(context, instruction)
-            ) ExerciseVoiceManager.markInstructionPlayed(context, instruction)
         }
     }
 }
