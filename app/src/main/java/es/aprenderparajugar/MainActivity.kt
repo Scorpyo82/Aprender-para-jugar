@@ -1925,10 +1925,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         )
                     }
                     "library-transfer" -> {
-                        item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Elige qué operación quieres realizar. Cada proceso tiene su propia pantalla para mantener separadas la importación y la exportación.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable {
+                        libraryTransferItems(
+                            transferMessage = transferMessage,
+                            onExport = {
                                 transferExportCategories = ContentStorage.Modality.entries.associateWith { modality ->
                                     LibraryPackageManager.categories(context, modality).map { it.directory }.toSet()
                                 }
@@ -1936,51 +1935,22 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 transferExportStories = StoryRepository.list(context).map { "${it.collection}/${it.folderName}" }.toSet()
                                 transferMessage = ""
                                 parentSection = "library-export"
-                            }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("📤", fontSize = 30.sp)
-                                    Column {
-                                        Text("Exportar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        Text("Crear un ZIP con las categorías y modalidades que elijas", color = Color(0xFF667085))
-                                    }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable {
+                            },
+                            onImport = {
                                 transferImportUsageStatistics = false
                                 transferMessage = ""
                                 preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                 unifiedImportLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
-                            }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("📥", fontSize = 30.sp)
-                                    Column {
-                                        Text("Importar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        Text("Seleccionar un ZIP y revisar su contenido antes de incorporarlo", color = Color(0xFF667085))
-                                    }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable {
+                            },
+                            onDelete = {
                                 deleteSelectedItems = emptySet()
                                 deleteExpandedCategories = emptySet()
                                 deleteConfirmArmed = false
                                 deleteDependencySnapshot = null
                                 transferMessage = ""
                                 parentSection = "library-delete"
-                            }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🗑️", fontSize = 30.sp)
-                                    Column {
-                                        Text("Eliminar biblioteca", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
-                                        Text("Borrar Tarjetas, Palabras o Secuencias", color = Color(0xFF667085))
-                                    }
-                                }
                             }
-                        }
-                        if (transferMessage.isNotBlank()) item { Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp) }
+                        )
                     }
                     "library-export" -> {
                         libraryExportContent(
@@ -3668,5 +3638,52 @@ private fun androidx.compose.foundation.lazy.LazyListScope.gameModesItems(
                 Column { Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar y crear cuentos ilustrados", color = Color(0xFF667085)) }
             }
         }
+    }
+}
+
+
+private fun androidx.compose.foundation.lazy.LazyListScope.libraryTransferItems(
+    transferMessage: String,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+    onDelete: () -> Unit
+) {
+    item { Text("Gestionar bibliotecas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+    item { Text("Elige qué operación quieres realizar. Cada proceso tiene su propia pantalla para mantener separadas la importación y la exportación.", fontSize = 14.sp, color = Color(0xFF667085)) }
+    item {
+        Card(Modifier.fillMaxWidth().clickable(onClick = onExport), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("📤", fontSize = 30.sp)
+                Column {
+                    Text("Exportar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Crear un ZIP con las categorías y modalidades que elijas", color = Color(0xFF667085))
+                }
+            }
+        }
+    }
+    item {
+        Card(Modifier.fillMaxWidth().clickable(onClick = onImport), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("📥", fontSize = 30.sp)
+                Column {
+                    Text("Importar bibliotecas", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Seleccionar un ZIP y revisar su contenido antes de incorporarlo", color = Color(0xFF667085))
+                }
+            }
+        }
+    }
+    item {
+        Card(Modifier.fillMaxWidth().clickable(onClick = onDelete), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("🗑️", fontSize = 30.sp)
+                Column {
+                    Text("Eliminar biblioteca", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB3261E))
+                    Text("Borrar Tarjetas, Palabras o Secuencias", color = Color(0xFF667085))
+                }
+            }
+        }
+    }
+    if (transferMessage.isNotBlank()) item {
+        Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp)
     }
 }
