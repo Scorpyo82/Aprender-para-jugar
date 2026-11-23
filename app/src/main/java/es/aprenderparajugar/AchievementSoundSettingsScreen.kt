@@ -122,6 +122,7 @@ internal fun AchievementSoundSettingsScreen() {
     DisposableEffect(Unit) { onDispose { stopRecording(false) } }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ExerciseVoiceSettingsSection()
         Text("Efectos y notificaciones", style = MaterialTheme.typography.headlineSmall)
         Text("Independientes de la música de fondo. En los cuentos, la narración se pausa mientras suena cada efecto y continúa desde el mismo punto al terminar.")
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
