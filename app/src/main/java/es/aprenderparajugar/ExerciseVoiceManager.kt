@@ -132,7 +132,10 @@ internal object ExerciseVoiceManager {
 
     /** Starts immediately; a newer call always releases and replaces the previous voice. */
     fun playLatest(context: Context, item: VoiceItem, preview: Boolean = false): Boolean {
-        if (!preview && !shouldPlay(context, item)) return false
+        // La vista previa puede ignorar el interruptor individual del elemento,
+        // pero nunca los controles generales: maestro y grupo siempre prevalecen.
+        if (!isMasterEnabled(context) || !isGroupEnabled(context, item.group)) return false
+        if (!preview && !isItemEnabled(context, item)) return false
         val token = generation.incrementAndGet()
         musicRestoreRunnable?.let(handler::removeCallbacks)
         musicRestoreRunnable = null
