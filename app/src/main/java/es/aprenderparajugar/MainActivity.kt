@@ -2997,16 +2997,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             storedStories.firstOrNull { it.directory.absolutePath == path }
                 ?: runCatching { StoryRepository.read(File(path)) }.getOrNull()
         }
-        if (selectedStory == null) {
-            screen = "stories"
-        } else if (selectedStory.metadata.requiredAccessObjects.none { !InventoryRepository.contains(context, it) }) {
-            screen = "story-cover"
-        } else {
-            StoryAccessRequirementsScreen(
-                story = selectedStory,
-                onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
-            )
-        }
+        StoryAccessRoute(
+            story = selectedStory,
+            hasMissingAccessObjects = selectedStory?.metadata?.requiredAccessObjects?.any {
+                !InventoryRepository.contains(context, it)
+            } == true,
+            onMissingStory = { screen = "stories" },
+            onAccessAlreadyGranted = { screen = "story-cover" },
+            onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
+        )
     } else if (screen == "story-player") {
         val selectedStory = selectedStoryPath?.let { path ->
             storedStories.firstOrNull { it.directory.absolutePath == path }
@@ -3342,6 +3341,26 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
 }
 
 
+
+@Composable
+private fun StoryAccessRoute(
+    story: StoredStory?,
+    hasMissingAccessObjects: Boolean,
+    onMissingStory: () -> Unit,
+    onAccessAlreadyGranted: () -> Unit,
+    onBack: () -> Unit
+) {
+    if (story == null) {
+        onMissingStory()
+    } else if (!hasMissingAccessObjects) {
+        onAccessAlreadyGranted()
+    } else {
+        StoryAccessRequirementsScreen(
+            story = story,
+            onBack = onBack
+        )
+    }
+}
 
 @Composable
 private fun StoryCoverRoute(
