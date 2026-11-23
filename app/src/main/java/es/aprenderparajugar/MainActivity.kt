@@ -3359,6 +3359,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
 
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WordExerciseScreen(
     hasTarget: Boolean,
