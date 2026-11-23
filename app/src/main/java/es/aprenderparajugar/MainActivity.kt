@@ -684,20 +684,6 @@ private fun AprenderApp() {
     var pendingCameraSequenceIndex by remember { mutableIntStateOf(-1) }
     var sequenceAlternativeDraft by remember { mutableStateOf("") }
     var sequenceEditorMessage by remember { mutableStateOf("") }
-    val onCreateSequenceExercise = {
-        sequenceEditingIndex = -1; sequenceTitleDraft = ""
-        sequenceCategoryDraft = ""; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
-        sequenceCardsDraft = listOf("", "", ""); sequenceCardPicturesDraft = listOf("", "", "")
-        sequenceAlternativeDraft = ""; sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
-    }
-    val onEditSequenceExercise: (Int, SequenceExercise) -> Unit = { index, exercise ->
-        sequenceEditingIndex = index; sequenceTitleDraft = exercise.title
-        sequenceCategoryDraft = exercise.category; sequenceTypeDraft = exercise.type; sequenceDifficultyDraft = exercise.difficulty
-        sequenceCardsDraft = exercise.cards
-        sequenceCardPicturesDraft = exercise.cards.indices.map { cardIndex -> exercise.pictures.getOrNull(cardIndex).orEmpty().ifBlank { defaultSequencePicture(cardIndex) } }
-        sequenceAlternativeDraft = exercise.alternatives.joinToString("\n")
-        sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
-    }
     val sequenceGameState = remember(preferences) { SequenceGameState(preferences) }
     var sequencePlayingExercise by sequenceGameState.playingExercise
     var sequencePlayOrder by sequenceGameState.playOrder
@@ -909,6 +895,20 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var permissionRecoveryEntryPending by remember { mutableStateOf(false) }
     val parentSectionState = remember { mutableStateOf("menu") }
     var parentSection by parentSectionState
+    val onCreateSequenceExercise = {
+        sequenceEditingIndex = -1; sequenceTitleDraft = ""
+        sequenceCategoryDraft = ""; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
+        sequenceCardsDraft = listOf("", "", ""); sequenceCardPicturesDraft = listOf("", "", "")
+        sequenceAlternativeDraft = ""; sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
+    }
+    val onEditSequenceExercise: (Int, SequenceExercise) -> Unit = { index, exercise ->
+        sequenceEditingIndex = index; sequenceTitleDraft = exercise.title
+        sequenceCategoryDraft = exercise.category; sequenceTypeDraft = exercise.type; sequenceDifficultyDraft = exercise.difficulty
+        sequenceCardsDraft = exercise.cards
+        sequenceCardPicturesDraft = exercise.cards.indices.map { cardIndex -> exercise.pictures.getOrNull(cardIndex).orEmpty().ifBlank { defaultSequencePicture(cardIndex) } }
+        sequenceAlternativeDraft = exercise.alternatives.joinToString("\n")
+        sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
+    }
     androidx.compose.runtime.LaunchedEffect(appInForeground, screen, rewardMode) {
         // Detect revoked prerequisites, pause Time mode and inform the parent.
         // Never open the permission wizard automatically: the parent chooses when to continue.
