@@ -5537,6 +5537,13 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 sequenceSelectedOrder = emptyList()
                 sequencePlayMessage = ""
             },
+            onReplayInstruction = {
+                sequencePlayingExercise?.type?.toVoiceKey()?.let { typeKey ->
+                    ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_sequences_$typeKey" }?.let {
+                        ExerciseVoiceManager.playLatest(context, it, preview = true)
+                    }
+                }
+            },
             onSelectCard = { cardIndex ->
                 val exercise = sequencePlayingExercise
                 if (exercise != null && sequenceGameState.selectCard(exercise, cardIndex)) {
