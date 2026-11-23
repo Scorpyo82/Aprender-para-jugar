@@ -73,7 +73,7 @@ internal fun RewardsSettingsContent(
                                 minimumPlayMinutes.value = (minimumPlayMinutes.value - 1).coerceAtLeast(0)
                                 preferences.edit().putInt("minimum_play_minutes", minimumPlayMinutes.value).apply()
                             }, enabled = !rewardMode.isStars && minimumPlayMinutes.value > 0) { Text("−") }
-                            Text("$minimumPlayMinutes.value min", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = if (rewardMode.isStars) Color.Gray else Color.Unspecified)
+                            Text("${minimumPlayMinutes.value} min", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = if (rewardMode.isStars) Color.Gray else Color.Unspecified)
                             OutlinedButton(onClick = {
                                 minimumPlayMinutes.value = (minimumPlayMinutes.value + 1).coerceAtMost(60)
                                 preferences.edit().putInt("minimum_play_minutes", minimumPlayMinutes.value).apply()
