@@ -47,6 +47,7 @@ internal fun SequenceGameScreen(
     exerciseFontFamily: FontFamily,
     rewardMessage: String,
     onBack: () -> Unit,
+    onReplayInstruction: () -> Unit = {},
     onSelectCard: (Int) -> Unit
 ) {
     if (exercise == null) {
@@ -70,7 +71,10 @@ internal fun SequenceGameScreen(
                 roundsLimit = roundsStatus?.limit,
                 difficulty = exercise.difficulty
             )
-            OutlinedButton(onClick = onBack) { Text("← Volver a ejercicios") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = onBack) { Text("← Volver a ejercicios") }
+                OutlinedButton(onClick = onReplayInstruction) { Text("🔊") }
+            }
             Text(exercise.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
             Text(
                 if (finished) "¡Muy bien! Has completado la secuencia." else "Toca las tarjetas en el orden en que ocurren.",
