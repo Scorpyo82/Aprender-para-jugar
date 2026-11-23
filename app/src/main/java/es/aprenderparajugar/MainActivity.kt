@@ -2610,23 +2610,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         )
                     }
-ransferImportStories.isNotEmpty()) &&
-                                    transferExerciseConflicts.all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
-                                    transferObjectConflicts.all { it.incoming.folderName in transferObjectConflictDecisions } &&
-                                    transferStoryNameConflicts.all { transferStoryConflictDecisions[it.first.key] == "overwrite" },
-                                    modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
-                            }
-                            item { OutlinedButton(onClick = {
-                                transferPackage = null
-                                remoteLibraryScope.launch {
-                                    withContext(Dispatchers.IO) { LibraryPackageManager.discard(info) }
-                                }
-                                parentSection = if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"
-                                transferRemoteLibraryName = null
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
-                        }
-                        if (transferMessage.isNotBlank()) item { Text(transferMessage, fontSize = 14.sp, color = if (transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)) }
-                    }
                     "active-games" -> {
                         item { Text("Actividades activas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                         item { Text("Desactiva los modos que no quieras incluir en la versión de pruebas. Los modos bloqueados mostrarán un candado y no se podrán abrir.", fontSize = 14.sp, color = Color(0xFF667085)) }
