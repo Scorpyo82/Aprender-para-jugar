@@ -1775,130 +1775,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         }
     }
 
-    if (screen == "pin-setup") {
-        BackHandler(enabled = true) { }
-        PinSetupScreen(
-            pinDraft = newPinDraft,
-            confirmationDraft = initialPinConfirmDraft,
-            error = initialPinError,
-            onPinDraftChange = { newPinDraft = it; initialPinError = "" },
-            onConfirmationDraftChange = { initialPinConfirmDraft = it; initialPinError = "" },
-            onSave = {
-                when {
-                    newPinDraft.length != 4 -> initialPinError = "El PIN debe tener exactamente 4 cifras."
-                    initialPinConfirmDraft.length != 4 -> initialPinError = "Confirma el PIN de 4 cifras."
-                    newPinDraft != initialPinConfirmDraft -> initialPinError = "Los PIN no coinciden."
-                    else -> {
-                        pinStored = newPinDraft
-                        preferences.edit()
-                            .putString("parent_pin", pinStored)
-                            .putBoolean("parent_pin_configured", true)
-                            .commit()
-                        newPinDraft = ""
-                        initialPinConfirmDraft = ""
-                        initialPinError = ""
-                        tourReturnTarget = if (firstLaunchNeedsSetup) "parent-setup" else "home"
-                        screen = "tour"
-                    }
-                }
-            }
-        )
-    } else if (screen == "tour") {
-        WelcomeTourScreen(
-            selectedMode = rewardMode,
-            onModeSelected = { selected ->
-                rewardMode = selected
-                if (selected.isStars) {
-                    pendingTimeModeActivation = false
-                    preferences.edit()
-                        .putBoolean("pending_time_mode_activation", false)
-                        .putString(RewardMode.PREFERENCE_KEY, "stars")
-                        .apply()
-                } else if (areMandatoryDeviceSetupPermissionsReady(context)) {
-                    pendingTimeModeActivation = false
-                    preferences.edit()
-                        .putBoolean("pending_time_mode_activation", false)
-                        .putString(RewardMode.PREFERENCE_KEY, "time")
-                        .apply()
-                } else {
-                    pendingTimeModeActivation = true
-                    preferences.edit()
-                        .putBoolean("pending_time_mode_activation", true)
-                        .putString(RewardMode.PREFERENCE_KEY, "stars")
-                        .apply()
-                }
-                if (selected.isStars) {
-                    val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
-                    if (activeDeadline > 0L) {
-                        balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
-                    }
-                    preferences.edit()
-                        .putInt("balance_seconds", balanceSeconds)
-                        .putLong("play_deadline_ms", 0L)
-                        .putBoolean("play_session_authorized", false)
-                        .putBoolean("play_paused_for_screen_lock", false)
-                        .apply()
-                    context.stopService(Intent(context, PlayTimeService::class.java))
-                }
-            },
-            onFinish = { finishWelcomeTour() }
-        )
-    } else if (screen == "exit-pin" && !rewardMode.isStars) {
-        PinGateScreen(
-            title = "🔒 Salir de la aplicación",
-            instruction = "Introduce el PIN familiar para confirmar la salida.",
-            pin = pinEntry,
-            error = pinError,
-            confirmLabel = "Confirmar salida",
-            onPinChange = { pinEntry = it.filter(Char::isDigit).take(4); pinError = false },
-            onConfirm = {
-                if (pinEntry == pinStored) {
-                    preferences.edit()
-                        .putBoolean("manual_exit_allowed", true)
-                        .putBoolean("parent_area_active", false)
-                        .putLong("play_deadline_ms", 0L)
-                        .apply()
-                    context.stopService(Intent(context, PlayTimeService::class.java))
-                    (context as? ComponentActivity)?.finishAndRemoveTask()
-                } else {
-                    pinError = true
-                }
-            },
-            onCancel = { screen = "home"; pinEntry = ""; pinError = false }
-        )
-    } else if (screen == "parent-pin") {
-        PinGateScreen(
-            title = "🔐 Zona de familias",
-            instruction = "Introduce el PIN para acceder a los controles.",
-            pin = pinEntry,
-            error = pinError,
-            confirmLabel = "Entrar",
-            warning = "Si olvidas el PIN, tendrás que restablecer la aplicación borrando sus datos desde los ajustes de Android. Esta operación elimina el contenido guardado localmente; conserva copias de tus bibliotecas.",
-            onPinChange = { pinEntry = it.filter(Char::isDigit).take(4); pinError = false },
-            onConfirm = {
-                if (pinEntry == pinStored) {
-                    parentSessionAuthenticated = true
-                    preferences.edit().putBoolean("parent_session_authenticated", true).putBoolean("parent_area_active", true).apply()
-                    screen = "parent"
-                    if (permissionRecoveryEntryPending) {
-                        pendingTimeModeActivation = false
-                        permissionRecoveryNotice = true
-                        preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", true).apply()
-                        parentSection = "device-setup-wizard"
-                        permissionRecoveryEntryPending = false
-                    } else {
-                        parentSection = "menu"
-                    }
-                    pinEntry = ""
-                    pinError = false
-                } else {
-                    pinError = true
-                }
-            },
-            onCancel = { screen = "home"; permissionRecoveryEntryPending = false; pinEntry = ""; pinError = false },
-            cancelLabel = "Volver al inicio"
-        )
-    } else if (screen == "parent") {
+
+    @Composable
+    fun ParentAreaScreen() {
         LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (parentSection != "menu") {
                 item { TextButton(onClick = { if (parentSection == "device-setup-wizard") { if (pendingTimeModeActivation) { rewardMode = RewardMode.STARS; preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars").apply() }; pendingTimeModeActivation = false; preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", false).apply(); parentSection = "menu" } else { parentSection = when (parentSection) { "game-modes" -> "menu"; "active-games", "rewards", "security", "device-setup", "device-setup-wizard", "about", "library-transfer", "typography" -> "menu"; "quota-system" -> "rewards"; "music", "stories-audio", "achievement-sounds" -> "sound-settings"; "library-export", "library-delete" -> "library-transfer"; "library-import" -> if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"; "statistics-menu" -> "menu"; "learning-stats", "usage-stats" -> "statistics-menu"; "cards-settings", "sequences-settings", "words-settings", "stories-settings" -> "game-modes"; "stories-content-settings", "stories-objects" -> "stories-settings"; "stories-library", "stories-collections" -> "stories-content-settings"; "stories-editor" -> "stories-library"; "stories-structure" -> "stories-editor"; "stories-scene-editor" -> "stories-editor"; "stories-object-create", "stories-object-collection", "stories-object-inventory" -> "stories-objects"; "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> "sequences-settings"; "sequence-editor-temporal" -> "sequence-library"; "sequence-library", "sequence-categories" -> "sequences-settings"; "sequence-library-temporal", "sequence-categories-temporal" -> "sequence-type-temporal"; "sequence-library-procesos", "sequence-categories-procesos" -> "sequence-type-procesos"; "sequence-library-causa", "sequence-categories-causa" -> "sequence-type-causa"; "sequence-library-ciclos", "sequence-categories-ciclos" -> "sequence-type-ciclos"; "words", "categories" -> "cards-settings"; "word-library", "word-categories" -> "words-settings"; else -> "menu" } } }) { Text(if (parentSection == "quota-system") "← Recompensas y límites" else if (parentSection == "game-modes") "← Control parental" else if (parentSection == "music" || parentSection == "stories-audio" || parentSection == "achievement-sounds") "← Ajustes de sonido" else if (parentSection == "cards-settings" || parentSection == "sequences-settings" || parentSection == "words-settings") "← Modos de juego" else if (parentSection == "stories-settings") "← Modos de juego" else if (parentSection == "stories-content-settings" || parentSection == "stories-objects") "← Cuentos" else if (parentSection == "stories-library" || parentSection == "stories-collections") "← Gestión de cuentos" else if (parentSection == "stories-object-create" || parentSection == "stories-object-collection" || parentSection == "stories-object-inventory") "← Objetos" else if (parentSection.startsWith("sequence-type-")) "← Secuencias" else if (parentSection == "sequence-editor-temporal") "← Biblioteca" else if (parentSection == "sequence-library" || parentSection == "sequence-categories") "← Secuencias" else if (parentSection.startsWith("sequence-library-") || parentSection.startsWith("sequence-categories-")) "← Tipo de secuencia" else if (parentSection == "words" || parentSection == "categories") "← Tarjetas" else if (parentSection == "word-library" || parentSection == "word-categories") "← Palabras" else if (parentSection == "library-export" || parentSection == "library-import" || parentSection == "library-delete") if (parentSection == "library-import" && transferRemoteLibraryName != null) "← Catálogo" else "← Bibliotecas" else if (parentSection == "learning-stats" || parentSection == "usage-stats") "← Estadísticas" else "← Control parental") } }
@@ -3081,6 +2960,133 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 parentSection = "menu"
             }, modifier = Modifier.fillMaxWidth()) { Text("Salir de configuración") } }
         }
+    }
+
+    if (screen == "pin-setup") {
+        BackHandler(enabled = true) { }
+        PinSetupScreen(
+            pinDraft = newPinDraft,
+            confirmationDraft = initialPinConfirmDraft,
+            error = initialPinError,
+            onPinDraftChange = { newPinDraft = it; initialPinError = "" },
+            onConfirmationDraftChange = { initialPinConfirmDraft = it; initialPinError = "" },
+            onSave = {
+                when {
+                    newPinDraft.length != 4 -> initialPinError = "El PIN debe tener exactamente 4 cifras."
+                    initialPinConfirmDraft.length != 4 -> initialPinError = "Confirma el PIN de 4 cifras."
+                    newPinDraft != initialPinConfirmDraft -> initialPinError = "Los PIN no coinciden."
+                    else -> {
+                        pinStored = newPinDraft
+                        preferences.edit()
+                            .putString("parent_pin", pinStored)
+                            .putBoolean("parent_pin_configured", true)
+                            .commit()
+                        newPinDraft = ""
+                        initialPinConfirmDraft = ""
+                        initialPinError = ""
+                        tourReturnTarget = if (firstLaunchNeedsSetup) "parent-setup" else "home"
+                        screen = "tour"
+                    }
+                }
+            }
+        )
+    } else if (screen == "tour") {
+        WelcomeTourScreen(
+            selectedMode = rewardMode,
+            onModeSelected = { selected ->
+                rewardMode = selected
+                if (selected.isStars) {
+                    pendingTimeModeActivation = false
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", false)
+                        .putString(RewardMode.PREFERENCE_KEY, "stars")
+                        .apply()
+                } else if (areMandatoryDeviceSetupPermissionsReady(context)) {
+                    pendingTimeModeActivation = false
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", false)
+                        .putString(RewardMode.PREFERENCE_KEY, "time")
+                        .apply()
+                } else {
+                    pendingTimeModeActivation = true
+                    preferences.edit()
+                        .putBoolean("pending_time_mode_activation", true)
+                        .putString(RewardMode.PREFERENCE_KEY, "stars")
+                        .apply()
+                }
+                if (selected.isStars) {
+                    val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
+                    if (activeDeadline > 0L) {
+                        balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
+                    }
+                    preferences.edit()
+                        .putInt("balance_seconds", balanceSeconds)
+                        .putLong("play_deadline_ms", 0L)
+                        .putBoolean("play_session_authorized", false)
+                        .putBoolean("play_paused_for_screen_lock", false)
+                        .apply()
+                    context.stopService(Intent(context, PlayTimeService::class.java))
+                }
+            },
+            onFinish = { finishWelcomeTour() }
+        )
+    } else if (screen == "exit-pin" && !rewardMode.isStars) {
+        PinGateScreen(
+            title = "🔒 Salir de la aplicación",
+            instruction = "Introduce el PIN familiar para confirmar la salida.",
+            pin = pinEntry,
+            error = pinError,
+            confirmLabel = "Confirmar salida",
+            onPinChange = { pinEntry = it.filter(Char::isDigit).take(4); pinError = false },
+            onConfirm = {
+                if (pinEntry == pinStored) {
+                    preferences.edit()
+                        .putBoolean("manual_exit_allowed", true)
+                        .putBoolean("parent_area_active", false)
+                        .putLong("play_deadline_ms", 0L)
+                        .apply()
+                    context.stopService(Intent(context, PlayTimeService::class.java))
+                    (context as? ComponentActivity)?.finishAndRemoveTask()
+                } else {
+                    pinError = true
+                }
+            },
+            onCancel = { screen = "home"; pinEntry = ""; pinError = false }
+        )
+    } else if (screen == "parent-pin") {
+        PinGateScreen(
+            title = "🔐 Zona de familias",
+            instruction = "Introduce el PIN para acceder a los controles.",
+            pin = pinEntry,
+            error = pinError,
+            confirmLabel = "Entrar",
+            warning = "Si olvidas el PIN, tendrás que restablecer la aplicación borrando sus datos desde los ajustes de Android. Esta operación elimina el contenido guardado localmente; conserva copias de tus bibliotecas.",
+            onPinChange = { pinEntry = it.filter(Char::isDigit).take(4); pinError = false },
+            onConfirm = {
+                if (pinEntry == pinStored) {
+                    parentSessionAuthenticated = true
+                    preferences.edit().putBoolean("parent_session_authenticated", true).putBoolean("parent_area_active", true).apply()
+                    screen = "parent"
+                    if (permissionRecoveryEntryPending) {
+                        pendingTimeModeActivation = false
+                        permissionRecoveryNotice = true
+                        preferences.edit().putBoolean("pending_time_mode_activation", false).putBoolean("device_setup_in_progress", true).apply()
+                        parentSection = "device-setup-wizard"
+                        permissionRecoveryEntryPending = false
+                    } else {
+                        parentSection = "menu"
+                    }
+                    pinEntry = ""
+                    pinError = false
+                } else {
+                    pinError = true
+                }
+            },
+            onCancel = { screen = "home"; permissionRecoveryEntryPending = false; pinEntry = ""; pinError = false },
+            cancelLabel = "Volver al inicio"
+        )
+    } else if (screen == "parent") {
+        ParentAreaScreen()
     } else if (screen == "exercise") {
         val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
         val wordCardFontSize = if (isTabletLayout) 44.sp else 32.sp
@@ -3864,7 +3870,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         )
     }
 }
-
 
 
 
