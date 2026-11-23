@@ -2989,21 +2989,24 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
         )
     } else if (screen == "cards-options") {
-        val activeCards = pairs.filter { it.active && it.difficulty == difficulty }
-        val categoryCounts = activeCards.groupingBy { it.category.lowercase() }.eachCount()
-        val cardsQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", difficulty), activeCards.size >= questionCount)
-        val lockedCardDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
-            val hasExercises = pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
-            val status = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", level), hasExercises)
-            hasExercises && status.limit != null && !status.available
-        }.toSet()
-        ExerciseOptionsScreen(title = "Tarjetas", difficulty = difficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = cardsStartMessage.ifBlank { quotaMessage(cardsQuota) },
-            lockedDifficulties = lockedCardDifficulties,
-            surpriseDescription = "Tarjetas de cualquier tema de esta dificultad.", mixDescription = "Combina tarjetas de diferentes temas en la misma partida.",
-            surpriseAvailable = activeCards.size >= questionCount && cardsQuota.available, chooseAvailable = categoryCounts.values.any { it >= questionCount } && cardsQuota.available, mixAvailable = questionCount >= 2 && activeCards.size >= questionCount && categoryCounts.size >= 2 && cardsQuota.available,
-            manualChoiceLocked = manualCategoryLimitReached, manualLimitMessage = if (manualCategoryLimitReached) "Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit)." else "",
-            onBack = { screen = "home"; cardsStartMessage = "" }, onDifficultyChange = { difficulty = it; cardsStartMessage = "" },
-            onSurprise = { startCardsGame("Al azar") }, onChooseTheme = { cardsStartMessage = ""; screen = "category-select" }, onMixThemes = { startCardsGame("Mezcladas") }
+        CardsOptionsRoute(
+            pairs = pairs,
+            difficulty = difficulty,
+            preferences = preferences,
+            questionCount = questionCount,
+            easyReward = easyRewardMinutes,
+            normalReward = normalRewardMinutes,
+            hardReward = hardRewardMinutes,
+            isStarsMode = rewardMode.isStars,
+            startMessage = cardsStartMessage,
+            manualChoiceLocked = manualCategoryLimitReached,
+            manualCategoryUsesToday = manualCategoryUsesToday,
+            dailyManualLimit = dailyManualLimit,
+            onBack = { screen = "home"; cardsStartMessage = "" },
+            onDifficultyChange = { difficulty = it; cardsStartMessage = "" },
+            onSurprise = { startCardsGame("Al azar") },
+            onChooseTheme = { cardsStartMessage = ""; screen = "category-select" },
+            onMixThemes = { startCardsGame("Mezcladas") }
         )
     } else if (screen == "help") {
         HelpScreen(isStarsMode = rewardMode.isStars, onBack = { screen = "home" })
@@ -3840,6 +3843,65 @@ private fun SequenceDifficultyRoute(
         surpriseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available,
         chooseAvailable = sequenceCandidates.isNotEmpty() && sequenceQuota.available,
         mixAvailable = sequenceCategories.size >= 2 && sequenceQuota.available,
+        onBack = onBack,
+        onDifficultyChange = onDifficultyChange,
+        onSurprise = onSurprise,
+        onChooseTheme = onChooseTheme,
+        onMixThemes = onMixThemes
+    )
+}
+
+@Composable
+private fun CardsOptionsRoute(
+    pairs: List<PairItem>,
+    difficulty: String,
+    preferences: android.content.SharedPreferences,
+    questionCount: Int,
+    easyReward: Int,
+    normalReward: Int,
+    hardReward: Int,
+    isStarsMode: Boolean,
+    startMessage: String,
+    manualChoiceLocked: Boolean,
+    manualCategoryUsesToday: Int,
+    dailyManualLimit: Int,
+    onBack: () -> Unit,
+    onDifficultyChange: (String) -> Unit,
+    onSurprise: () -> Unit,
+    onChooseTheme: () -> Unit,
+    onMixThemes: () -> Unit
+) {
+    val activeCards = pairs.filter { it.active && it.difficulty == difficulty }
+    val categoryCounts = activeCards.groupingBy { it.category.lowercase() }.eachCount()
+    val cardsQuota = ExerciseQuotaRepository.status(
+        preferences, ExerciseQuotaRepository.id("cards", difficulty), activeCards.size >= questionCount
+    )
+    val lockedCardDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
+        val hasExercises = pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
+        val status = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("cards", level), hasExercises)
+        hasExercises && status.limit != null && !status.available
+    }.toSet()
+    val quotaText = when {
+        cardsQuota.limit == null -> "Sin límite de intentos."
+        cardsQuota.available -> "Intentos restantes: ${cardsQuota.remaining}/${cardsQuota.limit}."
+        else -> cardsQuota.reason ?: "Dificultad bloqueada."
+    }
+    ExerciseOptionsScreen(
+        title = "Tarjetas",
+        difficulty = difficulty,
+        easyReward = easyReward,
+        normalReward = normalReward,
+        hardReward = hardReward,
+        isStarsMode = isStarsMode,
+        message = startMessage.ifBlank { quotaText },
+        lockedDifficulties = lockedCardDifficulties,
+        surpriseDescription = "Tarjetas de cualquier tema de esta dificultad.",
+        mixDescription = "Combina tarjetas de diferentes temas en la misma partida.",
+        surpriseAvailable = activeCards.size >= questionCount && cardsQuota.available,
+        chooseAvailable = categoryCounts.values.any { it >= questionCount } && cardsQuota.available,
+        mixAvailable = questionCount >= 2 && activeCards.size >= questionCount && categoryCounts.size >= 2 && cardsQuota.available,
+        manualChoiceLocked = manualChoiceLocked,
+        manualLimitMessage = if (manualChoiceLocked) "Has usado las $dailyManualLimit elecciones manuales de hoy ($manualCategoryUsesToday/$dailyManualLimit)." else "",
         onBack = onBack,
         onDifficultyChange = onDifficultyChange,
         onSurprise = onSurprise,
