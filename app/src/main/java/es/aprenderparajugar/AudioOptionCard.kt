@@ -30,6 +30,7 @@ internal fun AudioOptionCard(
     expanded: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     onExpandChange: () -> Unit,
+    checkboxEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     Card(
@@ -58,7 +59,7 @@ internal fun AudioOptionCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Checkbox(checked = enabled, onCheckedChange = onEnabledChange)
+                Checkbox(checked = enabled, onCheckedChange = onEnabledChange, enabled = checkboxEnabled)
             }
             if (expanded) {
                 content()
