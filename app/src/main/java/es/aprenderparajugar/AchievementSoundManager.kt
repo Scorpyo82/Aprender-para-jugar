@@ -13,22 +13,23 @@ internal enum class AchievementSoundEvent(
     val key: String,
     val title: String,
     val defaultResource: Int,
-    val defaultSpeech: String? = null
+    val defaultSpeech: String? = null,
+    val description: String
 ) {
-    OBJECT_ACQUIRED("object_acquired", "Objeto conseguido", R.raw.sound_object_acquired),
-    COLLECTIBLE_ACQUIRED("collectible_acquired", "Coleccionable conseguido", R.raw.sound_collectible_acquired),
-    STORY_COMPLETED("story_completed", "Cuento completado", R.raw.sound_story_completed),
-    REWARD_GRANTED("reward_granted", "Resultado perfecto", R.raw.sound_reward_granted, "¡Lo has hecho genial!"),
-    RESULT_PARTIAL("result_partial", "Resultado parcial", R.raw.sound_result_partial, "¡Buen trabajo! ¡Sigue así!"),
-    RESULT_TRY_AGAIN("result_try_again", "Resultado por mejorar", R.raw.sound_result_try_again, "¡Buen intento! ¡Vamos a practicar juntos!"),
-    ITEM_PURCHASED("item_purchased", "Objeto comprado", R.raw.sound_item_purchased),
-    STORY_UNLOCKED("story_unlocked", "Cuento desbloqueado", R.raw.sound_story_unlocked)
+    OBJECT_ACQUIRED("object_acquired", "Objeto conseguido", R.raw.sound_object_acquired, description = "Se reproduce cuando el niño obtiene un objeto nuevo."),
+    COLLECTIBLE_ACQUIRED("collectible_acquired", "Coleccionable conseguido", R.raw.sound_collectible_acquired, description = "Avisa cuando se consigue un objeto coleccionable."),
+    STORY_COMPLETED("story_completed", "Cuento completado", R.raw.sound_story_completed, description = "Celebra que el niño ha terminado de leer un cuento."),
+    REWARD_GRANTED("reward_granted", "Resultado perfecto", R.raw.sound_reward_granted, "¡Lo has hecho genial!", "Locución para felicitar un ejercicio completado correctamente."),
+    RESULT_PARTIAL("result_partial", "Resultado parcial", R.raw.sound_result_partial, "¡Buen trabajo! ¡Sigue así!", "Locución para reconocer un resultado parcialmente correcto."),
+    RESULT_TRY_AGAIN("result_try_again", "Resultado por mejorar", R.raw.sound_result_try_again, "¡Buen intento! ¡Vamos a practicar juntos!", "Locución de ánimo cuando el ejercicio necesita otro intento."),
+    ITEM_PURCHASED("item_purchased", "Objeto comprado", R.raw.sound_item_purchased, description = "Confirma la compra de un objeto en la tienda."),
+    STORY_UNLOCKED("story_unlocked", "Cuento desbloqueado", R.raw.sound_story_unlocked, description = "Avisa cuando se desbloquea un cuento nuevo.")
 }
 
 internal object AchievementSoundManager {
     private const val PREFS = "aprender_para_jugar"
     private val mutex = Mutex()
-    fun isEnabled(context: Context) = context.getSharedPreferences(PREFS, 0).getBoolean("achievement_sounds_enabled", true)
+    fun isEnabled(context: Context) = context.getSharedPreferences(PREFS, 0).getBoolean("achievement_sounds_enabled", true)\n    fun isEventEnabled(context: Context, event: AchievementSoundEvent) = context.getSharedPreferences(PREFS, 0).getBoolean(eventEnabledKey(event), true)\n    fun setEventEnabled(context: Context, event: AchievementSoundEvent, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean(eventEnabledKey(event), enabled).apply() }
     fun setEnabled(context: Context, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean("achievement_sounds_enabled", enabled).apply() }
     fun customPath(context: Context, event: AchievementSoundEvent): String? =
         context.getSharedPreferences(PREFS, 0).getString(pathKey(event), null)?.takeIf { File(it).isFile }
@@ -54,7 +55,7 @@ internal object AchievementSoundManager {
         return target.absolutePath
     }
     suspend fun play(context: Context, event: AchievementSoundEvent, preview: Boolean = false) {
-        if (!preview && !isEnabled(context)) return
+        if (!preview && (!isEnabled(context) || !isEventEnabled(context, event))) return
         NotificationAudioCoordinator.withNotificationFocus(
             resumeStoryAudio = event != AchievementSoundEvent.STORY_COMPLETED
         ) {
@@ -104,5 +105,5 @@ internal object AchievementSoundManager {
             }
         }
     }
-    private fun pathKey(event: AchievementSoundEvent) = "achievement_sound_path_${event.key}"
+    private fun pathKey(event: AchievementSoundEvent) = "achievement_sound_path_${event.key}"\n    private fun eventEnabledKey(event: AchievementSoundEvent) = "achievement_sound_${event.key}_enabled"
 }
