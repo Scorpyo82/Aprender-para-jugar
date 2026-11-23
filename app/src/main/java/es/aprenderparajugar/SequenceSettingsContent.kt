@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.*
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -197,6 +199,7 @@ internal fun LazyListScope.sequenceSettingsItems(
                     if (visibleExercises.isEmpty()) item { Text("No hay ejercicios que coincidan con estos filtros.", color = Color(0xFF667085)) }
                     visibleExercises.forEach { (index, exercise) ->
                         item {
+                            var pendingSequenceDeletion by remember { mutableStateOf(false) }
                             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (exercise.active) Color.White else Color(0xFFF2F4F7))) {
                                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f).clickable {
@@ -212,13 +215,26 @@ internal fun LazyListScope.sequenceSettingsItems(
                                             sequenceLibraryState.exercises.value = sequenceLibraryState.saveExercises(sequenceLibraryState.exercises.value)
                                         })
                                         Text(if (exercise.active) "Activo" else "Inactivo", fontSize = 11.sp)
-                                        OutlinedButton(onClick = {
+                                        OutlinedButton(onClick = { pendingSequenceDeletion = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text("Eliminar", fontSize = 12.sp) }
+                                    }
+                                }
+
+                            if (pendingSequenceDeletion) {
+                                AlertDialog(
+                                    onDismissRequest = { pendingSequenceDeletion = false },
+                                    title = { Text("Confirmar eliminación") },
+                                    text = { Text("¿Quieres eliminar el ejercicio «" + exercise.title + "» de la biblioteca? Esta acción no se puede deshacer.") },
+                                    confirmButton = {
+                                        TextButton(onClick = {
                                             sequenceLibraryState.exercises.value = sequenceLibraryState.exercises.value.filterIndexed { currentIndex, _ -> currentIndex != index }
                                             sequenceLibraryState.exercises.value = sequenceLibraryState.saveExercises(sequenceLibraryState.exercises.value)
                                             sequenceLibraryState.categoryMessage.value = "Ejercicio eliminado."
-                                        }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text("Eliminar", fontSize = 12.sp) }
-                                    }
-                                }
+                                            pendingSequenceDeletion = false
+                                        }) { Text("Eliminar definitivamente") }
+                                    },
+                                    dismissButton = { TextButton(onClick = { pendingSequenceDeletion = false }) { Text("Cancelar") } }
+                                )
+                            }
                             }
                         }
                     }
