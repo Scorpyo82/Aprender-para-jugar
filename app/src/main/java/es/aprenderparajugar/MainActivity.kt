@@ -1977,19 +1977,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         )
                     }
                     "library-delete" -> {
-                        val modalityCategories = ContentStorage.Modality.entries.associateWith { modality ->
-                            val exercises = ExerciseRepository.list(context, modality)
-                            val prefKey = when (modality) {
-                                ContentStorage.Modality.TARJETAS -> "categories"
-                                ContentStorage.Modality.PALABRAS -> "letter_word_categories_v1"
-                                ContentStorage.Modality.SECUENCIAS -> "sequence_categories_v1"
-                            }
-                            val registered = (preferences.getString(prefKey, "") ?: "").split("|").filter { it.isNotBlank() }
-                            (registered + exercises.map { it.metadata.category }).distinctBy { it.trim().lowercase() }.sortedBy { it.lowercase() }
-                                .map { category -> category to exercises.filter { it.metadata.category.equals(category, true) } }
-                        }
-                        LibraryDeleteScreen(
-                            modalityCategories = modalityCategories,
+                        libraryDeleteItems(
+                            context = context,
+                            preferences = preferences,
                             stories = storedStories,
                             objects = storedStoryObjects,
                             dependencySnapshot = deleteDependencySnapshot,
