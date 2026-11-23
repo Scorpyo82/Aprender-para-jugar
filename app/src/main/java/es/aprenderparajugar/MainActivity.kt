@@ -2708,100 +2708,32 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     } else if (screen == "parent") {
         parentAreaContent()
     } else if (screen == "exercise") {
-        val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
-        val wordCardFontSize = if (isTabletLayout) 44.sp else 32.sp
-        val pictureEmojiFontSize = if (isTabletLayout) 58.sp else 42.sp
-        val pictureImageHeight = if (isTabletLayout) 150.dp else 110.dp
-        val cardPadding = if (isTabletLayout) 24.dp else 18.dp
         val cardsQuotaStatus = ExerciseQuotaRepository.status(
             preferences,
             ExerciseQuotaRepository.id("cards", difficulty),
             pairs.count { it.active && it.difficulty.equals(difficulty, true) } >= questionCount
         )
-        val wordCardOrder = remember(activeExercisePairs) { exercisePairs.shuffled() }
-        val pictureCardOrder = remember(activeExercisePairs) {
-            val shuffled = exercisePairs.shuffled()
-            if (shuffled.size > 1 && shuffled.map { it.word } == wordCardOrder.map { it.word }) shuffled.drop(1) + shuffled.first() else shuffled
-        }
-        Column(
-            modifier = Modifier.fillMaxSize().clipToBounds().verticalScroll(rememberScrollState()).padding(if (isTabletLayout) 28.dp else 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ExerciseStatusBar(
-                balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
-                roundsUsed = cardsQuotaStatus.used,
-                roundsLimit = cardsQuotaStatus.limit,
-                difficulty = difficulty
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63), modifier = Modifier.weight(1f))
-                OutlinedButton(onClick = { ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }?.let { ExerciseVoiceManager.playLatest(context, it, preview = true) } }) { Text("🔊") }
-            }
-            Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    wordCardOrder.forEach { item ->
-                        val isSelected = selected["word"] == item.word
-                        val isResolved = item.word in resolved
-                        Card(
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                if (!isResolved) {
-                                    val pendingPicture = selectedPicture
-                                    if (pendingPicture.isBlank()) {
-                                        if (selected["word"] == item.word) {
-                                            selected = emptyMap()
-                                            feedback = "Selección cancelada."
-                                        } else {
-                                            selected = mapOf("word" to item.word)
-                                            feedback = "Ahora busca el dibujo de «" + item.word + "»."
-                                        }
-                                    } else {
-                                        resolveCardsPair(item.word, pendingPicture)
-                                    }
-                                }
-                            },
-                            colors = CardDefaults.cardColors(
-                                containerColor = when {
-                                    isResolved -> Color(0xFFD9F2D9)
-                                    isSelected -> Color(0xFFFFD66B)
-                                    else -> Color(0xFFF0E8F5)
-                                }
-                            ),
-                            border = if (isSelected) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null
-                        ) {
-                            Text(item.word, Modifier.padding(cardPadding), fontSize = wordCardFontSize, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold, color = Color(0xFF29213B))
-                        }
-                    }
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    pictureCardOrder.forEach { item ->
-                        Card(Modifier.fillMaxWidth().clickable {
-                            val word = selected["word"]
-                            if (word == null) {
-                                if (selectedPicture == item.picture) {
-                                    selectedPicture = ""
-                                    feedback = "Selección cancelada."
-                                } else {
-                                    selectedPicture = item.picture
-                                    feedback = "Has elegido un dibujo. Ahora toca la palabra que le corresponde."
-                                }
-                            } else if (word !in resolved) {
-                                resolveCardsPair(word, item.picture)
-                            }
-                        }, colors = CardDefaults.cardColors(containerColor = when { selectedPicture == item.picture -> Color(0xFFFFD66B); evaluatedPictures[item.picture] == true -> Color(0xFFD9F2D9); evaluatedPictures[item.picture] == false -> Color(0xFFFFDAD6); else -> Color(0xFFF0E8F5) }), border = when { selectedPicture == item.picture -> androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)); evaluatedPictures.containsKey(item.picture) -> androidx.compose.foundation.BorderStroke(3.dp, if (evaluatedPictures[item.picture] == true) Color(0xFF24733B) else Color(0xFFB3261E)); else -> null }) {
-                            if (item.picture.startsWith("content://") || item.picture.startsWith("file://")) {
-                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 180) } }, update = { view -> try { view.setImageURI(Uri.parse(item.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(pictureImageHeight).padding(8.dp))
-                            } else {
-                                Text(item.picture, Modifier.padding(12.dp).align(Alignment.CenterHorizontally), fontSize = pictureEmojiFontSize)
-                            }
-                        }
-                    }
-                }
-            }
-            Text("Parejas resueltas: ${resolved.size}/$pairCount", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-            if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
-            OutlinedButton(onClick = { screen = "home" }) { Text("Salir del ejercicio") }
-        }
+        CardsExerciseScreen(
+            activeExercisePairs = activeExercisePairs,
+            exercisePairs = exercisePairs,
+            rewardMode = rewardMode,
+            balanceSeconds = balanceSeconds,
+            roundsUsed = cardsQuotaStatus.used,
+            roundsLimit = cardsQuotaStatus.limit,
+            difficulty = difficulty,
+            selected = selected,
+            selectedPicture = selectedPicture,
+            resolved = resolved,
+            evaluatedPictures = evaluatedPictures,
+            feedback = feedback,
+            pairCount = pairCount,
+            exerciseFontFamily = exerciseFontFamily,
+            onSelectedChange = { selected = it },
+            onSelectedPictureChange = { selectedPicture = it },
+            onFeedbackChange = { feedback = it },
+            onResolveCardsPair = { word, picture -> resolveCardsPair(word, picture) },
+            onExit = { screen = "home" }
+        )
     } else if (screen == "word-options") {
         val availableWords = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
         val wordCategories = availableWords.map { it.category }.distinct()
@@ -3491,7 +3423,117 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
 }
 
-
-
-
+@Composable
+private fun CardsExerciseScreen(
+    activeExercisePairs: List<PairItem>,
+    exercisePairs: List<PairItem>,
+    rewardMode: RewardMode,
+    balanceSeconds: Int,
+    roundsUsed: Int,
+    roundsLimit: Int?,
+    difficulty: String,
+    selected: Map<String, String>,
+    selectedPicture: String,
+    resolved: Set<String>,
+    evaluatedPictures: Map<String, Boolean>,
+    feedback: String,
+    pairCount: Int,
+    exerciseFontFamily: FontFamily,
+    onSelectedChange: (Map<String, String>) -> Unit,
+    onSelectedPictureChange: (String) -> Unit,
+    onFeedbackChange: (String) -> Unit,
+    onResolveCardsPair: (String, String) -> Unit,
+    onExit: () -> Unit
+) {
+    val context = LocalContext.current
+    val isTabletLayout = LocalConfiguration.current.screenWidthDp >= 600
+    val wordCardFontSize = if (isTabletLayout) 44.sp else 32.sp
+    val pictureEmojiFontSize = if (isTabletLayout) 58.sp else 42.sp
+    val pictureImageHeight = if (isTabletLayout) 150.dp else 110.dp
+    val cardPadding = if (isTabletLayout) 24.dp else 18.dp
+    val wordCardOrder = remember(activeExercisePairs) { exercisePairs.shuffled() }
+    val pictureCardOrder = remember(activeExercisePairs) {
+        val shuffled = exercisePairs.shuffled()
+        if (shuffled.size > 1 && shuffled.map { it.word } == wordCardOrder.map { it.word }) shuffled.drop(1) + shuffled.first() else shuffled
+    }
+    Column(
+        modifier = Modifier.fillMaxSize().clipToBounds().verticalScroll(rememberScrollState()).padding(if (isTabletLayout) 28.dp else 20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        ExerciseStatusBar(
+            balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            roundsUsed = roundsUsed,
+            roundsLimit = roundsLimit,
+            difficulty = difficulty
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63), modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = { ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }?.let { ExerciseVoiceManager.playLatest(context, it, preview = true) } }) { Text("🔊") }
+        }
+        Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                wordCardOrder.forEach { item ->
+                    val isSelected = selected["word"] == item.word
+                    val isResolved = item.word in resolved
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            if (!isResolved) {
+                                val pendingPicture = selectedPicture
+                                if (pendingPicture.isBlank()) {
+                                    if (selected["word"] == item.word) {
+                                        onSelectedChange(emptyMap())
+                                        onFeedbackChange("Selección cancelada.")
+                                    } else {
+                                        onSelectedChange(mapOf("word" to item.word))
+                                        onFeedbackChange("Ahora busca el dibujo de «" + item.word + "».")
+                                    }
+                                } else {
+                                    onResolveCardsPair(item.word, pendingPicture)
+                                }
+                            }
+                        },
+                        colors = CardDefaults.cardColors(
+                            containerColor = when {
+                                isResolved -> Color(0xFFD9F2D9)
+                                isSelected -> Color(0xFFFFD66B)
+                                else -> Color(0xFFF0E8F5)
+                            }
+                        ),
+                        border = if (isSelected) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null
+                    ) {
+                        Text(item.word, Modifier.padding(cardPadding), fontSize = wordCardFontSize, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold, color = Color(0xFF29213B))
+                    }
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                pictureCardOrder.forEach { item ->
+                    Card(Modifier.fillMaxWidth().clickable {
+                        val word = selected["word"]
+                        if (word == null) {
+                            if (selectedPicture == item.picture) {
+                                onSelectedPictureChange("")
+                                onFeedbackChange("Selección cancelada.")
+                            } else {
+                                onSelectedPictureChange(item.picture)
+                                onFeedbackChange("Has elegido un dibujo. Ahora toca la palabra que le corresponde.")
+                            }
+                        } else if (word !in resolved) {
+                            onResolveCardsPair(word, item.picture)
+                        }
+                    }, colors = CardDefaults.cardColors(containerColor = when { selectedPicture == item.picture -> Color(0xFFFFD66B); evaluatedPictures[item.picture] == true -> Color(0xFFD9F2D9); evaluatedPictures[item.picture] == false -> Color(0xFFFFDAD6); else -> Color(0xFFF0E8F5) }), border = when { selectedPicture == item.picture -> androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)); evaluatedPictures.containsKey(item.picture) -> androidx.compose.foundation.BorderStroke(3.dp, if (evaluatedPictures[item.picture] == true) Color(0xFF24733B) else Color(0xFFB3261E)); else -> null }) {
+                        if (item.picture.startsWith("content://") || item.picture.startsWith("file://")) {
+                            AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 180) } }, update = { view -> try { view.setImageURI(Uri.parse(item.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(pictureImageHeight).padding(8.dp))
+                        } else {
+                            Text(item.picture, Modifier.padding(12.dp).align(Alignment.CenterHorizontally), fontSize = pictureEmojiFontSize)
+                        }
+                    }
+                }
+            }
+        }
+        Text("Parejas resueltas: ${resolved.size}/$pairCount", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
+        OutlinedButton(onClick = onExit) { Text("Salir del ejercicio") }
+    }
+}
 
