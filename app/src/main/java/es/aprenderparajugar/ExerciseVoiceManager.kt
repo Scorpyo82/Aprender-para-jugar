@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
+import java.io.File
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -53,20 +54,57 @@ internal object ExerciseVoiceManager {
     fun setGroupEnabled(context: Context, group: Group, enabled: Boolean) = prefs(context).edit().putBoolean(groupKey(group), enabled).apply()
     fun isItemEnabled(context: Context, item: VoiceItem) = prefs(context).getBoolean(itemKey(item), true)
     fun setItemEnabled(context: Context, item: VoiceItem, enabled: Boolean) = prefs(context).edit().putBoolean(itemKey(item), enabled).apply()
-
     fun shouldPlay(context: Context, item: VoiceItem): Boolean =
         isMasterEnabled(context) && isGroupEnabled(context, item.group) && isItemEnabled(context, item)
 
+    fun hasPlayedInstruction(context: Context, item: VoiceItem): Boolean =
+        prefs(context).getBoolean(firstPlayedKey(item), false)
+
     fun markInstructionPlayed(context: Context, item: VoiceItem): Boolean {
-        val key = "exercise_voice_first_played_${item.key}"
         val preferences = prefs(context)
-        if (preferences.getBoolean(key, false)) return false
-        preferences.edit().putBoolean(key, true).apply()
+        if (preferences.getBoolean(firstPlayedKey(item), false)) return false
+        preferences.edit().putBoolean(firstPlayedKey(item), true).apply()
         return true
     }
 
+    fun customPath(context: Context, item: VoiceItem): String? =
+        prefs(context).getString(customKey(item), null)?.takeIf { File(it).isFile && File(it).length() > 0L }
+
+    fun importAudio(context: Context, item: VoiceItem, uri: android.net.Uri) {
+        val directory = File(context.filesDir, "exercise_voice_audio").apply { mkdirs() }
+        val target = File(directory, "${item.key}.audio")
+        val temp = File(directory, "${item.key}.tmp")
+        context.contentResolver.openInputStream(uri).use { input ->
+            requireNotNull(input) { "No se ha podido abrir el audio seleccionado." }
+            temp.outputStream().use { output -> input.copyTo(output) }
+        }
+        require(temp.length() > 0L) { "El archivo está vacío." }
+        if (!temp.renameTo(target)) { temp.copyTo(target, true); temp.delete() }
+        prefs(context).edit().putString(customKey(item), target.absolutePath).apply()
+    }
+
+    fun setRecordedAudio(context: Context, item: VoiceItem, file: File) {
+        require(file.isFile && file.length() > 0L) { "La grabación está vacía." }
+        val directory = File(context.filesDir, "exercise_voice_audio").apply { mkdirs() }
+        val target = File(directory, "${item.key}.m4a")
+        if (file.absolutePath != target.absolutePath) {
+            if (!file.renameTo(target)) { file.copyTo(target, true); file.delete() }
+        }
+        prefs(context).edit().putString(customKey(item), target.absolutePath).apply()
+    }
+
+    fun restoreDefault(context: Context, item: VoiceItem) {
+        customPath(context, item)?.let { runCatching { File(it).delete() } }
+        prefs(context).edit().remove(customKey(item)).apply()
+    }
+
     fun setBackgroundMusicPlayer(value: MediaPlayer?) {
-        musicPlayer = value
+        if (musicPlayer !== value) {
+            musicRestoreRunnable?.let(handler::removeCallbacks)
+            musicRestoreRunnable = null
+            musicPlayer = value
+            musicWasPlaying = false
+        }
         if (value != null && player != null) duckMusic()
     }
 
@@ -74,13 +112,22 @@ internal object ExerciseVoiceManager {
     fun playLatest(context: Context, item: VoiceItem, preview: Boolean = false) {
         if (!preview && !shouldPlay(context, item)) return
         val token = generation.incrementAndGet()
-        handler.removeCallbacksAndMessages(null)
+        musicRestoreRunnable?.let(handler::removeCallbacks)
+        musicRestoreRunnable = null
         runCatching { player?.stop() }
         runCatching { player?.release() }
         player = null
         duckMusic()
         try {
-            val next = MediaPlayer.create(context.applicationContext, item.resource)
+            val path = customPath(context, item)
+            val next = if (path == null) {
+                MediaPlayer.create(context.applicationContext, item.resource)
+            } else {
+                MediaPlayer().apply {
+                    setDataSource(path)
+                    prepare()
+                }
+            }
             if (next == null) {
                 restoreMusic(token)
                 return
@@ -111,7 +158,8 @@ internal object ExerciseVoiceManager {
 
     fun stop() {
         val token = generation.incrementAndGet()
-        handler.removeCallbacksAndMessages(null)
+        musicRestoreRunnable?.let(handler::removeCallbacks)
+        musicRestoreRunnable = null
         runCatching { player?.stop() }
         runCatching { player?.release() }
         player = null
@@ -122,23 +170,22 @@ internal object ExerciseVoiceManager {
         val music = musicPlayer ?: return
         musicRestoreRunnable?.let(handler::removeCallbacks)
         musicRestoreRunnable = null
-        musicWasPlaying = runCatching { music.isPlaying }.getOrDefault(false) || musicWasPlaying
+        musicWasPlaying = musicWasPlaying || runCatching { music.isPlaying }.getOrDefault(false)
         if (musicWasPlaying) runCatching { music.setVolume(MUSIC_DUCK_VOLUME, MUSIC_DUCK_VOLUME) }
     }
 
     private fun restoreMusic(token: Long) {
         if (generation.get() != token) return
-        val music = musicPlayer ?: return
+        val music = musicPlayer ?: run { musicWasPlaying = false; return }
         if (!musicWasPlaying) return
-        val steps = 8
         var step = 0
         val restore = object : Runnable {
             override fun run() {
                 if (generation.get() != token || musicPlayer !== music) return
                 step++
-                val volume = MUSIC_DUCK_VOLUME + (MUSIC_NORMAL_VOLUME - MUSIC_DUCK_VOLUME) * step / steps
+                val volume = MUSIC_DUCK_VOLUME + (MUSIC_NORMAL_VOLUME - MUSIC_DUCK_VOLUME) * step / 8f
                 runCatching { music.setVolume(volume, volume) }
-                if (step < steps) handler.postDelayed(this, 45L) else {
+                if (step < 8) handler.postDelayed(this, 45L) else {
                     musicWasPlaying = false
                     musicRestoreRunnable = null
                 }
@@ -151,6 +198,8 @@ internal object ExerciseVoiceManager {
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private fun groupKey(group: Group) = if (group == Group.INSTRUCTIONS) INSTRUCTIONS_KEY else ENCOURAGEMENT_KEY
     private fun itemKey(item: VoiceItem) = "exercise_voice_item_${item.key}_enabled"
+    private fun customKey(item: VoiceItem) = "exercise_voice_custom_path_${item.key}"
+    private fun firstPlayedKey(item: VoiceItem) = "exercise_voice_first_played_${item.key}"
 }
 
 internal fun String.toVoiceKey(): String = when (trim().lowercase()) {
