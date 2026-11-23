@@ -2811,13 +2811,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
         )
     } else if (screen == "sequences") {
-        SequenceSelectionScreen(isDifficultyScreen = false, chosenCategory = sequenceChosenCategory, message = sequencePlayMessage, maxCards = sequenceMaxCards,
-            availableCounts = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").associateWith { type -> eligibleSequenceExercises(type).size },
-            lockedTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").filter { type -> listOf("Fácil", "Normal", "Difícil").none { level ->
-                val hasExercises = eligibleSequenceExercises(type, level).isNotEmpty()
-                ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, type), hasExercises).available
-            } }.toSet(), rewardLabels = emptyMap(),
-            onBack = { screen = "home" }, onChooseType = { type, available -> sequenceChosenCategory = type; sequenceChosenDifficulty = "Fácil"; sequencePlayMessage = if (available) "" else "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."; if (available) screen = "sequence-difficulty" }, onChooseDifficulty = { }
+        SequenceSelectionRoute(
+            chosenCategory = sequenceChosenCategory,
+            message = sequencePlayMessage,
+            maxCards = sequenceMaxCards,
+            preferences = preferences,
+            sequenceGameState = sequenceGameState,
+            sequenceExercises = sequenceExercises,
+            disabledCategories = disabledSequenceCategories,
+            onBack = { screen = "home" },
+            onChooseType = { type, available ->
+                sequenceChosenCategory = type
+                sequenceChosenDifficulty = "Fácil"
+                sequencePlayMessage = if (available) "" else "No hay ejercicios activos de $type que respeten el máximo de $sequenceMaxCards tarjetas configurado."
+                if (available) screen = "sequence-difficulty"
+            }
         )
     } else if (screen == "sequence-difficulty") {
         SequenceDifficultyRoute(
@@ -3907,5 +3915,43 @@ private fun CardsOptionsRoute(
         onSurprise = onSurprise,
         onChooseTheme = onChooseTheme,
         onMixThemes = onMixThemes
+    )
+}
+
+@Composable
+private fun SequenceSelectionRoute(
+    chosenCategory: String,
+    message: String,
+    maxCards: Int,
+    preferences: android.content.SharedPreferences,
+    sequenceGameState: SequenceGameState,
+    sequenceExercises: List<SequenceExercise>,
+    disabledCategories: Set<String>,
+    onBack: () -> Unit,
+    onChooseType: (String, Boolean) -> Unit
+) {
+    val types = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
+    fun eligible(type: String, level: String? = null): List<SequenceExercise> =
+        sequenceGameState.eligibleExercises(sequenceExercises, type, maxCards, disabledCategories, level)
+    val availableCounts = types.associateWith { type -> eligible(type).size }
+    val lockedTypes = types.filter { type ->
+        listOf("Fácil", "Normal", "Difícil").none { level ->
+            val hasExercises = eligible(type, level).isNotEmpty()
+            ExerciseQuotaRepository.status(
+                preferences, ExerciseQuotaRepository.id("sequences", level, type), hasExercises
+            ).available
+        }
+    }.toSet()
+    SequenceSelectionScreen(
+        isDifficultyScreen = false,
+        chosenCategory = chosenCategory,
+        message = message,
+        maxCards = maxCards,
+        availableCounts = availableCounts,
+        lockedTypes = lockedTypes,
+        rewardLabels = emptyMap(),
+        onBack = onBack,
+        onChooseType = onChooseType,
+        onChooseDifficulty = {}
     )
 }
