@@ -738,19 +738,6 @@ private fun AprenderApp() {
             storyObjectEditorState.markImageSelected(uri)
         }
     }
-    val onPickStoryCover: () -> Unit = {
-        preferences.edit().putBoolean("content_picker_active", true).apply()
-        storyCoverPicker.launch(arrayOf("image/*"))
-    }
-    val onPickStoryIllustration: () -> Unit = {
-        preferences.edit().putBoolean("content_picker_active", true).apply()
-        storyIllustrationPicker.launch(arrayOf("image/*"))
-    }
-    val onChooseStoryCollectionCover: (String) -> Unit = { name ->
-        pendingStoryCollectionCover = name
-        preferences.edit().putBoolean("content_picker_active", true).apply()
-        storyCollectionCoverPicker.launch(arrayOf("image/*"))
-    }
     val storyCollectionCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
         val collection = pendingStoryCollectionCover
@@ -782,6 +769,19 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             persistStoryDraft()
             storyEditorIllustrationRevision++
         }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la ilustración." }
+    }
+    val onPickStoryCover: () -> Unit = {
+        preferences.edit().putBoolean("content_picker_active", true).apply()
+        storyCoverPicker.launch(arrayOf("image/*"))
+    }
+    val onPickStoryIllustration: () -> Unit = {
+        preferences.edit().putBoolean("content_picker_active", true).apply()
+        storyIllustrationPicker.launch(arrayOf("image/*"))
+    }
+    val onChooseStoryCollectionCover: (String) -> Unit = { name ->
+        pendingStoryCollectionCover = name
+        preferences.edit().putBoolean("content_picker_active", true).apply()
+        storyCollectionCoverPicker.launch(arrayOf("image/*"))
     }
     val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
