@@ -3376,45 +3376,29 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         }
                         if (transferMessage.isNotBlank()) item { Text(transferMessage, fontSize = 14.sp, color = if (transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)) }
                     }
-                    "active-games" -> {
-                        item { Text("Actividades activas", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Desactiva los modos que no quieras incluir en la versión de pruebas. Los modos bloqueados mostrarán un candado y no se podrán abrir.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Checkbox(checked = gameActiveCards, onCheckedChange = { gameActiveCards = it; preferences.edit().putBoolean("game_active_cards", it).apply() })
-                                    Column(Modifier.weight(1f)) { Text("Tarjetas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Parejas de imágenes y palabras", fontSize = 14.sp, color = Color(0xFF667085)) }
-                                    Text(if (gameActiveCards) "Activo" else "🔒", color = if (gameActiveCards) Color(0xFF24733B) else Color(0xFFB3261E))
-                                }
+                    "active-games" -> item {
+                        ActiveGamesScreen(
+                            gameActiveCards = gameActiveCards,
+                            onGameActiveCardsChange = {
+                                gameActiveCards = it
+                                preferences.edit().putBoolean("game_active_cards", it).apply()
+                            },
+                            gameActiveSequences = gameActiveSequences,
+                            onGameActiveSequencesChange = {
+                                gameActiveSequences = it
+                                preferences.edit().putBoolean("game_active_sequences", it).apply()
+                            },
+                            gameActiveWords = gameActiveWords,
+                            onGameActiveWordsChange = {
+                                gameActiveWords = it
+                                preferences.edit().putBoolean("game_active_words", it).apply()
+                            },
+                            gameActiveStories = gameActiveStories,
+                            onGameActiveStoriesChange = {
+                                gameActiveStories = it
+                                preferences.edit().putBoolean("game_active_stories", it).apply()
                             }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Checkbox(checked = gameActiveSequences, onCheckedChange = { gameActiveSequences = it; preferences.edit().putBoolean("game_active_sequences", it).apply() })
-                                    Column(Modifier.weight(1f)) { Text("Secuencias", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Ordenar secuencias y procesos", fontSize = 14.sp, color = Color(0xFF667085)) }
-                                    Text(if (gameActiveSequences) "Activo" else "🔒", color = if (gameActiveSequences) Color(0xFF24733B) else Color(0xFFB3261E))
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Checkbox(checked = gameActiveWords, onCheckedChange = { gameActiveWords = it; preferences.edit().putBoolean("game_active_words", it).apply() })
-                                    Column(Modifier.weight(1f)) { Text("Palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Formar palabras con letras", fontSize = 14.sp, color = Color(0xFF667085)) }
-                                    Text(if (gameActiveWords) "Activo" else "🔒", color = if (gameActiveWords) Color(0xFF24733B) else Color(0xFFB3261E))
-                                }
-                            }
-                        }
-                                            item {
-                            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Checkbox(checked = gameActiveStories, onCheckedChange = { gameActiveStories = it; preferences.edit().putBoolean("game_active_stories", it).apply() })
-                                    Column(Modifier.weight(1f)) { Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Historias ilustradas e interactivas", fontSize = 14.sp, color = Color(0xFF667085)) }
-                                    Text(if (gameActiveStories) "Activo" else "🔒", color = if (gameActiveStories) Color(0xFF24733B) else Color(0xFFB3261E))
-                                }
-                            }
-                        }
+                        )
                     }
 "game-modes" -> {
                         item { Text("Actividades disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
