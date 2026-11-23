@@ -2848,8 +2848,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             onMixThemes = { sequenceSelectionMode = "Mezclar temas"; startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty) }
         )
     } else if (screen == "sequence-category-select") {
-        WordCategorySelectionScreen(difficulty = sequenceChosenDifficulty, availableCounts = eligibleSequenceExercises(sequenceChosenCategory, sequenceChosenDifficulty).groupingBy { it.category }.eachCount().toSortedMap(), message = sequencePlayMessage,
-            onBack = { screen = "sequence-difficulty"; sequencePlayMessage = "" }, onSelectCategory = { startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty, it) }
+        SequenceCategorySelectionRoute(
+            difficulty = sequenceChosenDifficulty,
+            chosenType = sequenceChosenCategory,
+            message = sequencePlayMessage,
+            sequenceGameState = sequenceGameState,
+            sequenceExercises = sequenceExercises,
+            maxCards = sequenceMaxCards,
+            disabledCategories = disabledSequenceCategories,
+            onBack = { screen = "sequence-difficulty"; sequencePlayMessage = "" },
+            onSelectCategory = { startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty, it) }
         )
     } else if (screen == "sequence-game") {
         SequenceGameRoute(
@@ -3953,5 +3961,29 @@ private fun SequenceSelectionRoute(
         onBack = onBack,
         onChooseType = onChooseType,
         onChooseDifficulty = {}
+    )
+}
+
+@Composable
+private fun SequenceCategorySelectionRoute(
+    difficulty: String,
+    chosenType: String,
+    message: String,
+    sequenceGameState: SequenceGameState,
+    sequenceExercises: List<SequenceExercise>,
+    maxCards: Int,
+    disabledCategories: Set<String>,
+    onBack: () -> Unit,
+    onSelectCategory: (String) -> Unit
+) {
+    val availableCounts = sequenceGameState.eligibleExercises(
+        sequenceExercises, chosenType, maxCards, disabledCategories, difficulty
+    ).groupingBy { it.category }.eachCount().toSortedMap()
+    WordCategorySelectionScreen(
+        difficulty = difficulty,
+        availableCounts = availableCounts,
+        message = message,
+        onBack = onBack,
+        onSelectCategory = onSelectCategory
     )
 }
