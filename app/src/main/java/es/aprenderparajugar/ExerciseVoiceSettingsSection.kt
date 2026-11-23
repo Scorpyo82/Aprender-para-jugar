@@ -87,6 +87,7 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
     val context = LocalContext.current
     var checked by remember(item) { mutableStateOf(ExerciseVoiceManager.isItemEnabled(context, item)) }
     var custom by remember(item) { mutableStateOf(ExerciseVoiceManager.customPath(context, item) != null) }
+    var preparing by remember(item) { mutableStateOf(false) }
     var recording by remember(item) { mutableStateOf(false) }
     var recorder by remember(item) { mutableStateOf<MediaRecorder?>(null) }
     var recordingFile by remember(item) { mutableStateOf<File?>(null) }
@@ -119,6 +120,7 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
     }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) {
+            preparing = false
             message = "No se ha concedido permiso para usar el micrófono."
         } else {
             val file = File(context.cacheDir, item.key + "_" + System.currentTimeMillis() + ".m4a")
@@ -127,7 +129,7 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
                 val instance = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(context) else MediaRecorder()
                 created = instance
                 instance.apply {
-                    setAudioSource(MediaRecorder.AudioSource.MIC)
+                    setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                     setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                     setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                     setAudioChannels(1)
@@ -139,11 +141,13 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
                 }
                 recorder = instance
                 recordingFile = file
+                preparing = false
                 recording = true
                 message = "Grabando…"
             } catch (error: Exception) {
                 runCatching { created?.release() }
                 file.delete()
+                preparing = false
                 message = "No se pudo iniciar la grabación: " + (error.message ?: "error de audio")
             }
         }
@@ -182,15 +186,27 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
             custom = false
             message = "Se ha restaurado el audio original."
         }) { Text("Dejar por defecto") }
-        OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { importLauncher.launch(arrayOf("audio/*")) }) { Text("Cargar audio") }
+        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !recording && !preparing, onClick = { importLauncher.launch(arrayOf("audio/*")) }) { Text("Cargar audio") }
         if (recording) {
             Text("● GRABACIÓN EN CURSO", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+            Text("Cuando termines de hablar, pulsa «Parar y guardar».", style = MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(modifier = Modifier.weight(1f), onClick = { finishRecording(true) }) { Text("Parar y guardar") }
                 OutlinedButton(modifier = Modifier.weight(1f), onClick = { finishRecording(false) }) { Text("Descartar") }
             }
+        } else if (preparing) {
+            Text("Preparar grabación", style = MaterialTheme.typography.titleSmall)
+            Text("Cuando estés preparado, pulsa «Iniciar grabación». El micrófono no se activará hasta entonces.", style = MaterialTheme.typography.bodySmall)
+            Button(modifier = Modifier.fillMaxWidth(), onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Iniciar grabación") }
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                preparing = false
+                message = "Grabación cancelada."
+            }) { Text("Cancelar") }
         } else {
-            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Grabar audio") }
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                preparing = true
+                message = ""
+            }) { Text("Grabar audio") }
         }
         if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
     }
