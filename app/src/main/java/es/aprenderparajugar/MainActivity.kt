@@ -576,13 +576,20 @@ private fun AprenderApp() {
     var wordPendingImportMode by remember { mutableStateOf("replace") }
     var wordNewCategoryDraft by wordLibraryState.newCategoryDraft
     var wordCategoryToDelete by wordLibraryState.categoryToDelete
-    var wordDraft by remember { mutableStateOf("") }
-    var pictureDraft by remember { mutableStateOf("") }
-    var categoryDraft by remember { mutableStateOf("") }
-    var difficultyDraft by remember { mutableStateOf("Fácil") }
-    var editingWord by remember { mutableStateOf<String?>(null) }
-    var libraryMessage by remember { mutableStateOf("") }
-    var libraryPage by remember { mutableStateOf("list") }
+    val wordDraftState = remember { mutableStateOf("") }
+    var wordDraft by wordDraftState
+    val pictureDraftState = remember { mutableStateOf("") }
+    var pictureDraft by pictureDraftState
+    val categoryDraftState = remember { mutableStateOf("") }
+    var categoryDraft by categoryDraftState
+    val difficultyDraftState = remember { mutableStateOf("Fácil") }
+    var difficultyDraft by difficultyDraftState
+    val editingWordState = remember { mutableStateOf<String?>(null) }
+    var editingWord by editingWordState
+    val libraryMessageState = remember { mutableStateOf("") }
+    var libraryMessage by libraryMessageState
+    val libraryPageState = remember { mutableStateOf("list") }
+    var libraryPage by libraryPageState
         val storyObjectEditorState = remember { StoryObjectEditorState() }
     var storyObjectNameDraft by storyObjectEditorState.nameDraft
     var storyObjectPictureDraft by storyObjectEditorState.pictureDraft
@@ -1150,18 +1157,25 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var initialPinConfirmDraft by remember { mutableStateOf("") }
     var initialPinError by remember { mutableStateOf("") }
     var tourReturnTarget by remember { mutableStateOf("home") }
-    var categoryDraftName by remember { mutableStateOf("") }
-    var categoryMenuExpanded by remember { mutableStateOf(false) }
+    val categoryDraftNameState = remember { mutableStateOf("") }
+    var categoryDraftName by categoryDraftNameState
+    val categoryMenuExpandedState = remember { mutableStateOf(false) }
+    var categoryMenuExpanded by categoryMenuExpandedState
     val categoryNamesState = remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
     var categoryNames by categoryNamesState
-    var categoryMessage by remember { mutableStateOf("") }
-    var categoryToRemove by remember { mutableStateOf("") }
+    val categoryMessageState = remember { mutableStateOf("") }
+    var categoryMessage by categoryMessageState
+    val categoryToRemoveState = remember { mutableStateOf("") }
+    var categoryToRemove by categoryToRemoveState
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
     var selectedExerciseCategory by remember { mutableStateOf(preferences.getString("selected_exercise_category", categories.firstOrNull() ?: "") ?: "") }
     var exerciseCategoryMenuExpanded by remember { mutableStateOf(false) }
-    var libraryCategoryFilter by remember { mutableStateOf("Todas") }
-    var libraryDifficultyFilter by remember { mutableStateOf("Todas") }
-    var libraryFilterCategoryExpanded by remember { mutableStateOf(false) }
+    val libraryCategoryFilterState = remember { mutableStateOf("Todas") }
+    var libraryCategoryFilter by libraryCategoryFilterState
+    val libraryDifficultyFilterState = remember { mutableStateOf("Todas") }
+    var libraryDifficultyFilter by libraryDifficultyFilterState
+    val libraryFilterCategoryExpandedState = remember { mutableStateOf(false) }
+    var libraryFilterCategoryExpanded by libraryFilterCategoryExpandedState
     val wordGameState = remember { WordGameState() }
     var wordExerciseTarget by wordGameState.target
     var wordExerciseLetterOrder by wordGameState.letterOrder
@@ -2992,198 +3006,39 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             }
                         )
                     }
-                    "words" -> item {
-                        if (libraryPage == "list") {
-                            Text("Biblioteca de tarjetas", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                            Text("Gestiona las tarjetas guardadas. Pulsa Añadir para crear una nueva.", fontSize = 14.sp, color = Color(0xFF667085))
-                            Button(onClick = { editingWord = null; wordDraft = ""; pictureDraft = ""; categoryDraft = "Primeras palabras"; difficultyDraft = "Fácil"; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.fillMaxWidth()) { Text("＋ Añadir tarjeta") }
-                            Spacer(Modifier.height(8.dp))
-
-                            Text("Filtrar contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            androidx.compose.foundation.layout.Box {
-                                OutlinedButton(onClick = { libraryFilterCategoryExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("🗂️ Categoría: $libraryCategoryFilter  ▾")
-                                }
-                                DropdownMenu(expanded = libraryFilterCategoryExpanded, onDismissRequest = { libraryFilterCategoryExpanded = false }) {
-                                    (listOf("Todas") + categories).forEach { name ->
-                                        DropdownMenuItem(text = { Text(name) }, onClick = { libraryCategoryFilter = name; libraryFilterCategoryExpanded = false })
-                                    }
-                                }
-                            }
-                            Text("Dificultad", fontWeight = FontWeight.SemiBold)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                listOf("Todas", "Fácil", "Normal", "Difícil").forEach { level ->
-                                    val selected = libraryDifficultyFilter == level
-                                    OutlinedButton(
-                                        onClick = { libraryDifficultyFilter = level },
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
-                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                                            containerColor = if (selected) Color(0xFFEBDDF8) else Color.Transparent
-                                        )
-                                    ) {
-                                        Text(level, fontSize = 11.sp, maxLines = 1, softWrap = false)
-                                    }
-                                }
-                            }
-                            val filteredLibraryPairs = pairs.filter { pair ->
-                                (libraryCategoryFilter == "Todas" || pair.category.equals(libraryCategoryFilter, ignoreCase = true)) &&
-                                    (libraryDifficultyFilter == "Todas" || pair.difficulty.equals(libraryDifficultyFilter, ignoreCase = true))
-                            }
-                            Text("Mostrando ${filteredLibraryPairs.size} de ${pairs.size} palabras", fontSize = 13.sp, color = Color(0xFF667085))
-                            if (filteredLibraryPairs.isEmpty()) {
-                                Text("No hay palabras que coincidan con estos filtros.", color = Color(0xFF667085))
-                            }
-                            filteredLibraryPairs.forEach { pair ->
-                                Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                    Column(Modifier.padding(12.dp)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            if (pair.picture.startsWith("content://") || pair.picture.startsWith("file://")) {
-                                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; adjustViewBounds = true; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) } }, update = { view -> try { view.setImageURI(Uri.parse(pair.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.width(64.dp).height(64.dp).clipToBounds())
-                                            } else Text(pair.picture, fontSize = 28.sp)
-                                            Column(Modifier.weight(1f)) { Text(pair.word, fontSize = 19.sp, fontWeight = FontWeight.SemiBold); Text("${pair.category} · ${pair.difficulty} · ${if (pair.active) "Activa" else "Inactiva"}", color = Color(0xFF667085)) }
-                                        }
-                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            OutlinedButton(onClick = { editingWord = pair.word; wordDraft = pair.word; pictureDraft = pair.picture; categoryDraft = pair.category; difficultyDraft = pair.difficulty; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar", maxLines = 1, fontSize = 13.sp) }
-                                            OutlinedButton(onClick = { pairs = pairs.map { if (it.word == pair.word) it.copy(active = !it.active) else it }; pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs) }, modifier = Modifier.weight(1.2f)) { Text(if (pair.active) "Desactivar" else "Activar", maxLines = 1, fontSize = 13.sp) }
-                                            OutlinedButton(onClick = { pairs = pairs.filterNot { it.word == pair.word }; pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs) }, modifier = Modifier.weight(1f)) { Text("Eliminar", maxLines = 1, fontSize = 13.sp) }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            Text(if (editingWord == null) "Añadir tarjeta" else "Editar tarjeta", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                            Text("Completa los datos de la tarjeta y guarda. La imagen se elige desde la galería.", fontSize = 14.sp, color = Color(0xFF667085))
-                            OutlinedTextField(value = wordDraft, onValueChange = { wordDraft = if (editingWord == null) NameRules.filterInput(it) else it }, label = { Text("Palabra") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                            Column {
-                                Text("Categoría", fontWeight = FontWeight.SemiBold)
-                                androidx.compose.foundation.layout.Box {
-                                    OutlinedButton(onClick = { categoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                        Text(categoryDraft.ifBlank { "Seleccionar categoría" })
-                                    }
-                                    DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
-                                        categories.forEach { name ->
-                                            DropdownMenuItem(text = { Text(name) }, onClick = { categoryDraft = name; categoryMenuExpanded = false })
-                                        }
-                                    }
-                                }
-                            }
-                            Text("Dificultad", fontWeight = FontWeight.SemiBold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { listOf("Fácil", "Normal", "Difícil").forEach { level -> OutlinedButton(onClick = { difficultyDraft = level }) { Text(if (difficultyDraft == level) "✓ $level" else level) } } }
-                            if (pictureDraft.startsWith("content://") || pictureDraft.startsWith("file://")) {
-                                AndroidView(factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 320) } }, update = { view -> try { view.setImageURI(Uri.parse(pictureDraft)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } }, modifier = Modifier.fillMaxWidth().height(180.dp))
-                            } else Text(if (pictureDraft.isBlank()) "Todavía no has elegido una imagen." else "Dibujo actual: $pictureDraft", fontSize = 18.sp)
-                            OutlinedButton(onClick = {
-                                // Keep the parental-area guard armed while Android's
-                                // system document picker is temporarily in the foreground.
-                                preferences.edit()
-                                    .putBoolean("content_picker_active", true)
-                                    .putBoolean("parent_area_active", true)
-                                    .commit()
+                    "words", "categories" -> {
+                        cardLibraryItems(
+                            state = CardLibraryState(
+                                context = context,
+                                preferences = preferences,
+                                pairs = pairsState,
+                                wordDraft = wordDraftState,
+                                pictureDraft = pictureDraftState,
+                                categoryDraft = categoryDraftState,
+                                difficultyDraft = difficultyDraftState,
+                                editingWord = editingWordState,
+                                libraryMessage = libraryMessageState,
+                                libraryPage = libraryPageState,
+                                categoryDraftName = categoryDraftNameState,
+                                categoryNames = categoryNamesState,
+                                categoryMessage = categoryMessageState,
+                                categoryToRemove = categoryToRemoveState,
+                                categoryMenuExpanded = categoryMenuExpandedState,
+                                libraryCategoryFilter = libraryCategoryFilterState,
+                                libraryDifficultyFilter = libraryDifficultyFilterState,
+                                libraryFilterCategoryExpanded = libraryFilterCategoryExpandedState
+                            ),
+                            section = parentSection,
+                            onPickImage = {
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                 imagePicker.launch(arrayOf("image/*"))
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Elegir imagen de la galería") }
-                            OutlinedButton(onClick = {
-                                // The external camera app temporarily backgrounds this Activity.
-                                preferences.edit()
-                                    .putBoolean("content_picker_active", true)
-                                    .putBoolean("parent_area_active", true)
-                                    .commit()
+                            },
+                            onTakePhoto = {
                                 pendingCameraTarget = "pair"
+                                preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                 cameraLauncher.launch(null)
-                            }, modifier = Modifier.fillMaxWidth()) { Text("📷 Hacer foto al objeto") }
-                            Button(onClick = {
-                                val clean = wordDraft.trim()
-                                when {
-                                    NameRules.validationError(clean) != null -> libraryMessage = NameRules.validationError(clean)!!
-                                    pictureDraft.isBlank() || categoryDraft.isBlank() -> libraryMessage = "Completa la palabra, la categoría y elige una imagen o emoji."
-                                    pairs.any { it.word.equals(clean, ignoreCase = true) && it.word != editingWord } -> libraryMessage = "Esa palabra ya existe."
-                                    else -> {
-                                        val updatedPairs = if (editingWord == null) {
-                                            pairs + PairItem(clean, pictureDraft.trim(), categoryDraft.trim(), difficultyDraft)
-                                        } else {
-                                            pairs.map { if (it.word == editingWord) it.copy(word = clean, picture = pictureDraft.trim(), category = categoryDraft.trim(), difficulty = difficultyDraft) else it }
-                                        }
-                                        runCatching {
-                                            ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, updatedPairs)
-                                        }.onSuccess { savedPairs ->
-                                            pairs = savedPairs
-                                            wordDraft = ""
-                                            pictureDraft = ""
-                                            categoryDraft = "Primeras palabras"
-                                            difficultyDraft = "Fácil"
-                                            editingWord = null
-                                            libraryMessage = "Tarjeta guardada correctamente."
-                                            libraryPage = "list"
-                                        }.onFailure { error ->
-                                            libraryMessage = "No se ha podido guardar la tarjeta: ${error.message ?: "error de almacenamiento"}. Comprueba la imagen y la categoría e inténtalo de nuevo."
-                                        }
-                                    }
-                                }
-                            }, modifier = Modifier.fillMaxWidth()) { Text("Guardar tarjeta") }
-                            OutlinedButton(onClick = { libraryPage = "list"; editingWord = null; libraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar y volver a la biblioteca") }
-                            if (libraryMessage.isNotBlank()) Text(libraryMessage, color = if (libraryMessage.startsWith("No se ha podido")) Color(0xFFB3261E) else Color(0xFF24733B))
-                        }
-                    }
-                    "categories" -> item {
-                        Text("Categorías", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Activa o desactiva categorías completas sin borrar sus palabras. También puedes mover o eliminar categorías.", fontSize = 14.sp, color = Color(0xFF667085))
-                        OutlinedTextField(value = categoryDraftName, onValueChange = { categoryDraftName = NameRules.filterInput(it) }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        Button(onClick = { val clean = categoryDraftName.trim(); if (NameRules.validationError(clean) != null) categoryMessage = NameRules.validationError(clean)!!; else if (categories.any { NameRules.key(it) == NameRules.key(clean) }) categoryMessage = "Esa categoría ya existe."; else { categoryNames = categoryNames + clean; preferences.edit().putString("categories", categoryNames.joinToString("|")).apply(); categoryDraftName = ""; categoryMessage = "Categoría creada." } }, modifier = Modifier.fillMaxWidth()) { Text("Añadir categoría") }
-                        if (categoryMessage.isNotBlank()) Text(categoryMessage, color = Color(0xFF24733B))
-                        categories.forEach { name ->
-                            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text(name, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                    val categoryPairs = pairs.filter { it.category.equals(name, ignoreCase = true) }
-                                    val allCategoryWordsActive = categoryPairs.isNotEmpty() && categoryPairs.all { it.active }
-                                    val anyCategoryWordsActive = categoryPairs.any { it.active }
-                                    Text("${categoryPairs.size} palabras · ${if (categoryPairs.isEmpty()) "vacía" else if (allCategoryWordsActive) "activa" else if (anyCategoryWordsActive) "parcialmente activa" else "desactivada"}", color = Color(0xFF667085))
-                                    OutlinedButton(
-                                        onClick = {
-                                            val activate = !allCategoryWordsActive
-                                            pairs = pairs.map { pair -> if (pair.category.equals(name, ignoreCase = true)) pair.copy(active = activate) else pair }
-                                            pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
-                                            categoryMessage = if (categoryPairs.isEmpty()) "Esta categoría no tiene palabras todavía." else if (activate) "Categoría «$name» activada." else "Categoría «$name» desactivada."
-                                        },
-                                        enabled = categoryPairs.isNotEmpty(),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { Text(if (allCategoryWordsActive) "Desactivar categoría" else "Activar toda la categoría") }
-                                    if (name.equals(categoryToRemove, ignoreCase = true)) {
-                                        Text("Borrar categoría y contenido", fontWeight = FontWeight.SemiBold)
-                                        Text("Esta opción eliminará también las ${pairs.count { it.category.equals(name, ignoreCase = true) }} palabras de esta categoría.", fontSize = 13.sp, color = Color(0xFFB3261E))
-                                        Button(onClick = {
-                                            pairs = pairs.filterNot { it.category.equals(name, ignoreCase = true) }
-                                            pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
-                                            categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
-                                            preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
-                                            categoryToRemove = ""
-                                            categoryMessage = "Categoría y palabras eliminadas."
-                                        }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
-                                        Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.SemiBold)
-                                        categories.filterNot { it.equals(name, ignoreCase = true) }.forEach { destination ->
-                                            OutlinedButton(onClick = {
-                                                val moving = pairs.filter { it.category.equals(name, ignoreCase = true) }
-                                                val destinationItems = pairs.filter { it.category.equals(destination, ignoreCase = true) }
-                                                val conflicts = NameRules.duplicates(moving.map { it.word }, destinationItems.map { it.word })
-                                                if (conflicts.isNotEmpty()) {
-                                                    categoryMessage = "No se ha movido el contenido. Ya existen en «$destination»: ${conflicts.joinToString()}. Renombra o resuelve esos duplicados antes de reasignar."
-                                                } else {
-                                                    pairs = pairs.map { if (it.category.equals(name, ignoreCase = true)) it.copy(category = destination) else it }
-                                                    pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
-                                                    categoryNames = categoryNames.filterNot { it.equals(name, ignoreCase = true) }
-                                                    preferences.edit().putString("categories", categoryNames.joinToString("|")).apply()
-                                                    categoryToRemove = ""
-                                                    categoryMessage = "Categoría eliminada; palabras movidas a $destination."
-                                                }
-                                            }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
-                                        }
-                                        OutlinedButton(onClick = { categoryToRemove = ""; categoryMessage = "Operación cancelada. No se ha borrado nada." }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-                                    } else {
-                                        OutlinedButton(onClick = { categoryToRemove = name; categoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
-                                    }
-                                }
                             }
-                        }
+                        )
                     }
                     "rewards" -> item {
                         Text("Saldo de recompensas", fontSize = 23.sp, fontWeight = FontWeight.Bold)
