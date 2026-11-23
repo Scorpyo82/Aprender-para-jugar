@@ -127,5 +127,5 @@ internal fun RewardsSettingsContent(
                         androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                         Text("Control de intentos", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Configura cuántas veces se puede jugar cada dificultad y cuándo se reinician los intentos.", fontSize = 14.sp, color = Color(0xFF667085))
-                        ParentMenuNavigationCard("🔄", "Sistemas de cuotas", "Configurar intentos y reinicios") { parentSection = "quota-system" }
+                        ParentMenuNavigationCard("🔄", "Sistemas de cuotas", "Configurar intentos y reinicios") { onOpenQuotaSystem() }
 }
