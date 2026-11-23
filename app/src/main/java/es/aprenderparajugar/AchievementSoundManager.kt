@@ -29,7 +29,9 @@ internal enum class AchievementSoundEvent(
 internal object AchievementSoundManager {
     private const val PREFS = "aprender_para_jugar"
     private val mutex = Mutex()
-    fun isEnabled(context: Context) = context.getSharedPreferences(PREFS, 0).getBoolean("achievement_sounds_enabled", true)\n    fun isEventEnabled(context: Context, event: AchievementSoundEvent) = context.getSharedPreferences(PREFS, 0).getBoolean(eventEnabledKey(event), true)\n    fun setEventEnabled(context: Context, event: AchievementSoundEvent, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean(eventEnabledKey(event), enabled).apply() }
+    fun isEnabled(context: Context) = context.getSharedPreferences(PREFS, 0).getBoolean("achievement_sounds_enabled", true)
+    fun isEventEnabled(context: Context, event: AchievementSoundEvent) = context.getSharedPreferences(PREFS, 0).getBoolean(eventEnabledKey(event), true)
+    fun setEventEnabled(context: Context, event: AchievementSoundEvent, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean(eventEnabledKey(event), enabled).apply() }
     fun setEnabled(context: Context, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean("achievement_sounds_enabled", enabled).apply() }
     fun customPath(context: Context, event: AchievementSoundEvent): String? =
         context.getSharedPreferences(PREFS, 0).getString(pathKey(event), null)?.takeIf { File(it).isFile }
@@ -105,5 +107,6 @@ internal object AchievementSoundManager {
             }
         }
     }
-    private fun pathKey(event: AchievementSoundEvent) = "achievement_sound_path_${event.key}"\n    private fun eventEnabledKey(event: AchievementSoundEvent) = "achievement_sound_${event.key}_enabled"
+    private fun pathKey(event: AchievementSoundEvent) = "achievement_sound_path_${event.key}"
+    private fun eventEnabledKey(event: AchievementSoundEvent) = "achievement_sound_${event.key}_enabled"
 }
