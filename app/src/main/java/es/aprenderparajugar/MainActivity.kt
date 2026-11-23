@@ -660,8 +660,10 @@ private fun AprenderApp() {
     var sequenceExercises by sequenceLibraryState.exercises
     var sequenceEditingIndex by remember { mutableIntStateOf(-1) }
     var sequenceTitleDraft by remember { mutableStateOf("") }
-    var sequenceMaxCards by remember { mutableIntStateOf(preferences.getInt("sequence_max_cards_v1", 6).coerceIn(2, 6)) }
-    var sequenceContentFormat by remember { mutableStateOf(preferences.getString("sequence_content_format_v1", "Imagen y texto") ?: "Imagen y texto") }
+    val sequenceMaxCardsState = remember { mutableIntStateOf(preferences.getInt("sequence_max_cards_v1", 6).coerceIn(2, 6)) }
+    var sequenceMaxCards by sequenceMaxCardsState
+    val sequenceContentFormatState = remember { mutableStateOf(preferences.getString("sequence_content_format_v1", "Imagen y texto") ?: "Imagen y texto") }
+    var sequenceContentFormat by sequenceContentFormatState
     var sequenceCategoryDraft by remember { mutableStateOf("") }
     var sequenceNewCategoryDraft by sequenceLibraryState.newCategoryDraft
     var sequenceCategoryMenuExpanded by remember { mutableStateOf(false) }
@@ -682,6 +684,20 @@ private fun AprenderApp() {
     var pendingCameraSequenceIndex by remember { mutableIntStateOf(-1) }
     var sequenceAlternativeDraft by remember { mutableStateOf("") }
     var sequenceEditorMessage by remember { mutableStateOf("") }
+    val onCreateSequenceExercise = {
+        sequenceEditingIndex = -1; sequenceTitleDraft = ""
+        sequenceCategoryDraft = ""; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
+        sequenceCardsDraft = listOf("", "", ""); sequenceCardPicturesDraft = listOf("", "", "")
+        sequenceAlternativeDraft = ""; sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
+    }
+    val onEditSequenceExercise: (Int, SequenceExercise) -> Unit = { index, exercise ->
+        sequenceEditingIndex = index; sequenceTitleDraft = exercise.title
+        sequenceCategoryDraft = exercise.category; sequenceTypeDraft = exercise.type; sequenceDifficultyDraft = exercise.difficulty
+        sequenceCardsDraft = exercise.cards
+        sequenceCardPicturesDraft = exercise.cards.indices.map { cardIndex -> exercise.pictures.getOrNull(cardIndex).orEmpty().ifBlank { defaultSequencePicture(cardIndex) } }
+        sequenceAlternativeDraft = exercise.alternatives.joinToString("\n")
+        sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
+    }
     val sequenceGameState = remember(preferences) { SequenceGameState(preferences) }
     var sequencePlayingExercise by sequenceGameState.playingExercise
     var sequencePlayOrder by sequenceGameState.playOrder
@@ -2900,305 +2916,18 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             )
                         }
                     }
-                    "sequences-settings" -> {
-                        item { Text("Configurar Secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-library" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5E6))) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("📚", fontSize = 26.sp)
-                                    Column(Modifier.weight(1f)) { Text("Biblioteca común de ejercicios", fontWeight = FontWeight.Bold); Text("Crear, editar, filtrar y activar ejercicios de los cuatro tipos", fontSize = 13.sp, color = Color(0xFF667085)) }
-                                    Text("›", fontSize = 24.sp)
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-categories" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5E6))) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🗂️", fontSize = 26.sp)
-                                    Column(Modifier.weight(1f)) { Text("Categorías comunes", fontWeight = FontWeight.Bold); Text("Activar o desactivar categorías para todos los tipos", fontSize = 13.sp, color = Color(0xFF667085)) }
-                                    Text("›", fontSize = 24.sp)
-                                }
-                            }
-                        }
-                        item {
-                            Text("Tipos de ejercicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("Estos son los cuatro tipos previstos para esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085))
-                        }
-                        listOf(
-                            Triple("Orden temporal", "Primero, después y al final", "temporal"),
-                            Triple("Procesos", "Ordenar los pasos de una actividad", "procesos"),
-                            Triple("Causa y consecuencia", "Relacionar una situación con su resultado", "causa"),
-                            Triple("Ciclos", "Comprender procesos que se repiten", "ciclos")
-                        ).forEach { (name, description, key) ->
-                            item {
-                                Card(Modifier.fillMaxWidth().clickable { parentSection = "sequence-type-$key" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
-                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Text(when (key) { "temporal" -> "🕒"; "procesos" -> "⚙️"; "causa" -> "🔗"; else -> "🔄" }, fontSize = 24.sp)
-                                        Column(Modifier.weight(1f)) { Text(name, fontWeight = FontWeight.Bold); Text(description, fontSize = 13.sp, color = Color(0xFF667085)) }
-                                        Text("›", fontSize = 26.sp, color = Color(0xFF39713A))
-                                    }
-                                }
-                            }
-                        }
-                        item {
-                            androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Qué mostrar en la actividad:", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            listOf("Imagen y texto" to "Imágenes con texto", "Solo imágenes" to "Solo imágenes", "Solo texto" to "Solo texto").forEach { (format, label) ->
-                                Row(
-                                    Modifier.fillMaxWidth().clickable {
-                                        sequenceContentFormat = format
-                                        preferences.edit().putString("sequence_content_format_v1", format).apply()
-                                    }.padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(label, modifier = Modifier.weight(1f))
-                                    androidx.compose.material3.RadioButton(
-                                        selected = sequenceContentFormat == format,
-                                        onClick = {
-                                            sequenceContentFormat = format
-                                            preferences.edit().putString("sequence_content_format_v1", format).apply()
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        item {
-                            androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Máximo de tarjetas por secuencia", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("Limita el número de tarjetas de las secuencias que se ofrecerán al menor.", fontSize = 14.sp, color = Color(0xFF667085))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedButton(onClick = { if (sequenceMaxCards > 2) { sequenceMaxCards--; preferences.edit().putInt("sequence_max_cards_v1", sequenceMaxCards).apply() } }, enabled = sequenceMaxCards > 2, modifier = Modifier.weight(1f)) { Text("−") }
-                                Text("$sequenceMaxCards", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                OutlinedButton(onClick = { if (sequenceMaxCards < 6) { sequenceMaxCards++; preferences.edit().putInt("sequence_max_cards_v1", sequenceMaxCards).apply() } }, enabled = sequenceMaxCards < 6, modifier = Modifier.weight(1f)) { Text("+") }
-                            }
-                        }
-                    }
-                    "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos" -> {
-                        val sequenceType = when (parentSection) {
-                            "sequence-type-temporal" -> "Orden temporal"
-                            "sequence-type-procesos" -> "Procesos"
-                            "sequence-type-causa" -> "Causa y consecuencia"
-                            else -> "Ciclos"
-                        }
-                        item { Text(sequenceType, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Configura el contenido específico de esta modalidad.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable {
-                                val key = when (parentSection) {
-                                    "sequence-type-temporal" -> "temporal"
-                                    "sequence-type-procesos" -> "procesos"
-                                    "sequence-type-causa" -> "causa"
-                                    else -> "ciclos"
-                                }
-                                parentSection = "sequence-library"
-                            }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🖼️", fontSize = 26.sp)
-                                    Column { Text("Biblioteca de secuencias", fontWeight = FontWeight.Bold); Text("Ver, crear y editar ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable {
-                                val key = when (parentSection) {
-                                    "sequence-type-temporal" -> "temporal"
-                                    "sequence-type-procesos" -> "procesos"
-                                    "sequence-type-causa" -> "causa"
-                                    else -> "ciclos"
-                                }
-                                parentSection = "sequence-categories"
-                            }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
-                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🗂️", fontSize = 26.sp)
-                                    Column { Text("Categorías", fontWeight = FontWeight.Bold); Text("Organizar por temas los ejercicios de $sequenceType", fontSize = 13.sp, color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item { Text(if (parentSection == "sequence-type-temporal") "Prototipo funcional: biblioteca y editor de Orden temporal." else "Cada modalidad tendrá su propia biblioteca de ejercicios.", fontSize = 13.sp, color = Color(0xFF667085)) }
-                    }
-                    "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos" -> {
-                        val sequenceTypes = listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos")
-                        val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
-                        val visibleExercises = sequenceExercises.withIndex().filter { (_, exercise) ->
-                            (sequenceFilterType == "Todos" || exercise.type == sequenceFilterType) &&
-                            (sequenceFilterCategory == "Todas" || exercise.category == sequenceFilterCategory) &&
-                            (sequenceFilterDifficulty == "Todas" || exercise.difficulty == sequenceFilterDifficulty) &&
-                            (sequenceFilterStatus == "Todos" || if (sequenceFilterStatus == "Activos") exercise.active else !exercise.active)
-                        }
-                        item { Text("Biblioteca de secuencias", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Control parental · Gestiona ejercicios, categorías y su disponibilidad.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        item {
-                            Button(onClick = {
-                                sequenceEditingIndex = -1; sequenceTitleDraft = ""
-                                sequenceCategoryDraft = ""; sequenceTypeDraft = "Orden temporal"; sequenceDifficultyDraft = "Normal"
-                                sequenceCardsDraft = listOf("", "", ""); sequenceCardPicturesDraft = listOf("", "", "")
-                                sequenceAlternativeDraft = ""; sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
-                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear ejercicio") }
-                        }
-                        item {
-                            Text("Filtrar contenido", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                        item {
-                            Text("Tipo", fontWeight = FontWeight.Bold)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-                                (listOf("Todos") + sequenceTypes).forEach { type ->
-                                    FilterChip(selected = sequenceFilterType == type, onClick = { sequenceFilterType = type }, label = { Text(type, softWrap = false) })
-                                }
-                            }
-                        }
-                        item {
-                            Text("Categoría", fontWeight = FontWeight.Bold)
-                            androidx.compose.foundation.layout.Box {
-                                OutlinedButton(onClick = { sequenceLibraryFilterCategoryExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("🗂️ Categoría: $sequenceFilterCategory  ▾", maxLines = 1)
-                                }
-                                DropdownMenu(expanded = sequenceLibraryFilterCategoryExpanded, onDismissRequest = { sequenceLibraryFilterCategoryExpanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
-                                    (listOf("Todas") + sequenceCategories).forEach { category ->
-                                        DropdownMenuItem(text = { Text(category) }, onClick = { sequenceFilterCategory = category; sequenceLibraryFilterCategoryExpanded = false })
-                                    }
-                                }
-                            }
-                        }
-                        item {
-                            Text("Dificultad", fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                listOf("Todas", "Fácil", "Normal", "Difícil").forEach { level -> FilterChip(selected = sequenceFilterDifficulty == level, onClick = { sequenceFilterDifficulty = level }, label = { Text(level) }) }
-                            }
-                        }
-                        item {
-                            Text("Estado", fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                listOf("Todos", "Activos", "Inactivos").forEach { status -> FilterChip(selected = sequenceFilterStatus == status, onClick = { sequenceFilterStatus = status }, label = { Text(status) }) }
-                            }
-                        }
-                        if (visibleExercises.isEmpty()) item { Text("No hay ejercicios que coincidan con estos filtros.", color = Color(0xFF667085)) }
-                        visibleExercises.forEach { (index, exercise) ->
-                            item {
-                                Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (exercise.active) Color.White else Color(0xFFF2F4F7))) {
-                                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f).clickable {
-                                            sequenceEditingIndex = index; sequenceTitleDraft = exercise.title
-                                            sequenceCategoryDraft = exercise.category; sequenceTypeDraft = exercise.type; sequenceDifficultyDraft = exercise.difficulty
-                                            sequenceCardsDraft = exercise.cards
-                                            sequenceCardPicturesDraft = exercise.cards.indices.map { cardIndex -> exercise.pictures.getOrNull(cardIndex).orEmpty().ifBlank { defaultSequencePicture(cardIndex) } }
-                                            sequenceAlternativeDraft = exercise.alternatives.joinToString("\n")
-                                            sequenceEditorMessage = ""; parentSection = "sequence-editor-temporal"
-                                        }) {
-                                            Text(exercise.title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                            Text("${exercise.type} · ${exercise.category} · ${exercise.difficulty}", fontSize = 12.sp, color = Color(0xFF667085))
-                                            Text("${exercise.cards.size} tarjetas · ${exercise.format}", fontSize = 12.sp, color = Color(0xFF667085))
-                                        }
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Switch(checked = exercise.active, onCheckedChange = { active ->
-                                                sequenceExercises = sequenceExercises.toMutableList().also { it[index] = exercise.copy(active = active) }
-                                                sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
-                                            })
-                                            Text(if (exercise.active) "Activo" else "Inactivo", fontSize = 11.sp)
-                                            OutlinedButton(onClick = {
-                                                sequenceExercises = sequenceExercises.filterIndexed { currentIndex, _ -> currentIndex != index }
-                                                sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
-                                                sequenceCategoryMessage = "Ejercicio eliminado."
-                                            }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text("Eliminar", fontSize = 12.sp) }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    "sequences-settings", "sequence-type-temporal", "sequence-type-procesos", "sequence-type-causa", "sequence-type-ciclos",
+                    "sequence-library", "sequence-library-temporal", "sequence-library-procesos", "sequence-library-causa", "sequence-library-ciclos",
                     "sequence-categories", "sequence-categories-temporal", "sequence-categories-procesos", "sequence-categories-causa", "sequence-categories-ciclos" -> {
-                        val sequenceCategories = (sequenceCategoryNames + sequenceExercises.map { it.category }.filter { it.isNotBlank() }).distinct().sorted()
-                        item { Text("Categorías de secuencias", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item { Text("Crea y organiza categorías temáticas compartidas por todos los tipos de secuencia. Desactivar una categoría mantiene sus ejercicios guardados, pero evita que aparezcan en las partidas.", fontSize = 14.sp, color = Color(0xFF667085)) }
-                        item {
-                            OutlinedTextField(
-                                value = sequenceNewCategoryDraft,
-                                onValueChange = { sequenceNewCategoryDraft = NameRules.filterInput(it); sequenceCategoryMessage = "" },
-                                label = { Text("Nueva categoría") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true
-                            )
-                            Button(onClick = {
-                                val name = sequenceNewCategoryDraft.trim()
-                                when {
-                                    NameRules.validationError(name) != null -> sequenceCategoryMessage = NameRules.validationError(name)!!
-                                    sequenceCategories.any { NameRules.key(it) == NameRules.key(name) } -> sequenceCategoryMessage = "Ya existe una categoría con ese nombre."
-                                    else -> {
-                                        sequenceCategoryNames = (sequenceCategoryNames + name).distinct()
-                                        preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
-                                        sequenceNewCategoryDraft = ""
-                                        sequenceCategoryMessage = "Categoría creada."
-                                    }
-                                }
-                            }, modifier = Modifier.fillMaxWidth()) { Text("＋ Crear categoría") }
-                            if (sequenceCategoryMessage.isNotBlank()) Text(sequenceCategoryMessage, color = if (sequenceCategoryMessage == "Categoría creada.") Color(0xFF24733B) else Color(0xFFB3261E), fontSize = 13.sp)
-                        }
-                        sequenceCategories.forEach { category ->
-                            item {
-                                val enabled = category !in disabledSequenceCategories
-                                Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = if (enabled) Color.White else Color(0xFFF2F4F7))) {
-                                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Column(Modifier.weight(1f)) {
-                                                Text(category, fontWeight = FontWeight.Bold)
-                                                Text("${sequenceExercises.count { it.category == category }} ejercicios · ${sequenceExercises.count { it.category == category && it.active }} activos", fontSize = 12.sp, color = Color(0xFF667085))
-                                            }
-                                            Switch(checked = enabled, onCheckedChange = { checked ->
-                                                disabledSequenceCategories = if (checked) disabledSequenceCategories - category else disabledSequenceCategories + category
-                                                preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
-                                            })
-                                        }
-                                        if (sequenceCategoryToDelete.equals(category, ignoreCase = true)) {
-                                            val assignedCount = sequenceExercises.count { it.category.equals(category, ignoreCase = true) }
-                                            Text("Borrar categoría y contenido", fontWeight = FontWeight.SemiBold)
-                                            Text(
-                                                "Esta opción eliminará también los $assignedCount ejercicios de esta categoría.",
-                                                fontSize = 13.sp,
-                                                color = Color(0xFFB3261E)
-                                            )
-                                            Button(onClick = {
-                                                sequenceExercises = sequenceExercises.filterNot { it.category.equals(category, ignoreCase = true) }
-                                                sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
-                                                sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
-                                                preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
-                                                disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
-                                                preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
-                                                sequenceCategoryToDelete = null
-                                                sequenceCategoryMessage = "Categoría y ejercicios eliminados."
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Borrar categoría y contenido") }
-                                            Text("Borrar categoría pero mover contenido a:", fontWeight = FontWeight.SemiBold)
-                                            val destinations = sequenceCategories.filterNot { it.equals(category, ignoreCase = true) }
-                                            destinations.forEach { destination ->
-                                                OutlinedButton(onClick = {
-                                                    val moving = sequenceExercises.filter { it.category.equals(category, ignoreCase = true) }
-                                                    val destinationItems = sequenceExercises.filter { it.category.equals(destination, ignoreCase = true) }
-                                                    val conflicts = NameRules.duplicates(moving.map { it.title }, destinationItems.map { it.title })
-                                                    if (conflicts.isNotEmpty()) {
-                                                        sequenceCategoryMessage = "No se han movido los ejercicios. Ya existen en «$destination»: ${conflicts.joinToString()}. Renombra o resuelve esos duplicados antes de reasignar."
-                                                    } else {
-                                                        sequenceExercises = sequenceExercises.map {
-                                                            if (it.category.equals(category, ignoreCase = true)) it.copy(category = destination) else it
-                                                        }
-                                                        sequenceExercises = sequenceLibraryState.saveExercises(sequenceExercises)
-                                                        sequenceCategoryNames = sequenceCategoryNames.filterNot { it.equals(category, ignoreCase = true) }
-                                                        preferences.edit().putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|")).apply()
-                                                        disabledSequenceCategories = disabledSequenceCategories.filterNot { it.equals(category, ignoreCase = true) }.toSet()
-                                                        preferences.edit().putStringSet("disabled_sequence_categories", disabledSequenceCategories).apply()
-                                                        sequenceCategoryToDelete = null
-                                                        sequenceCategoryMessage = "Categoría eliminada; ejercicios movidos a $destination."
-                                                    }
-                                                }, modifier = Modifier.fillMaxWidth()) { Text(destination) }
-                                            }
-                                            OutlinedButton(onClick = {
-                                                sequenceCategoryToDelete = null
-                                                sequenceCategoryMessage = "Operación cancelada. No se ha borrado nada."
-                                            }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-                                        } else {
-                                            OutlinedButton(onClick = { sequenceCategoryToDelete = category; sequenceCategoryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Eliminar / reasignar") }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        sequenceSettingsItems(
+                            parentSectionState = parentSectionState,
+                            preferences = preferences,
+                            sequenceLibraryState = sequenceLibraryState,
+                            sequenceContentFormatState = sequenceContentFormatState,
+                            sequenceMaxCardsState = sequenceMaxCardsState,
+                            onCreateExercise = onCreateSequenceExercise,
+                            onEditExercise = onEditSequenceExercise
+                        )
                     }
                     "sequence-editor-temporal" -> {
                         SequenceEditorTemporalScreen(
