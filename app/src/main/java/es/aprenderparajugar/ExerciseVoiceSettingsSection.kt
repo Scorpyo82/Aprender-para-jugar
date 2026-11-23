@@ -152,12 +152,17 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
             }
         }
     }
-    DisposableEffect(recorder) {
+    // Mantener un único efecto durante la vida del editor. Si se usara
+    // DisposableEffect(recorder), al asignar el MediaRecorder recién iniciado
+    // Compose cerraría el efecto anterior y podría detener esa misma grabación.
+    DisposableEffect(Unit) {
         onDispose {
-            if (recorder != null) {
-                runCatching { recorder?.stop() }
-                runCatching { recorder?.release() }
-                recordingFile?.delete()
+            val activeRecorder = recorder
+            val activeFile = recordingFile
+            if (activeRecorder != null) {
+                runCatching { activeRecorder.stop() }
+                runCatching { activeRecorder.release() }
+                activeFile?.delete()
             }
         }
     }
