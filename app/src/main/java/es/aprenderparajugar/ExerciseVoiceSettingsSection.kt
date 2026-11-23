@@ -52,14 +52,14 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
         Text("Explican cómo realizar cada modalidad o tipo de Secuencias. Se reproducen automáticamente al comenzar y pueden repetirse manualmente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Activar todas las instrucciones", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Checkbox(checked = instructionsEnabled, onCheckedChange = {
+            Checkbox(checked = instructionsEnabled, enabled = masterEnabled, onCheckedChange = {
                 instructionsEnabled = it
                 ExerciseVoiceManager.setGroupEnabled(context, ExerciseVoiceManager.Group.INSTRUCTIONS, it)
                 if (!it) ExerciseVoiceManager.stop()
             })
         }
         ExerciseVoiceManager.items.filter { it.group == ExerciseVoiceManager.Group.INSTRUCTIONS }.forEach { item ->
-            VoiceItemEditor(item, expandedAudioKey == "voice:" + item.key, {
+            VoiceItemEditor(item, masterEnabled && instructionsEnabled, expandedAudioKey == "voice:" + item.key, {
                 onExpandAudio(if (expandedAudioKey == "voice:" + item.key) null else "voice:" + item.key)
             })
         }
@@ -68,14 +68,14 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
         Text("Mensajes breves que animan al niño al elegir modalidad, dificultad o tipo de ejercicio.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Activar todos los mensajes de acompañamiento", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Checkbox(checked = encouragementEnabled, onCheckedChange = {
+            Checkbox(checked = encouragementEnabled, enabled = masterEnabled, onCheckedChange = {
                 encouragementEnabled = it
                 ExerciseVoiceManager.setGroupEnabled(context, ExerciseVoiceManager.Group.ENCOURAGEMENT, it)
                 if (!it) ExerciseVoiceManager.stop()
             })
         }
         ExerciseVoiceManager.items.filter { it.group == ExerciseVoiceManager.Group.ENCOURAGEMENT }.forEach { item ->
-            VoiceItemEditor(item, expandedAudioKey == "voice:" + item.key, {
+            VoiceItemEditor(item, masterEnabled && encouragementEnabled, expandedAudioKey == "voice:" + item.key, {
                 onExpandAudio(if (expandedAudioKey == "voice:" + item.key) null else "voice:" + item.key)
             })
         }
@@ -83,7 +83,7 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
 }
 
 @Composable
-private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Boolean, onExpand: () -> Unit) {
+private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, parentEnabled: Boolean, expanded: Boolean, onExpand: () -> Unit) {
     val context = LocalContext.current
     var checked by remember(item) { mutableStateOf(ExerciseVoiceManager.isItemEnabled(context, item)) }
     var custom by remember(item) { mutableStateOf(ExerciseVoiceManager.customPath(context, item) != null) }
@@ -178,37 +178,38 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
             ExerciseVoiceManager.setItemEnabled(context, item, it)
             if (!it) ExerciseVoiceManager.stop()
         },
-        onExpandChange = onExpand
+        onExpandChange = onExpand,
+        checkboxEnabled = parentEnabled
     ) {
         Text(if (custom) "Audio personalizado" else "Audio predeterminado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(modifier = Modifier.weight(1f), onClick = {
+            OutlinedButton(modifier = Modifier.weight(1f), enabled = parentEnabled, onClick = {
                 if (!ExerciseVoiceManager.playLatest(context, item, preview = true)) message = "No se ha podido reproducir el audio."
             }) { Text("▶ Escuchar", maxLines = 1) }
         }
-        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = custom && !recording, onClick = {
+        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = parentEnabled && custom && !recording, onClick = {
             ExerciseVoiceManager.restoreDefault(context, item)
             custom = false
             message = "Se ha restaurado el audio original."
         }) { Text("Dejar por defecto") }
-        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !recording && !preparing, onClick = { importLauncher.launch(arrayOf("audio/*")) }) { Text("Cargar audio") }
+        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = parentEnabled && !recording && !preparing, onClick = { importLauncher.launch(arrayOf("audio/*")) }) { Text("Cargar audio") }
         if (recording) {
             Text("● GRABACIÓN EN CURSO", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
             Text("Cuando termines de hablar, pulsa «Parar y guardar».", style = MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(modifier = Modifier.weight(1f), onClick = { finishRecording(true) }) { Text("Parar y guardar") }
-                OutlinedButton(modifier = Modifier.weight(1f), onClick = { finishRecording(false) }) { Text("Descartar") }
+                Button(modifier = Modifier.weight(1f), enabled = parentEnabled, onClick = { finishRecording(true) }) { Text("Parar y guardar") }
+                OutlinedButton(modifier = Modifier.weight(1f), enabled = parentEnabled, onClick = { finishRecording(false) }) { Text("Descartar") }
             }
         } else if (preparing) {
             Text("Preparar grabación", style = MaterialTheme.typography.titleSmall)
             Text("Cuando estés preparado, pulsa «Iniciar grabación». El micrófono no se activará hasta entonces.", style = MaterialTheme.typography.bodySmall)
-            Button(modifier = Modifier.fillMaxWidth(), onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Iniciar grabación") }
-            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+            Button(modifier = Modifier.fillMaxWidth(), enabled = parentEnabled, onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Iniciar grabación") }
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = parentEnabled, onClick = {
                 preparing = false
                 message = "Grabación cancelada."
             }) { Text("Cancelar") }
         } else {
-            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = parentEnabled, onClick = {
                 preparing = true
                 message = ""
             }) { Text("Grabar audio") }
