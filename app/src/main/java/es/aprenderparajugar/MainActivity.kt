@@ -1646,6 +1646,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
 
 
+    AppAudioCoordinator(
+        state = appAudioState,
+        preferences = preferences,
+        screen = screen,
+        firstLaunchNeedsSetup = firstLaunchNeedsSetup,
+        onFirstLaunchSetupComplete = { firstLaunchNeedsSetup = false },
+        appInForeground = appInForeground,
+        context = context,
+        difficulty = difficulty,
+        wordSelectedDifficulty = wordSelectedDifficulty,
+        sequenceChosenCategory = sequenceChosenCategory,
+        sequenceChosenDifficulty = sequenceChosenDifficulty,
+        sequenceType = sequencePlayingExercise?.type
+    )
+
     fun resolveCardsPair(word: String, picture: String) {
         val resolution = cardsGameState.resolve(word, picture, exercisePairs, learningStats, learningTurn)
         learningTurn = resolution.learningTurn
