@@ -669,7 +669,7 @@ private fun AprenderApp() {
     var storyEditorScenes by storyEditorState.scenes
     var storyEditorSelectedScene by storyEditorState.selectedScene
     var storyScenePendingDeletion by remember { mutableStateOf<String?>(null) }
-    val storyAudioSettingsState = remember(preferences) { StoryAudioSettingsState(preferences) }
+    val storyAudioSettingsState = remember(context) { StoryAudioSettingsState(context) }
     var showPendingStoryObjectImages by remember { mutableStateOf(preferences.getBoolean("stories_show_pending_object_images", false)) }
     var storySceneTest by remember { mutableStateOf<StoredStoryScene?>(null) }
     var storySceneTestAmbientOverride by remember { mutableStateOf(false) }
