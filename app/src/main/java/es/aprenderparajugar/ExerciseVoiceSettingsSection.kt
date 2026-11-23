@@ -74,7 +74,7 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
                 if (!it) ExerciseVoiceManager.stop()
             })
         }
-        ExerciseVoiceManager.items.filter { it.group == ExerciseVoiceManager.Group.ENCOURAGEMENT && it.key != "encouragement_stories" }.forEach { item ->
+        ExerciseVoiceManager.items.filter { it.group == ExerciseVoiceManager.Group.ENCOURAGEMENT }.forEach { item ->
             VoiceItemEditor(item, expandedAudioKey == "voice:" + item.key, {
                 onExpandAudio(if (expandedAudioKey == "voice:" + item.key) null else "voice:" + item.key)
             })
