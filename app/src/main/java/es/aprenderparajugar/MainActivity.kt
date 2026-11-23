@@ -1496,22 +1496,16 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             sequenceExercises, type, sequenceMaxCards, disabledSequenceCategories, level
         )
 
-    fun quotaAvailabilitySnapshot(): Map<String, Boolean> {
-        val result = mutableMapOf<String, Boolean>()
-        listOf("Fácil", "Normal", "Difícil").forEach { level ->
-            result[ExerciseQuotaRepository.id("cards", level)] =
-                pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
-            result[ExerciseQuotaRepository.id("words", level)] =
-                wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(level, true) }
-            listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
-                result[ExerciseQuotaRepository.id("sequences", level, type)] =
-                    eligibleSequenceExercises(type, level).isNotEmpty()
-            }
-        }
-        return result
-    }
-
-    val quotaAvailability = quotaAvailabilitySnapshot()
+    val quotaAvailability = buildQuotaAvailabilitySnapshot(
+        pairs = pairs,
+        wordExercises = wordExercises,
+        disabledWordExerciseCategories = disabledWordExerciseCategories,
+        questionCount = questionCount,
+        sequenceGameState = sequenceGameState,
+        sequenceExercises = sequenceExercises,
+        sequenceMaxCards = sequenceMaxCards,
+        disabledSequenceCategories = disabledSequenceCategories
+    )
     LaunchedEffect(quotaAvailability) {
         ExerciseQuotaRepository.allQuotaIds().forEach { id ->
             ExerciseQuotaRepository.status(preferences, id, quotaAvailability[id] == true)
@@ -3761,3 +3755,28 @@ private fun SequenceGameRoute(
     )
 }
 
+private fun buildQuotaAvailabilitySnapshot(
+    pairs: List<PairItem>,
+    wordExercises: List<PairItem>,
+    disabledWordExerciseCategories: Set<String>,
+    questionCount: Int,
+    sequenceGameState: SequenceGameState,
+    sequenceExercises: List<SequenceExercise>,
+    sequenceMaxCards: Int,
+    disabledSequenceCategories: Set<String>
+): Map<String, Boolean> {
+    val result = mutableMapOf<String, Boolean>()
+    listOf("Fácil", "Normal", "Difícil").forEach { level ->
+        result[ExerciseQuotaRepository.id("cards", level)] =
+            pairs.count { it.active && it.difficulty.equals(level, true) } >= questionCount
+        result[ExerciseQuotaRepository.id("words", level)] =
+            wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(level, true) }
+        listOf("Orden temporal", "Procesos", "Causa y consecuencia", "Ciclos").forEach { type ->
+            result[ExerciseQuotaRepository.id("sequences", level, type)] =
+                sequenceGameState.eligibleExercises(
+                    sequenceExercises, type, sequenceMaxCards, disabledSequenceCategories, level
+                ).isNotEmpty()
+        }
+    }
+    return result
+}
