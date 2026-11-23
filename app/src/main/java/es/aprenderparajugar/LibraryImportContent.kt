@@ -630,14 +630,14 @@ internal fun LazyListScope.libraryImportContent(
                                     }
                                 }
                                 item {
-                                    Button(onClick = onImportSelection, enabled}, enabled = !transferImportPreparationLoadingState.value && !transferImportPreparationErrorState.value &&
+                                    Button(onClick = onImportSelection, enabled = !transferImportPreparationLoadingState.value && !transferImportPreparationErrorState.value &&
                                         (transferImportCategoriesState.value.values.any { it.isNotEmpty() } || transferImportStoriesState.value.isNotEmpty()) &&
                                         transferExerciseConflictsState.value.all { transferExerciseConflictDecisionsState.value[it.key] in setOf("reuse", "overwrite") } &&
                                         transferObjectConflictsState.value.all { it.incoming.folderName in transferObjectConflictDecisionsState.value } &&
                                         transferStoryNameConflictsState.value.all { transferStoryConflictDecisionsState.value[it.first.key] == "overwrite" },
                                         modifier = Modifier.fillMaxWidth()) { Text("Importar selección") }
                                 }
-                                item { OutlinedButton(onClick = onCancelImport}, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
+                                item { OutlinedButton(onClick = onCancelImport, modifier = Modifier.fillMaxWidth()) { Text("Cancelar importación") } }
                             }
                             if (transferMessage.isNotBlank()) item { Text(transferMessage, fontSize = 14.sp, color = if (transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B)) }
 }
