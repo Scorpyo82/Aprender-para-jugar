@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -132,7 +133,7 @@ internal fun AchievementSoundSettingsScreen() {
                     Text("Activar efectos sonoros", style = MaterialTheme.typography.titleMedium)
                     Text("Logros, objetos, recompensas y compras.")
                 }
-                Switch(checked = enabled, onCheckedChange = {
+                Checkbox(checked = enabled, onCheckedChange = {
                     enabled = it
                     AchievementSoundManager.setEnabled(context, it)
                 })
