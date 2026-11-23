@@ -176,9 +176,6 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
             OutlinedButton(Modifier.weight(1f), onClick = {
                 if (!ExerciseVoiceManager.playLatest(context, item, preview = true)) message = "No se ha podido reproducir el audio."
             }) { Text("▶ Escuchar", maxLines = 1) }
-            OutlinedButton(Modifier.weight(1f), onClick = {
-                if (!ExerciseVoiceManager.playLatest(context, item, preview = true)) message = "No se ha podido reproducir el audio."
-            }) { Text("↻ Repetir", maxLines = 1) }
         }
         OutlinedButton(Modifier.fillMaxWidth(), enabled = custom && !recording, onClick = {
             ExerciseVoiceManager.restoreDefault(context, item)
