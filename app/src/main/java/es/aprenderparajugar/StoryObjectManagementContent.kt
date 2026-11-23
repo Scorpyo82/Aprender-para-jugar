@@ -18,7 +18,6 @@ internal fun LazyListScope.storyObjectManagementItems(
     objectStoreMessageState: MutableState<String>,
     objectEditorReturnSectionState: MutableState<String>,
     storyObjectCollectionMenuExpandedState: MutableState<Boolean>,
-    pendingCameraTargetState: MutableState<String>,
     parentSectionState: MutableState<String>,
     onChooseGallery: () -> Unit,
     onTakePhoto: () -> Unit
@@ -42,7 +41,6 @@ internal fun LazyListScope.storyObjectManagementItems(
     var objectStoreMessage by objectStoreMessageState
     var objectEditorReturnSection by objectEditorReturnSectionState
     var storyObjectCollectionMenuExpanded by storyObjectCollectionMenuExpandedState
-    var pendingCameraTarget by pendingCameraTargetState
     var parentSection by parentSectionState
 
     when (section) {
@@ -184,15 +182,8 @@ internal fun LazyListScope.storyObjectManagementItems(
                                 onRequiresUnlockChange = { storyObjectRequiresUnlock = it },
                                 onCollectibleChange = { storyObjectCollectible = it },
                                 onStorePriceChange = { storyObjectStorePriceMinutes = it.filter(Char::isDigit).take(5) },
-                                onChooseGallery = {
-                                    preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                    storyObjectImagePicker.launch(arrayOf("image/*"))
-                                },
-                                onTakePhoto = {
-                                    preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
-                                    pendingCameraTarget = "story-object"
-                                    cameraLauncher.launch(null)
-                                },
+                                onChooseGallery = onChooseGallery,
+                                onTakePhoto = onTakePhoto,
                                 onSave = {
                                     storyObjectEditorState.save(context)?.let { savedObjects ->
                                         storedStoryObjects = savedObjects

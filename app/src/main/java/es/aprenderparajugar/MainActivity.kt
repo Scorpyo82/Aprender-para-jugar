@@ -2357,7 +2357,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             objectStoreMessageState = objectStoreMessageState,
                             objectEditorReturnSectionState = objectEditorReturnSectionState,
                             storyObjectCollectionMenuExpandedState = storyObjectCollectionMenuExpandedState,
-                            pendingCameraTargetState = pendingCameraTargetState,
                             parentSectionState = parentSectionState,
                             onChooseGallery = {
                                 preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
