@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,12 +32,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
+@OptIn(ExperimentalLayoutApi::class)
 internal fun LazyListScope.wordLibraryItems(
     state: WordLibraryState,
+    section: String,
     onPickImage: () -> Unit,
     onTakePhoto: () -> Unit
 ) {
@@ -56,6 +60,7 @@ internal fun LazyListScope.wordLibraryItems(
         var wordFilterStatus by state.filterStatus
         var wordNewCategoryDraft by state.newCategoryDraft
         var wordCategoryToDelete by state.categoryToDelete
+        if (section == "word-library") {
             item { Text(if (wordLibraryPage == "list") "Ejercicios de Palabras" else if (wordLibraryEditingIndex < 0) "Nuevo ejercicio de Palabras" else "Editar ejercicio de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
             if (wordLibraryPage == "list") {
                 item { Text("Esta biblioteca es independiente de Parejas y Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
@@ -173,7 +178,7 @@ internal fun LazyListScope.wordLibraryItems(
                 item { OutlinedButton(onClick = { wordLibraryPage = "list"; wordLibraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
             }
         }
-        "word-categories" -> {
+        } else {
             item { Text("Categorías de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
             item { Text("Estas categorías solo afectan a los ejercicios de Palabras; no modifican Tarjetas ni Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
             item { OutlinedTextField(value = wordNewCategoryDraft, onValueChange = { wordNewCategoryDraft = NameRules.filterInput(it); wordLibraryMessage = "" }, label = { Text("Nueva categoría") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
