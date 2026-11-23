@@ -3,6 +3,8 @@ package es.aprenderparajugar
 import android.content.SharedPreferences
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.*
 import androidx.compose.runtime.MutableState
@@ -13,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 
-@OptIn(androidx.compose.foundation.ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 internal fun LazyListScope.sequenceSettingsItems(
     parentSectionState: MutableState<String>,
     preferences: SharedPreferences,
