@@ -1912,91 +1912,52 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
             }
             if (parentSection == "menu") {
-                item {
-                    RewardModeSelectorCard(
-                        rewardMode = rewardMode,
-                        onSelectTime = {
-                            setupAccessibilityEnabled = isPlayTimeAccessibilityEnabled(context)
-                            if (areMandatoryDeviceSetupPermissionsReady(context)) {
-                                pendingTimeModeActivation = false
-                                permissionRecoveryNotice = false
-                                preferences.edit()
-                                    .putBoolean("pending_time_mode_activation", false)
-                                    .putString(RewardMode.PREFERENCE_KEY, "time")
-                                    .apply()
-                                rewardMode = RewardMode.TIME
-                                parentSection = "menu"
-                            } else {
-                                pendingTimeModeActivation = true
-                                preferences.edit()
-                                    .putBoolean("pending_time_mode_activation", true)
-                                    .putBoolean("device_setup_in_progress", true)
-                                    .putBoolean("parent_area_active", true)
-                                    .apply()
-                                parentSection = "device-setup-wizard"
-                            }
-                        },
-                        onSelectStars = {
+                parentMenuItems(
+                    rewardMode = rewardMode,
+                    linkedExerciseFont = linkedExerciseFont,
+                    onSelectTime = {
+                        setupAccessibilityEnabled = isPlayTimeAccessibilityEnabled(context)
+                        if (areMandatoryDeviceSetupPermissionsReady(context)) {
                             pendingTimeModeActivation = false
-                            preferences.edit().putBoolean("pending_time_mode_activation", false).apply()
-                            rewardMode = RewardMode.STARS
-                            val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
-                            if (activeDeadline > 0L) {
-                                balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
-                            }
-                            preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars")
-                                .putInt("balance_seconds", balanceSeconds)
-                                .putLong("play_deadline_ms", 0L)
-                                .putBoolean("play_session_authorized", false)
-                                .putBoolean("play_paused_for_screen_lock", false)
+                            permissionRecoveryNotice = false
+                            preferences.edit()
+                                .putBoolean("pending_time_mode_activation", false)
+                                .putString(RewardMode.PREFERENCE_KEY, "time")
                                 .apply()
-                            context.stopService(Intent(context, PlayTimeService::class.java))
+                            rewardMode = RewardMode.TIME
+                            parentSection = "menu"
+                        } else {
+                            pendingTimeModeActivation = true
+                            preferences.edit()
+                                .putBoolean("pending_time_mode_activation", true)
+                                .putBoolean("device_setup_in_progress", true)
+                                .putBoolean("parent_area_active", true)
+                                .apply()
+                            parentSection = "device-setup-wizard"
                         }
-                    )
-                }
-                item {
-                    ParentMenuTourCard(
-                        onOpenTour = {
-                            tourReturnTarget = "parent-menu"
-                            screen = "tour"
+                    },
+                    onSelectStars = {
+                        pendingTimeModeActivation = false
+                        preferences.edit().putBoolean("pending_time_mode_activation", false).apply()
+                        rewardMode = RewardMode.STARS
+                        val activeDeadline = preferences.getLong("play_deadline_ms", 0L)
+                        if (activeDeadline > 0L) {
+                            balanceSeconds = ((activeDeadline - System.currentTimeMillis() + 999L) / 1000L).toInt().coerceAtLeast(0)
                         }
-                    )
-                }
-                item {
-                    ParentMenuNavigationCard("🎮", "Configurar actividades", "Opciones específicas de cada modalidad") {
-                        parentSection = "game-modes"
-                    }
-                }
-                item { ParentMenuSectionLabel("CONFIGURACIÓN GENERAL") }
-                item {
-                    ParentMenuNavigationCard(
-                        "🔤",
-                        "Tipografía de los ejercicios",
-                        if (linkedExerciseFont) "Playwrite ES · Letra escolar ligada" else "Fuente del teléfono"
-                    ) {
-                        parentSection = "typography"
-                    }
-                }
-                item {
-                    ParentMenuActiveGamesCard(onClick = { parentSection = "active-games" })
-                }
-                item {
-                    ParentMenuNavigationCard("⏱️", "Recompensas y límites", "Minutos/Estrellas por dificultad") {
-                        parentSection = "rewards"
-                    }
-                }
-                item {
-                    ParentMenuNavigationCard("🔊", "Ajustes de sonido", "Música, audio de cuentos y efectos de logros") {
-                        parentSection = "sound-settings"
-                    }
-                }
-                item {
-                    ParentMenuNavigationCard("☁️⬇️", "Descargar contenido online", "Explorar y descargar bibliotecas y paquetes de contenido desde Internet") {
-                        parentSection = "basic-library"
-                    }
-                }
-                item {
-                    ParentMenuNavigationCard("📦", "Importar y exportar bibliotecas", "Copias selectivas de Tarjetas, Palabras y Secuencias") {
+                        preferences.edit().putString(RewardMode.PREFERENCE_KEY, "stars")
+                            .putInt("balance_seconds", balanceSeconds)
+                            .putLong("play_deadline_ms", 0L)
+                            .putBoolean("play_session_authorized", false)
+                            .putBoolean("play_paused_for_screen_lock", false)
+                            .apply()
+                        context.stopService(Intent(context, PlayTimeService::class.java))
+                    },
+                    onOpenTour = {
+                        tourReturnTarget = "parent-menu"
+                        screen = "tour"
+                    },
+                    onNavigate = { parentSection = it },
+                    onOpenLibraryTransfer = {
                         transferExportCategories = ContentStorage.Modality.entries.associateWith { modality ->
                             LibraryPackageManager.categories(context, modality).flatMap { category ->
                                 if (modality == ContentStorage.Modality.SECUENCIAS) category.sequenceExercises.map { exercise ->
@@ -2008,29 +1969,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         transferExportStatistics = emptySet()
                         transferMessage = ""
                         parentSection = "library-transfer"
-                    }
-                }
-
-                item {
-                    ParentMenuNavigationCard("📊", "Estadísticas", "Consulta el aprendizaje y el uso de la aplicación") {
-                        parentSection = "statistics-menu"
-                    }
-                }
-                item {
-                    ParentMenuAboutCard(onClick = { parentSection = "about" })
-                }
-                item {
-                    ParentMenuNavigationCard("🔐", "Cambiar PIN", "Modificar el PIN de acceso familiar") {
-                        parentSection = "security"
-                    }
-                }
-                item { ParentMenuSectionDivider() }
-                item {
-                    ParentMenuNavigationCard(
-                        "⚙️",
-                        "Asistente de permisos",
-                        if (rewardMode.isStars) "Prepara el dispositivo para activar el modo Tiempo" else "Comprueba y configura la protección del tiempo"
-                    ) {
+                    },
+                    onOpenDeviceSetup = {
                         pendingTimeModeActivation = false
                         preferences.edit()
                             .putBoolean("pending_time_mode_activation", false)
@@ -2039,7 +1979,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             .apply()
                         parentSection = "device-setup-wizard"
                     }
-                }
+                )
             } else {
                 when (parentSection) {
                     "sound-settings" -> {
