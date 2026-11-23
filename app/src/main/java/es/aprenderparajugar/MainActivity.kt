@@ -2977,37 +2977,21 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             storedStories.firstOrNull { it.directory.absolutePath == path }
                 ?: runCatching { StoryRepository.read(File(path)) }.getOrNull()
         }
-        if (selectedStory == null) {
-            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("No se ha podido abrir este cuento.")
-                OutlinedButton(onClick = { screen = "stories"; selectedStoryPath = null }) { Text("Volver a la cartelera") }
+        StoryCoverRoute(
+            story = selectedStory,
+            showAccessRequirements = showStoryAccessRequirements,
+            fontFamily = exerciseFontFamily,
+            onMissingStoryBack = { screen = "stories"; selectedStoryPath = null },
+            onAccessRequirementsBack = { showStoryAccessRequirements = false },
+            onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false },
+            onPlay = {
+                val missingObjects = selectedStory?.metadata?.requiredAccessObjects.orEmpty().filterNot {
+                    InventoryRepository.contains(context, it)
+                }
+                showStoryAccessRequirements = false
+                screen = if (missingObjects.isEmpty()) "story-player" else "story-access"
             }
-        } else {
-            if (showStoryAccessRequirements) {
-                StoryAccessRequirementsScreen(
-                    story = selectedStory,
-                    onBack = { showStoryAccessRequirements = false }
-                )
-            } else {
-                StoryCoverScreen(
-                    story = selectedStory,
-                    fontFamily = exerciseFontFamily,
-                    onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false },
-                    onPlay = {
-                        val missingObjects = selectedStory.metadata.requiredAccessObjects.filterNot {
-                            InventoryRepository.contains(context, it)
-                        }
-                        if (missingObjects.isEmpty()) {
-                            showStoryAccessRequirements = false
-                            screen = "story-player"
-                        } else {
-                            showStoryAccessRequirements = false
-                            screen = "story-access"
-                        }
-                    }
-                )
-            }
-        }
+        )
     } else if (screen == "story-access") {
         val selectedStory = selectedStoryPath?.let { path ->
             storedStories.firstOrNull { it.directory.absolutePath == path }
@@ -3358,6 +3342,40 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
 }
 
 
+
+@Composable
+private fun StoryCoverRoute(
+    story: StoredStory?,
+    showAccessRequirements: Boolean,
+    fontFamily: FontFamily,
+    onMissingStoryBack: () -> Unit,
+    onAccessRequirementsBack: () -> Unit,
+    onBack: () -> Unit,
+    onPlay: () -> Unit
+) {
+    if (story == null) {
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("No se ha podido abrir este cuento.")
+            OutlinedButton(onClick = onMissingStoryBack) { Text("Volver a la cartelera") }
+        }
+    } else if (showAccessRequirements) {
+        StoryAccessRequirementsScreen(
+            story = story,
+            onBack = onAccessRequirementsBack
+        )
+    } else {
+        StoryCoverScreen(
+            story = story,
+            fontFamily = fontFamily,
+            onBack = onBack,
+            onPlay = onPlay
+        )
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
