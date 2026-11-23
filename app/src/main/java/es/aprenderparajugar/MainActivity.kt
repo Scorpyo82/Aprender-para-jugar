@@ -2806,35 +2806,23 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onAlternativeDraftChange = { sequenceAlternativeDraft = it },
                             message = sequenceEditorMessage,
                             onSave = {
-                                val cleanCards = sequenceCardsDraft.map { it.trim() }
-                                val alternativeLines = sequenceAlternativeDraft.lines().map { it.trim() }.filter { it.isNotBlank() }
-                                val parsedAlternatives = alternativeLines.map { line -> line.split(",").map { it.trim().toIntOrNull() } }
-                                val invalidAlternative = parsedAlternatives.any { indexes ->
-                                    indexes.size != cleanCards.size ||
-                                        indexes.any { it == null || it !in 1..cleanCards.size } ||
-                                        indexes.filterNotNull().distinct().size != cleanCards.size
-                                }
-                                when {
-                                    NameRules.validationError(sequenceTitleDraft) != null && sequenceTitleDraft != sequenceExercises.getOrNull(sequenceEditingIndex)?.title -> sequenceEditorMessage = NameRules.validationError(sequenceTitleDraft)!!
-                                    sequenceExercises.withIndex().any { (index, item) -> index != sequenceEditingIndex && NameRules.key(item.title) == NameRules.key(sequenceTitleDraft) && NameRules.key(item.category) == NameRules.key(sequenceCategoryDraft) } -> sequenceEditorMessage = "Ya existe un ejercicio con ese nombre en esta categoría."
-                                    sequenceCategoryDraft.isBlank() -> sequenceEditorMessage = "Crea o selecciona una categoría antes de guardar el ejercicio."
-                                    cleanCards.size < 2 || cleanCards.any { it.isBlank() } -> sequenceEditorMessage = "Completa al menos 2 tarjetas; no puede haber pasos vacíos."
-                                    cleanCards.size > 6 -> sequenceEditorMessage = "El máximo es de 6 tarjetas."
-                                    sequenceCardPicturesDraft.indices.take(cleanCards.size).any { sequenceCardPicturesDraft.getOrNull(it).isNullOrBlank() } || sequenceCardPicturesDraft.size < cleanCards.size -> sequenceEditorMessage = "Selecciona una imagen para cada tarjeta. No puede quedar ninguna imagen vacía."
-                                    alternativeLines.isNotEmpty() && invalidAlternative -> sequenceEditorMessage = "Cada alternativa debe incluir todos los números del 1 al ${cleanCards.size}, sin repetir y separados por comas."
-                                    else -> {
-                                        val alternatives = alternativeLines
-                                        val cleanPictures = cleanCards.indices.map { sequenceCardPicturesDraft.getOrNull(it).orEmpty() }
-                                        val previousExercise = sequenceExercises.getOrNull(sequenceEditingIndex)
-                                        val exercise = SequenceExercise(sequenceTitleDraft.trim(), cleanCards, "Imagen y texto", sequenceCategoryDraft.trim(), alternatives, cleanPictures, sequenceTypeDraft, sequenceDifficultyDraft, previousExercise?.active ?: true, previousExercise?.directory, previousExercise?.createdAt.orEmpty())
-                                        val updatedExercises = sequenceExercises.toMutableList().also {
-                                            if (sequenceEditingIndex < 0) it.add(exercise) else it[sequenceEditingIndex] = exercise
-                                        }
-                                        sequenceExercises = updatedExercises
-                                        sequenceExercises = sequenceLibraryState.saveExercises(updatedExercises)
+                                saveTemporalSequenceExercise(
+                                    title = sequenceTitleDraft,
+                                    editingIndex = sequenceEditingIndex,
+                                    exercises = sequenceExercises,
+                                    category = sequenceCategoryDraft,
+                                    cards = sequenceCardsDraft,
+                                    alternativeDraft = sequenceAlternativeDraft,
+                                    pictures = sequenceCardPicturesDraft,
+                                    sequenceType = sequenceTypeDraft,
+                                    difficulty = sequenceDifficultyDraft,
+                                    libraryState = sequenceLibraryState,
+                                    onValidationError = { sequenceEditorMessage = it },
+                                    onSaved = {
+                                        sequenceExercises = it
                                         parentSection = "sequence-library"
                                     }
-                                }
+                                )
                             },
                             onCancel = { parentSection = "sequence-library-temporal" }
                         )
