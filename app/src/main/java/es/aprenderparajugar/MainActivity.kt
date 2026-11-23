@@ -873,6 +873,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
     var activeExerciseMode by remember { mutableStateOf("cards") }
     var musicUri by remember { mutableStateOf(preferences.getString("background_music_uri", null)) }
+    var musicMessage by remember { mutableStateOf("") }
     var soundEnabled by remember { mutableStateOf(if (firstLaunchNeedsSetup) false else preferences.getBoolean("sound_enabled", true)) }
     androidx.compose.runtime.LaunchedEffect(screen) {
         if (screen == "home" && firstLaunchNeedsSetup) {
@@ -920,7 +921,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         musicUri = musicUri,
         soundEnabled = soundEnabled,
         appInForeground = appInForeground,
-        screen = screen
+        screen = screen,
+        onError = { musicMessage = it }
     )
     var mode by remember { mutableStateOf("Al azar") }
     var cardsStartMessage by remember { mutableStateOf("") }
@@ -4855,7 +4857,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             musicUri = musicUri,
                             onMusicUriChange = { musicUri = it },
                             soundEnabled = soundEnabled,
-                            onSoundEnabledChange = { soundEnabled = it }
+                            onSoundEnabledChange = { soundEnabled = it },
+                            message = musicMessage,
+                            onMessageChange = { musicMessage = it }
                         )
                     }
                     "device-setup-wizard" -> item {
