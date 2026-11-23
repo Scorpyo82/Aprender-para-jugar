@@ -2964,6 +2964,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     "word-library", "word-categories" -> {
                         wordLibraryItems(
                             state = wordLibraryState,
+                            section = parentSection,
                             onPickImage = {
                                 preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit()
                                 wordImagePicker.launch(arrayOf("image/*"))
