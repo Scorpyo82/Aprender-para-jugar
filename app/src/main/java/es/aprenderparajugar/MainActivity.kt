@@ -2134,41 +2134,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             onStoriesChange = { gameActiveStories = it; preferences.edit().putBoolean("game_active_stories", it).apply() }
                         )
                     }
-"game-modes" -> {
-                        item { Text("Actividades disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "cards-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🖼️", fontSize = 30.sp)
-                                    Column { Text("Tarjetas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Biblioteca, categorías y parejas por partida", color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "sequences-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))) {
-                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🌱", fontSize = 30.sp)
-                                    Column { Text("Secuencias", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar tipo de contenido y secuencias", color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "words-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))) {
-                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("🔤", fontSize = 30.sp)
-                                    Column { Text("Palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar vocabulario y dificultad", color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "stories-settings" }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE3))) {
-                                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("📖", fontSize = 30.sp)
-                                    Column { Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar y crear cuentos ilustrados", color = Color(0xFF667085)) }
-                                }
-                            }
-                        }
-                    }
+"game-modes" -> gameModesItems(
+                        onOpenCards = { parentSection = "cards-settings" },
+                        onOpenSequences = { parentSection = "sequences-settings" },
+                        onOpenWords = { parentSection = "words-settings" },
+                        onOpenStories = { parentSection = "stories-settings" }
+                    )
                     "stories-settings" -> {
                         StorySettingsScreen(
                             showPendingObjectImages = showPendingStoryObjectImages,
@@ -3537,3 +3508,61 @@ private fun CardsExerciseScreen(
     }
 }
 
+
+
+private fun androidx.compose.foundation.lazy.LazyListScope.gameModesItems(
+    onOpenCards: () -> Unit,
+    onOpenSequences: () -> Unit,
+    onOpenWords: () -> Unit,
+    onOpenStories: () -> Unit
+) {
+    item { Text("Actividades disponibles", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+    item {
+        Card(
+            Modifier.fillMaxWidth().clickable(onClick = onOpenCards),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("🖼️", fontSize = 30.sp)
+                Column { Text("Tarjetas", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Biblioteca, categorías y parejas por partida", color = Color(0xFF667085)) }
+            }
+        }
+    }
+    item {
+        Card(
+            Modifier.fillMaxWidth().clickable(onClick = onOpenSequences),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8EC))
+        ) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("🌱", fontSize = 30.sp)
+                Column { Text("Secuencias", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar tipo de contenido y secuencias", color = Color(0xFF667085)) }
+            }
+        }
+    }
+    item {
+        Card(
+            Modifier.fillMaxWidth().clickable(onClick = onOpenWords),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF5FF))
+        ) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("🔤", fontSize = 30.sp)
+                Column { Text("Palabras", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar vocabulario y dificultad", color = Color(0xFF667085)) }
+            }
+        }
+    }
+    item {
+        Card(
+            Modifier.fillMaxWidth().clickable(onClick = onOpenStories),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE3))
+        ) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("📖", fontSize = 30.sp)
+                Column { Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("Configurar y crear cuentos ilustrados", color = Color(0xFF667085)) }
+            }
+        }
+    }
+}
