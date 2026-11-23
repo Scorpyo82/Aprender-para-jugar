@@ -594,7 +594,8 @@ private fun AprenderApp() {
     var showTimeModeNotActivatedDialog by remember { mutableStateOf(false) }
     var expandedLearningModalities by remember { mutableStateOf(setOf<ContentStorage.Modality>()) }
     // No se borran datos del usuario al iniciar ni al actualizar la aplicación.
-    var pairs by remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
+    val pairsState = remember { mutableStateOf(ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS)) }
+    var pairs by pairsState
     val wordLibraryState = remember(context, preferences) { WordLibraryState(context, preferences) }
     var wordExercises by wordLibraryState.exercises
     var gameActiveCards by remember { mutableStateOf(preferences.getBoolean("game_active_cards", true)) }
@@ -635,7 +636,8 @@ private fun AprenderApp() {
     var storyObjectStorePriceMinutes by storyObjectEditorState.storePriceMinutes
     var storyObjectCollectible by storyObjectEditorState.collectible
     var storyObjectMessage by storyObjectEditorState.message
-    var storedStoryObjects by remember { mutableStateOf(emptyList<StoredObject>()) }
+    val storedStoryObjectsState = remember { mutableStateOf(emptyList<StoredObject>()) }
+    var storedStoryObjects by storedStoryObjectsState
     val storyObjectInventoryState = remember(context) { StoryObjectInventoryState(context) }
     var storedInventoryFolders by storyObjectInventoryState.folders
     var storyInventoryMessage by remember { mutableStateOf("") }
@@ -971,7 +973,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var pinError by remember { mutableStateOf(false) }
     var parentSessionAuthenticated by remember { mutableStateOf(false) }
     var permissionRecoveryEntryPending by remember { mutableStateOf(false) }
-    var parentSection by remember { mutableStateOf("menu") }
+    val parentSectionState = remember { mutableStateOf("menu") }
+    var parentSection by parentSectionState
     androidx.compose.runtime.LaunchedEffect(appInForeground, screen, rewardMode) {
         // Detect revoked prerequisites, pause Time mode and inform the parent.
         // Never open the permission wizard automatically: the parent chooses when to continue.
@@ -1030,7 +1033,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferExportStories by transferExportStoriesState
     val transferExportObjectsState = remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferExportObjects by transferExportObjectsState
-    var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
+    val transferPackageState = remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
+    var transferPackage by transferPackageState
     val transferImportCategoriesState = remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
     var transferImportCategories by transferImportCategoriesState
     val transferImportStoriesState = remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -1050,16 +1054,20 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferImportStatistics by transferImportStatisticsState
     val transferImportUsageStatisticsState = remember { mutableStateOf(false) }
     var transferImportUsageStatistics by transferImportUsageStatisticsState
-    var transferMessage by remember { mutableStateOf("") }
-    var remoteLibraryPackages by remember { mutableStateOf<List<RemoteLibraryPackage>>(emptyList()) }
+    val transferMessageState = remember { mutableStateOf("") }
+    var transferMessage by transferMessageState
+    val remoteLibraryPackagesState = remember { mutableStateOf<List<RemoteLibraryPackage>>(emptyList()) }
+    var remoteLibraryPackages by remoteLibraryPackagesState
     var remoteLibraryLoading by remember { mutableStateOf(false) }
     var remoteLibraryMessage by remember { mutableStateOf("") }
     var remoteLibraryDownloadingName by remember { mutableStateOf<String?>(null) }
     var remoteLibraryDownloadedBytes by remember { mutableStateOf(0L) }
     var remoteLibraryTotalBytes by remember { mutableStateOf(0L) }
     var remoteLibraryPendingImport by remember { mutableStateOf<RemoteLibraryPackage?>(null) }
-    var transferRemoteLibraryName by remember { mutableStateOf<String?>(null) }
-    var libraryTaskRunning by remember { mutableStateOf(false) }
+    val transferRemoteLibraryNameState = remember { mutableStateOf<String?>(null) }
+    var transferRemoteLibraryName by transferRemoteLibraryNameState
+    val libraryTaskRunningState = remember { mutableStateOf(false) }
+    var libraryTaskRunning by libraryTaskRunningState
     var libraryTaskMessage by remember { mutableStateOf("") }
     var libraryTaskProgress by remember { mutableStateOf(0f) }
     var libraryTaskIndeterminate by remember { mutableStateOf(true) }
@@ -1204,7 +1212,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var tourReturnTarget by remember { mutableStateOf("home") }
     var categoryDraftName by remember { mutableStateOf("") }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
-    var categoryNames by remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
+    val categoryNamesState = remember { mutableStateOf((preferences.getString("categories", "") ?: "").split("|").filter { it.isNotBlank() }) }
+    var categoryNames by categoryNamesState
     var categoryMessage by remember { mutableStateOf("") }
     var categoryToRemove by remember { mutableStateOf("") }
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
@@ -2514,113 +2523,34 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                             transferObjectConflictThumbnailsState = transferObjectConflictThumbnailsState,
                             transferMessage = transferMessage,
                             onImportSelection = {
-                                val info = transferPackage
-                                if (info != null) {
-                                    libraryTaskRunning = true
-                                    updateLibraryTaskProgress("Preparando la importación…", 0, 0)
-                                    remoteLibraryScope.launch {
-                                    try {
-                                        val count = withContext(Dispatchers.IO) {
-                                            LibraryPackageManager.import(
-                                                context, info, transferImportCategories, false,
-                                                transferImportStatistics, transferImportUsageStatistics,
-                                                transferImportStories, transferObjectConflictDecisions,
-                                                transferStoryConflictDecisions, transferImportObjects,
-                                                transferExerciseConflictDecisions, updateLibraryTaskProgress
-                                            )
-                                        }
-                                        updateLibraryTaskProgress("Actualizando las bibliotecas locales…", 0, 0)
-                                        // Mark the exact release as installed only after the import completed
-                                        // successfully. This state survives deletion of the downloaded ZIP.
-                                        transferRemoteLibraryName?.let { packageName ->
-                                            remoteLibraryPackages.firstOrNull { it.name == packageName }?.let { remotePackage ->
-                                                withContext(Dispatchers.IO) {
-                                                    RemoteLibraryRepository.saveInstalled(context, packageName, remotePackage.sha)
-                                                }
-                                            }
-                                        }
-                                        transferPackage = null
-                                        withContext(Dispatchers.IO) {
-                                            LibraryPackageManager.discard(info)
-                                            transferRemoteLibraryName?.let { RemoteLibraryRepository.deleteCached(context, it) }
-                                        }
-                                        transferRemoteLibraryName = null
-                                        // La biblioteca de cuentos mantiene una lista en estado Compose.
-                                        // Tras importar, hay que recargarla explícitamente para que los
-                                        // cuentos recién copiados aparezcan sin reiniciar la aplicación.
-                                        storedStories = withContext(Dispatchers.IO) { StoryRepository.list(context) }
-                                        storedStoryObjects = withContext(Dispatchers.IO) { ObjectRepository.list(context) }
-                                        // Registrar también las colecciones de objetos que llegan con
-                                        // las dependencias de los cuentos importados. La biblioteca de
-                                        // objetos se copia correctamente, pero la pantalla de colecciones
-                                        // solo muestra las carpetas presentes en estas preferencias.
-                                        val knownObjectCollectionFolders = storyObjectCollections.map {
-                                            ObjectRepository.collectionFolderName(it)
-                                        }.toSet()
-                                        val importedObjectCollectionNames = storedStoryObjects
-                                            .map { it.collection }
-                                            .distinct()
-                                            .filter { it !in knownObjectCollectionFolders }
-                                            .map { it.replace('_', ' ') }
-                                        if (importedObjectCollectionNames.isNotEmpty()) {
-                                            storyObjectCollections = (storyObjectCollections + importedObjectCollectionNames)
-                                                .distinctBy { ObjectRepository.collectionFolderName(it).lowercase() }
-                                                .sortedBy { it.lowercase() }
-                                            preferences.edit()
-                                                .putString("story_object_collections", storyObjectCollections.joinToString("|"))
-                                                .apply()
-                                        }
-                                        // Las colecciones importadas pueden no existir todavía en las
-                                        // preferencias de este dispositivo. Registrar un nombre visible
-                                        // derivado del identificador de carpeta, sin modificar la ruta.
-                                        val knownCollectionFolders = storyCollections.map {
-                                            StoryRepository.collectionFolderName(it)
-                                        }.toSet()
-                                        val importedCollectionNames = storedStories.map { it.collection }.distinct()
-                                            .filter { it !in knownCollectionFolders }
-                                            .map { it.replace('_', ' ') }
-                                        if (importedCollectionNames.isNotEmpty()) {
-                                            storyCollections = (storyCollections + importedCollectionNames)
-                                                .distinctBy { it.lowercase() }
-                                                .sortedBy { it.lowercase() }
-                                            preferences.edit()
-                                                .putString("story_collections", storyCollections.joinToString("|"))
-                                                .apply()
-                                        }
-                                        val refreshedLibraryData = withContext(Dispatchers.IO) {
-                                            Triple(
-                                                ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.TARJETAS),
-                                                ExerciseUiStorage.loadPairs(context, ContentStorage.Modality.PALABRAS),
-                                                ExerciseUiStorage.loadSequences(context)
-                                            ) to Triple(
-                                                ExerciseRepository.list(context, ContentStorage.Modality.TARJETAS).map { it.metadata.category },
-                                                ExerciseRepository.list(context, ContentStorage.Modality.PALABRAS).map { it.metadata.category },
-                                                ExerciseRepository.list(context, ContentStorage.Modality.SECUENCIAS).map { it.metadata.category }
-                                            )
-                                        }
-                                        pairs = refreshedLibraryData.first.first
-                                        wordExercises = refreshedLibraryData.first.second
-                                        wordLibraryState.exercises.value = wordExercises
-                                        sequenceExercises = refreshedLibraryData.first.third
-                                        sequenceLibraryState.exercises.value = sequenceExercises
-                                        categoryNames = (categoryNames + refreshedLibraryData.second.first).distinct()
-                                        wordLibraryState.mergeImportedCategories(refreshedLibraryData.second.second, false)
-                                        sequenceCategoryNames = (sequenceCategoryNames + refreshedLibraryData.second.third).distinct()
-                                        preferences.edit()
-                                            .putString("categories", categoryNames.joinToString("|"))
-                                            .putString("letter_word_categories_v1", wordExerciseCategories.joinToString("|"))
-                                            .putString("sequence_categories_v1", sequenceCategoryNames.joinToString("|"))
-                                            .apply()
-                                        transferMessage = "Importación completada: $count ejercicios y ${transferImportStories.size} cuentos incorporados. El inventario del niño no se ha modificado."
-                                        parentSection = "library-transfer"
-                                    } catch (e: Exception) {
-                                        transferMessage = "No se pudo completar la importación: ${e.message ?: "error"}"
-                                    } finally {
-                                        libraryTaskRunning = false
-                                    }
-                                    }
-                                
-                                }
+                                launchLibraryImportSelection(
+                                    context = context,
+                                    scope = remoteLibraryScope,
+                                    preferences = preferences,
+                                    transferPackageState = transferPackageState,
+                                    transferImportCategoriesState = transferImportCategoriesState,
+                                    transferImportStatisticsState = transferImportStatisticsState,
+                                    transferImportUsageStatisticsState = transferImportUsageStatisticsState,
+                                    transferImportStoriesState = transferImportStoriesState,
+                                    transferObjectConflictDecisionsState = transferObjectConflictDecisionsState,
+                                    transferStoryConflictDecisionsState = transferStoryConflictDecisionsState,
+                                    transferImportObjectsState = transferImportObjectsState,
+                                    transferExerciseConflictDecisionsState = transferExerciseConflictDecisionsState,
+                                    transferRemoteLibraryNameState = transferRemoteLibraryNameState,
+                                    remoteLibraryPackagesState = remoteLibraryPackagesState,
+                                    storedStoriesState = storyEditorState.storedStories,
+                                    storedStoryObjectsState = storedStoryObjectsState,
+                                    storyObjectCollectionsState = storyObjectCollectionsState.collections,
+                                    storyCollectionsState = storyCollectionsState.collections,
+                                    pairsState = pairsState,
+                                    categoryNamesState = categoryNamesState,
+                                    transferMessageState = transferMessageState,
+                                    parentSectionState = parentSectionState,
+                                    libraryTaskRunningState = libraryTaskRunningState,
+                                    wordLibraryState = wordLibraryState,
+                                    sequenceLibraryState = sequenceLibraryState,
+                                    updateProgress = updateLibraryTaskProgress
+                                )
                             },
                             onCancelImport = {
                                 val info = transferPackage
