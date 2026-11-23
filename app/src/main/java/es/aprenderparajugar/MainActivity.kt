@@ -2776,32 +2776,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             }
         )
     } else if (screen == "result" || screen == "sequence-result") {
-        val rewardStars = when {
-            resultCorrectCount * 2 == resultTotalCount -> 2
-            resultCorrectCount * 2 > resultTotalCount && resultCorrectCount != resultTotalCount -> 3
-            else -> 0
-        }
-        val rewardIcon = when {
-            resultCorrectCount == 0 -> "😢"
-            resultCorrectCount == resultTotalCount -> "🏆"
-            else -> "⭐"
-        }
-        val rewardMessage = when {
-            resultCorrectCount == 0 -> "¡Vamos a intentarlo otra vez!"
-            resultCorrectCount == resultTotalCount -> "¡PERFECTO! ¡Eres un campeón!"
-            resultCorrectCount * 2 < resultTotalCount -> "¡Buen intento! Sigue practicando"
-            resultCorrectCount * 2 == resultTotalCount -> "¡Bien hecho! Has conseguido la mitad"
-            else -> "¡Muy bien! Cada vez lo haces mejor"
-        }
-        ExerciseResultScreen(
-            rewardStars = rewardStars,
-            rewardIcon = rewardIcon,
-            rewardMessage = rewardMessage,
+        ExerciseResultRoute(
+            resultCorrectCount = resultCorrectCount,
+            resultTotalCount = resultTotalCount,
             isPerfectCardsResult = correct == pairCount,
-            rewardAmountText = if (rewardMode.isStars) "+${formatRewardBalance(lastEarnedSeconds, rewardMode)} ⭐" else "+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}",
-            rewardUnitText = if (rewardMode.isStars) "ESTRELLAS GANADAS" else "MINUTOS GANADOS",
-            correctCount = resultCorrectCount,
-            totalCount = resultTotalCount,
+            rewardMode = rewardMode,
+            lastEarnedSeconds = lastEarnedSeconds,
             onHome = {
                 screen = "home"
                 resolved = emptySet()
@@ -3706,4 +3686,46 @@ private fun StoryPlayerRoute(
             onExit = onExit
         )
     }
+}
+
+
+@Composable
+private fun ExerciseResultRoute(
+    resultCorrectCount: Int,
+    resultTotalCount: Int,
+    isPerfectCardsResult: Boolean,
+    rewardMode: RewardMode,
+    lastEarnedSeconds: Int,
+    onHome: () -> Unit,
+    onNextExercise: () -> Unit
+) {
+    val rewardStars = when {
+        resultCorrectCount * 2 == resultTotalCount -> 2
+        resultCorrectCount * 2 > resultTotalCount && resultCorrectCount != resultTotalCount -> 3
+        else -> 0
+    }
+    val rewardIcon = when {
+        resultCorrectCount == 0 -> "😢"
+        resultCorrectCount == resultTotalCount -> "🏆"
+        else -> "⭐"
+    }
+    val rewardMessage = when {
+        resultCorrectCount == 0 -> "¡Vamos a intentarlo otra vez!"
+        resultCorrectCount == resultTotalCount -> "¡PERFECTO! ¡Eres un campeón!"
+        resultCorrectCount * 2 < resultTotalCount -> "¡Buen intento! Sigue practicando"
+        resultCorrectCount * 2 == resultTotalCount -> "¡Bien hecho! Has conseguido la mitad"
+        else -> "¡Muy bien! Cada vez lo haces mejor"
+    }
+    ExerciseResultScreen(
+        rewardStars = rewardStars,
+        rewardIcon = rewardIcon,
+        rewardMessage = rewardMessage,
+        isPerfectCardsResult = isPerfectCardsResult,
+        rewardAmountText = if (rewardMode.isStars) "+${formatRewardBalance(lastEarnedSeconds, rewardMode)} ⭐" else "+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}",
+        rewardUnitText = if (rewardMode.isStars) "ESTRELLAS GANADAS" else "MINUTOS GANADOS",
+        correctCount = resultCorrectCount,
+        totalCount = resultTotalCount,
+        onHome = onHome,
+        onNextExercise = onNextExercise
+    )
 }
