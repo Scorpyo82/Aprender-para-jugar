@@ -29,6 +29,10 @@ internal fun ExerciseVoicePlaybackCoordinator(
         screen, difficulty, wordSelectedDifficulty, sequenceChosenCategory,
         sequenceChosenDifficulty, sequenceType, appInForeground
     ) {
+        val previousScreen = preferences.getString("exercise_voice_last_screen", null)
+        val enteredScreen = previousScreen != screen
+        preferences.edit().putString("exercise_voice_last_screen", screen).apply()
+
         if (!appInForeground || screen == "story-player") {
             ExerciseVoiceManager.stop()
         } else {
@@ -68,7 +72,7 @@ internal fun ExerciseVoicePlaybackCoordinator(
             }
 
             if (decision != null) {
-                if (decision != previous) {
+                if (decision != previous || (screen == "stories" && enteredScreen)) {
                     preferences.edit().putString("exercise_voice_last_decision", decision).apply()
                     if (voice != null) ExerciseVoiceManager.playLatest(context, voice)
                 }
