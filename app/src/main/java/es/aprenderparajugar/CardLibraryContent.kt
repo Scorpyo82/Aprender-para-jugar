@@ -18,12 +18,16 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -83,6 +87,7 @@ internal fun LazyListScope.cardLibraryItems(
     val categories = (categoryNames + pairs.map { it.category }).distinctBy { it.trim().lowercase() }.sorted()
     when (section) {
             "words" -> item {
+                        var pendingCardDeletion by remember { mutableStateOf<String?>(null) }
                         if (libraryPage == "list") {
                             Text("Biblioteca de tarjetas", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                             Text("Gestiona las tarjetas guardadas. Pulsa Añadir para crear una nueva.", fontSize = 14.sp, color = Color(0xFF667085))
@@ -136,10 +141,26 @@ internal fun LazyListScope.cardLibraryItems(
                                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                             OutlinedButton(onClick = { editingWord = pair.word; wordDraft = pair.word; pictureDraft = pair.picture; categoryDraft = pair.category; difficultyDraft = pair.difficulty; libraryMessage = ""; libraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar", maxLines = 1, fontSize = 13.sp) }
                                             OutlinedButton(onClick = { pairs = pairs.map { if (it.word == pair.word) it.copy(active = !it.active) else it }; pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs) }, modifier = Modifier.weight(1.2f)) { Text(if (pair.active) "Desactivar" else "Activar", maxLines = 1, fontSize = 13.sp) }
-                                            OutlinedButton(onClick = { pairs = pairs.filterNot { it.word == pair.word }; pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs) }, modifier = Modifier.weight(1f)) { Text("Eliminar", maxLines = 1, fontSize = 13.sp) }
+                                            OutlinedButton(onClick = { pendingCardDeletion = pair.word }, modifier = Modifier.weight(1f)) { Text("Eliminar", maxLines = 1, fontSize = 13.sp) }
                                         }
                                     }
                                 }
+
+                            pendingCardDeletion?.let { wordToDelete ->
+                                AlertDialog(
+                                    onDismissRequest = { pendingCardDeletion = null },
+                                    title = { Text("Confirmar eliminación") },
+                                    text = { Text("¿Quieres eliminar la tarjeta «" + wordToDelete + "» de la biblioteca? Esta acción no se puede deshacer.") },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            pairs = pairs.filterNot { it.word == wordToDelete }
+                                            pairs = ExerciseUiStorage.savePairs(context, ContentStorage.Modality.TARJETAS, pairs)
+                                            pendingCardDeletion = null
+                                        }) { Text("Eliminar definitivamente") }
+                                    },
+                                    dismissButton = { TextButton(onClick = { pendingCardDeletion = null }) { Text("Cancelar") } }
+                                )
+                            }
                             }
                         } else {
                             Text(if (editingWord == null) "Añadir tarjeta" else "Editar tarjeta", fontSize = 23.sp, fontWeight = FontWeight.Bold)
