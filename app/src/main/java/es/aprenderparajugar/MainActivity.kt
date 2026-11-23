@@ -2848,7 +2848,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             onBack = { screen = "sequence-difficulty"; sequencePlayMessage = "" }, onSelectCategory = { startSequenceExercise(sequenceChosenCategory, sequenceChosenDifficulty, it) }
         )
     } else if (screen == "sequence-game") {
-        SequenceGameScreen(
+        SequenceGameRoute(
             balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
             roundsStatus = sequencePlayingExercise?.let { exercise ->
                 ExerciseQuotaRepository.status(
@@ -3729,3 +3729,35 @@ private fun ExerciseResultRoute(
         onNextExercise = onNextExercise
     )
 }
+
+@Composable
+private fun SequenceGameRoute(
+    balance: String,
+    roundsStatus: ExerciseQuotaRepository.QuotaStatus?,
+    exercise: SequenceExercise?,
+    selectedOrder: List<Int>,
+    playOrder: List<Int>,
+    contentFormat: String,
+    message: String,
+    exerciseFontFamily: FontFamily,
+    rewardMessage: String,
+    onBack: () -> Unit,
+    onReplayInstruction: () -> Unit,
+    onSelectCard: (Int) -> Unit
+) {
+    SequenceGameScreen(
+        balance = balance,
+        roundsStatus = roundsStatus,
+        exercise = exercise,
+        selectedOrder = selectedOrder,
+        playOrder = playOrder,
+        contentFormat = contentFormat,
+        message = message,
+        exerciseFontFamily = exerciseFontFamily,
+        rewardMessage = rewardMessage,
+        onBack = onBack,
+        onReplayInstruction = onReplayInstruction,
+        onSelectCard = onSelectCard
+    )
+}
+
