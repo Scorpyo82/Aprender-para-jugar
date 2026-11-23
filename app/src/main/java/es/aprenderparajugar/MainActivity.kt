@@ -5217,7 +5217,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 roundsLimit = cardsQuotaStatus.limit,
                 difficulty = difficulty
             )
-            Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63), modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = { ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }?.let { ExerciseVoiceManager.playLatest(context, it, preview = true) } }) { Text("🔊") }
+            }
             Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -5338,7 +5341,10 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Palabras", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
-                    OutlinedButton(onClick = { wordExerciseTarget = null; screen = "home" }) { Text("Salir") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = { ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }?.let { ExerciseVoiceManager.playLatest(context, it, preview = true) } }) { Text("🔊") }
+                        OutlinedButton(onClick = { wordExerciseTarget = null; screen = "home" }) { Text("Salir") }
+                    }
                 }
                 Text("Forma la palabra", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 if (target.picture.startsWith("content://") || target.picture.startsWith("file://")) {
