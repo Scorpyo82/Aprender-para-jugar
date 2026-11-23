@@ -187,7 +187,7 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
             Text("● GRABACIÓN EN CURSO", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(modifier = Modifier.weight(1f), onClick = { finishRecording(true) }) { Text("Parar y guardar") }
-                OutlinedButton(Modifier.weight(1f), onClick = { finishRecording(false) }) { Text("Descartar") }
+                OutlinedButton(modifier = Modifier.weight(1f), onClick = { finishRecording(false) }) { Text("Descartar") }
             }
         } else {
             OutlinedButton(Modifier.fillMaxWidth(), onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Grabar audio") }
