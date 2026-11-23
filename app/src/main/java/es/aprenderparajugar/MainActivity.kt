@@ -1020,7 +1020,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var transferExportCategories by transferExportCategoriesState
     val expandedExportSequenceCategoriesState = remember { mutableStateOf<Set<String>>(emptySet()) }
     var expandedExportSequenceCategories by expandedExportSequenceCategoriesState
-    var expandedImportSequenceCategories by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val expandedImportSequenceCategoriesState = remember { mutableStateOf<Set<String>>(emptySet()) }
+    var expandedImportSequenceCategories by expandedImportSequenceCategoriesState
     val transferExportStatisticsState = remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
     var transferExportStatistics by transferExportStatisticsState
     val transferExportUsageStatisticsState = remember { mutableStateOf<Set<ContentStorage.Modality>>(emptySet()) }
@@ -1030,16 +1031,25 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     val transferExportObjectsState = remember { mutableStateOf<Set<String>>(emptySet()) }
     var transferExportObjects by transferExportObjectsState
     var transferPackage by remember { mutableStateOf<LibraryPackageManager.PackageInfo?>(null) }
-    var transferImportCategories by remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
-    var transferImportStories by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var transferImportObjects by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var transferObjectConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var transferStoryConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var transferExerciseConflictDecisions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var transferConflictIndex by remember { mutableIntStateOf(0) }
+    val transferImportCategoriesState = remember { mutableStateOf<Map<ContentStorage.Modality, Set<String>>>(emptyMap()) }
+    var transferImportCategories by transferImportCategoriesState
+    val transferImportStoriesState = remember { mutableStateOf<Set<String>>(emptySet()) }
+    var transferImportStories by transferImportStoriesState
+    val transferImportObjectsState = remember { mutableStateOf<Set<String>>(emptySet()) }
+    var transferImportObjects by transferImportObjectsState
+    val transferObjectConflictDecisionsState = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferObjectConflictDecisions by transferObjectConflictDecisionsState
+    val transferStoryConflictDecisionsState = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferStoryConflictDecisions by transferStoryConflictDecisionsState
+    val transferExerciseConflictDecisionsState = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var transferExerciseConflictDecisions by transferExerciseConflictDecisionsState
+    val transferConflictIndexState = remember { mutableIntStateOf(0) }
+    var transferConflictIndex by transferConflictIndexState
     var transferReplaceDuplicates by remember { mutableStateOf(false) }
-    var transferImportStatistics by remember { mutableStateOf(false) }
-    var transferImportUsageStatistics by remember { mutableStateOf(false) }
+    val transferImportStatisticsState = remember { mutableStateOf(false) }
+    var transferImportStatistics by transferImportStatisticsState
+    val transferImportUsageStatisticsState = remember { mutableStateOf(false) }
+    var transferImportUsageStatistics by transferImportUsageStatisticsState
     var transferMessage by remember { mutableStateOf("") }
     var remoteLibraryPackages by remember { mutableStateOf<List<RemoteLibraryPackage>>(emptyList()) }
     var remoteLibraryLoading by remember { mutableStateOf(false) }
@@ -1053,15 +1063,24 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     var libraryTaskMessage by remember { mutableStateOf("") }
     var libraryTaskProgress by remember { mutableStateOf(0f) }
     var libraryTaskIndeterminate by remember { mutableStateOf(true) }
-    var transferImportPreparationLoading by remember { mutableStateOf(false) }
-    var transferImportPreparationError by remember { mutableStateOf(false) }
-    var transferExerciseConflicts by remember { mutableStateOf<List<LibraryPackageManager.ExerciseConflictInfo>>(emptyList()) }
-    var transferObjectConflicts by remember { mutableStateOf<List<LibraryPackageManager.ObjectConflictInfo>>(emptyList()) }
-    var transferStoryNameConflicts by remember { mutableStateOf<List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>>(emptyList()) }
-    var transferImportObjectEntries by remember { mutableStateOf<List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>>(emptyList()) }
-    var transferRequiredImportObjects by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
-    var transferLocalObjects by remember { mutableStateOf<List<StoredObject>>(emptyList()) }
-    var transferObjectConflictThumbnails by remember { mutableStateOf<Map<String, Pair<Bitmap?, Bitmap?>>>(emptyMap()) }
+    val transferImportPreparationLoadingState = remember { mutableStateOf(false) }
+    var transferImportPreparationLoading by transferImportPreparationLoadingState
+    val transferImportPreparationErrorState = remember { mutableStateOf(false) }
+    var transferImportPreparationError by transferImportPreparationErrorState
+    val transferExerciseConflictsState = remember { mutableStateOf<List<LibraryPackageManager.ExerciseConflictInfo>>(emptyList()) }
+    var transferExerciseConflicts by transferExerciseConflictsState
+    val transferObjectConflictsState = remember { mutableStateOf<List<LibraryPackageManager.ObjectConflictInfo>>(emptyList()) }
+    var transferObjectConflicts by transferObjectConflictsState
+    val transferStoryNameConflictsState = remember { mutableStateOf<List<Pair<LibraryPackageManager.StoryInfo, StoredStory>>>(emptyList()) }
+    var transferStoryNameConflicts by transferStoryNameConflictsState
+    val transferImportObjectEntriesState = remember { mutableStateOf<List<Pair<LibraryPackageManager.ObjectDependencyInfo, StoredObject>>>(emptyList()) }
+    var transferImportObjectEntries by transferImportObjectEntriesState
+    val transferRequiredImportObjectsState = remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
+    var transferRequiredImportObjects by transferRequiredImportObjectsState
+    val transferLocalObjectsState = remember { mutableStateOf<List<StoredObject>>(emptyList()) }
+    var transferLocalObjects by transferLocalObjectsState
+    val transferObjectConflictThumbnailsState = remember { mutableStateOf<Map<String, Pair<Bitmap?, Bitmap?>>>(emptyMap()) }
+    var transferObjectConflictThumbnails by transferObjectConflictThumbnailsState
     val remoteLibraryScope = rememberCoroutineScope()
     val updateLibraryTaskProgress: (String, Int, Int) -> Unit = { message, current, total ->
         libraryTaskMessage = message
@@ -2444,609 +2463,33 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     deleteExpandedCategories = emptySet()
                                     deleteConfirmArmed = false
                                     transferMessage = "Eliminación completada: " + removedExercises + " ejercicios, " + removedStatistics +
-                                        " estadísticas, " + removedStoryAndObjectCounts.first + " cuentos y " +
-                                        removedStoryAndObjectCounts.second + " objetos eliminados."
-                                    parentSection = "library-transfer"
-                                } catch (e: Exception) {
-                                    deleteConfirmArmed = false
-                                    transferMessage = "No se pudo completar la eliminación: " + (e.message ?: "error")
-                                }
-                                }
-                            }
-                        )
-                    }
-                    "learning-stats" -> {
-                        item {
-                            LearningStatisticsScreen(
-                                context = context,
-                                expandedModalities = expandedLearningModalities,
-                                onToggleModality = { modality ->
-                                    expandedLearningModalities = if (modality in expandedLearningModalities) {
-                                        expandedLearningModalities - modality
-                                    } else {
-                                        expandedLearningModalities + modality
-                                    }
-                                }
-                            )
-                        }
-                    }
-                    "library-import" -> {
-                        val info = transferPackage
-                        item { Text("Contenido del archivo", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        if (transferImportPreparationLoading) {
-                            item {
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("Comprobando coincidencias y dependencias…", fontSize = 13.sp, color = Color(0xFF667085))
-                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                }
-                            }
-                        }
-                        if (info == null) {
-                            item { Text("No hay ningún paquete validado. Vuelve atrás y selecciona un archivo.") }
-                        } else {
-                            val storyNameConflicts = transferStoryNameConflicts
-                            if (info.stories.isNotEmpty()) {
-                                item {
-                                    Text("Cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("Se importan completos, con escenas, conexiones y recursos.", fontSize = 12.sp, color = Color(0xFF667085))
-                                }
-                                item {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = info.stories.all { it.key in transferImportStories },
-                                            onCheckedChange = { checked -> transferImportStories = if (checked) info.stories.map { it.key }.toSet() else emptySet() }
-                                        )
-                                        Text("Seleccionar todos los cuentos")
-                                    }
-                                }
-                                info.stories.forEach { story ->
-                                    item {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                checked = story.key in transferImportStories,
-                                                onCheckedChange = { checked ->
-                                                    transferImportStories = transferImportStories.toMutableSet().also {
-                                                        if (checked) it.add(story.key) else it.remove(story.key)
-                                                    }
-                                                }
-                                            )
-                                            Column {
-                                                Text(story.title, fontWeight = FontWeight.SemiBold)
-                                                Text("${story.collection} · ${story.sceneCount} escenas", fontSize = 12.sp, color = Color(0xFF667085))
-                                            }
-                                        }
-                                    }
-                                }
-                                val conflictDetails = transferObjectConflicts
-                                if (storyNameConflicts.isNotEmpty()) {
-                                    item {
-                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text("Cuentos con el mismo nombre", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                            Text("Un cuento nunca se fusiona ni se adapta. Si confirmas, el cuento local se sustituirá por completo, con todas sus escenas, conexiones, imágenes y audios. Si no quieres sustituirlo, cancela toda la importación.", fontSize = 12.sp, color = Color(0xFF667085))
-                                        }
-                                    }
-                                    storyNameConflicts.forEach { (incomingStory, existingStory) ->
-                                        item {
-                                            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF4E5))) {
-                                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                    Text(incomingStory.title, fontWeight = FontWeight.Bold)
-                                                    Text("Colección: ${incomingStory.collection}", fontSize = 12.sp)
-                                                    Text("Local: ${existingStory.metadata.scenes.size} escenas · ZIP: ${incomingStory.sceneCount} escenas", fontSize = 12.sp, color = Color(0xFF667085))
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Checkbox(
-                                                            checked = transferStoryConflictDecisions[incomingStory.key] == "overwrite",
-                                                            onCheckedChange = { checked ->
-                                                                transferStoryConflictDecisions = if (checked) {
-                                                                    transferStoryConflictDecisions + (incomingStory.key to "overwrite")
-                                                                } else {
-                                                                    transferStoryConflictDecisions - incomingStory.key
-                                                                }
-                                                            }
-                                                        )
-                                                        Column {
-                                                            Text("Confirmo sobrescribir el cuento completo", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                                            Text("Puedes desmarcarlo en cualquier momento. Sin confirmación no se permitirá importar.", fontSize = 11.sp, color = Color(0xFF667085))
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                val conflictIndex = transferConflictIndex.coerceIn(0, (conflictDetails.size - 1).coerceAtLeast(0))
-                                item {
-                                    Text(if (conflictDetails.isEmpty()) "Revisión de objetos: sin conflictos" else "Conflicto ${conflictIndex + 1} de ${conflictDetails.size}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                    if (conflictDetails.isNotEmpty()) {
-                                        androidx.compose.material3.LinearProgressIndicator(progress = { (conflictIndex + 1).toFloat() / conflictDetails.size.toFloat() }, modifier = Modifier.fillMaxWidth())
-                                        Text("Resuelve las coincidencias una a una. Se comparan las imágenes reales y los datos de cada objeto.", fontSize = 12.sp, color = Color(0xFF667085))
-                                    }
-                                }
-                                val localObjects = transferLocalObjects
-                                val requiredObjectKeys = transferRequiredImportObjects.keys
-                                info.objects.filter { it.key in requiredObjectKeys }.forEach { dependency ->
-                                    val incoming = transferImportObjectEntries.firstOrNull { it.first.key == dependency.key }?.second
-                                        ?: return@forEach
-                                    val existing = localObjects.firstOrNull {
-                                        it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
-                                    }
-                                    if (existing != null) {
-                                        if (conflictDetails.indexOfFirst { it.incoming.folderName == dependency.directory } == conflictIndex) {
-                                            item {
-                                                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                        Text("Conflicto de objeto: ${dependency.name}", fontWeight = FontWeight.Bold)
-                                                        Text("Comparación de las dos definiciones:", fontSize = 12.sp, color = Color(0xFF667085))
-                                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-                                                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                                Text("En el ZIP", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                                                val incomingBitmap = transferObjectConflictThumbnails[dependency.directory]?.first
-                                                                if (incomingBitmap != null) Image(incomingBitmap.asImageBitmap(), contentDescription = "Objeto del ZIP", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
-                                                                Text(incoming.metadata.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                                                Text("Aparece en la tienda: ${if (incoming.metadata.availableInStore) "Sí" else "No"}", fontSize = 11.sp, color = Color(0xFF667085))
-                                                            }
-                                                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                                Text("En este dispositivo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                                                val existingBitmap = transferObjectConflictThumbnails[dependency.directory]?.second
-                                                                if (existingBitmap != null) Image(existingBitmap.asImageBitmap(), contentDescription = "Objeto existente", modifier = Modifier.width(84.dp).height(84.dp), contentScale = ContentScale.Fit)
-                                                                Text(existing.metadata.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                                                Text("Aparece en la tienda: ${if (existing.metadata.availableInStore) "Sí" else "No"}", fontSize = 11.sp, color = Color(0xFF667085))
-                                                            }
-                                                        }
-                                                        val detail = conflictDetails.firstOrNull { it.incoming.folderName == dependency.directory }
-                                                        detail?.differences?.forEach { difference -> Text("• $difference", fontSize = 11.sp, color = Color(0xFF475467)) }
-                                                        Text("Ya existe un objeto con la misma identidad, pero sus datos o imagen son diferentes.", fontSize = 12.sp, color = Color(0xFF667085))
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            androidx.compose.material3.RadioButton(
-                                                                selected = transferObjectConflictDecisions[dependency.directory] == "reuse",
-                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (dependency.directory to "reuse") }
-                                                            )
-                                                            Text("Conservar el objeto de este dispositivo")
-                                                        }
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            androidx.compose.material3.RadioButton(
-                                                                selected = transferObjectConflictDecisions[dependency.directory] == "overwrite",
-                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (dependency.directory to "overwrite") }
-                                                            )
-                                                            Text("Sobrescribir el objeto existente")
-                                                        }
-                                                        if (transferObjectConflictDecisions[dependency.directory] == "overwrite") {
-                                                            val affectedStories = detail?.referencingStories.orEmpty()
-                                                            Text(
-                                                                if (affectedStories.isEmpty()) "No se han encontrado otros cuentos locales que utilicen este objeto."
-                                                                else "ATENCIÓN: ${affectedStories.size} cuento(s) local(es) también lo utilizan: ${affectedStories.joinToString(", ")}.",
-                                                                fontSize = 11.sp,
-                                                                color = Color(0xFFB3261E)
-                                                            )
-                                                            Text("La definición compartida cambiará para todos ellos. El inventario no se modifica.", fontSize = 11.sp, color = Color(0xFFB3261E))
-                                                        }
-                                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                                            OutlinedButton(onClick = { transferConflictIndex = (conflictIndex - 1).coerceAtLeast(0) }, enabled = conflictIndex > 0) { Text("Anterior") }
-                                                            OutlinedButton(onClick = { transferConflictIndex = (conflictIndex + 1).coerceAtMost(conflictDetails.lastIndex) }, enabled = conflictIndex < conflictDetails.lastIndex) { Text("Siguiente") }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (info.objects.isNotEmpty()) {
-                                val importObjectsWithData = transferImportObjectEntries
-                                val requiredImportObjects = transferRequiredImportObjects
-                                item {
-                                    Text("Objetos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("Los objetos requeridos por los cuentos seleccionados se incorporarán automáticamente. También puedes seleccionar objetos por separado. Esta operación no modifica el inventario del niño.", fontSize = 12.sp, color = Color(0xFF667085))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(
-                                            checked = info.objects.all { it.key in requiredImportObjects || it.key in transferImportObjects },
-                                            onCheckedChange = { checked ->
-                                                transferImportObjects = if (checked) info.objects.map { it.key }.toSet() else emptySet()
-                                                transferObjectConflictDecisions = emptyMap()
-                                            }
-                                        )
-                                        Text("Seleccionar todos los objetos")
-                                    }
-                                }
-                                val collectibleObjects = importObjectsWithData.filter { it.second.metadata.collectible }
-                                if (collectibleObjects.isNotEmpty()) {
-                                    item { Text("Coleccionables", fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
-                                    collectibleObjects.forEach { (objectInfo, incoming) ->
-                                        val requiredBy = requiredImportObjects[objectInfo.key].orEmpty()
-                                        val isRequired = requiredBy.isNotEmpty()
-                                        val selected = isRequired || objectInfo.key in transferImportObjects
-                                        val local = transferLocalObjects.firstOrNull {
-                                            it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
-                                        }
-                                        item {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
-                                                    checked = selected,
-                                                    enabled = !isRequired,
-                                                    onCheckedChange = { checked ->
-                                                        transferImportObjects = transferImportObjects.toMutableSet().also {
-                                                            if (checked) it.add(objectInfo.key) else it.remove(objectInfo.key)
-                                                        }
-                                                    }
-                                                )
-                                                Column {
-                                                    Text(objectInfo.name, fontWeight = FontWeight.SemiBold)
-                                                    Text(
-                                                        if (isRequired) "REQUERIDO" else if (incoming.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
-                                                        fontSize = 12.sp,
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        color = if (isRequired) Color(0xFF16803C) else if (incoming.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
-                                                    )
-                                                    if (isRequired) Text("Requerido por: ${requiredBy.joinToString(", ")}", fontSize = 11.sp, color = Color(0xFF667085))
-                                                    if (local != null) {
-                                                        Text(
-                                                            when (transferObjectConflictDecisions[objectInfo.directory]) {
-                                                                "reuse" -> "Coincidencia: se conservará el objeto local"
-                                                                "overwrite" -> "Coincidencia: se sobrescribirá el objeto local"
-                                                                else -> "Ya existe otro objeto con ese nombre; elige cómo resolverlo"
-                                                            },
-                                                            fontSize = 11.sp,
-                                                            color = Color(0xFF9A6700)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            if (selected && local != null) {
-                                                Column(Modifier.padding(start = 42.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        androidx.compose.material3.RadioButton(
-                                                            selected = transferObjectConflictDecisions[objectInfo.directory] == "reuse",
-                                                            onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (objectInfo.directory to "reuse") }
-                                                        )
-                                                        Text("Conservar el objeto de este dispositivo", fontSize = 12.sp)
-                                                    }
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        androidx.compose.material3.RadioButton(
-                                                            selected = transferObjectConflictDecisions[objectInfo.directory] == "overwrite",
-                                                            onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (objectInfo.directory to "overwrite") }
-                                                        )
-                                                        Text("Sobrescribir el objeto existente", fontSize = 12.sp)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                importObjectsWithData.filter { !it.second.metadata.collectible }
-                                    .groupBy { it.second.collection }
-                                    .toSortedMap()
-                                    .forEach { (collection, objects) ->
-                                        item { Text(collection, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
-                                        objects.forEach { (objectInfo, incoming) ->
-                                            val requiredBy = requiredImportObjects[objectInfo.key].orEmpty()
-                                            val isRequired = requiredBy.isNotEmpty()
-                                            val selected = isRequired || objectInfo.key in transferImportObjects
-                                            val local = transferLocalObjects.firstOrNull {
-                                                it.collection == incoming.collection && NameRules.key(it.metadata.name) == NameRules.key(incoming.metadata.name)
-                                            }
-                                            item {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Checkbox(
-                                                        checked = selected,
-                                                        enabled = !isRequired,
-                                                        onCheckedChange = { checked ->
-                                                            transferImportObjects = transferImportObjects.toMutableSet().also {
-                                                                if (checked) it.add(objectInfo.key) else it.remove(objectInfo.key)
-                                                            }
-                                                        }
-                                                    )
-                                                    Column {
-                                                        Text(objectInfo.name, fontWeight = FontWeight.SemiBold)
-                                                        Text(
-                                                            if (isRequired) "REQUERIDO" else if (incoming.metadata.collectible) "🏆 COLECCIONABLE" else "📦 OBJETO NORMAL",
-                                                            fontSize = 12.sp,
-                                                            fontWeight = FontWeight.ExtraBold,
-                                                            color = if (isRequired) Color(0xFF16803C) else if (incoming.metadata.collectible) Color(0xFF7952A5) else Color(0xFF356B91)
-                                                        )
-                                                        if (isRequired) Text("Requerido por: ${requiredBy.joinToString(", ")}", fontSize = 11.sp, color = Color(0xFF667085))
-                                                        if (local != null) {
-                                                            Text(
-                                                                when (transferObjectConflictDecisions[objectInfo.directory]) {
-                                                                    "reuse" -> "Coincidencia: se conservará el objeto local"
-                                                                    "overwrite" -> "Coincidencia: se sobrescribirá el objeto local"
-                                                                    else -> "Ya existe otro objeto con ese nombre; elige cómo resolverlo"
-                                                                },
-                                                                fontSize = 11.sp,
-                                                                color = Color(0xFF9A6700)
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                                if (selected && local != null) {
-                                                    Column(Modifier.padding(start = 42.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            androidx.compose.material3.RadioButton(
-                                                                selected = transferObjectConflictDecisions[objectInfo.directory] == "reuse",
-                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (objectInfo.directory to "reuse") }
-                                                            )
-                                                            Text("Conservar el objeto de este dispositivo", fontSize = 12.sp)
-                                                        }
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            androidx.compose.material3.RadioButton(
-                                                                selected = transferObjectConflictDecisions[objectInfo.directory] == "overwrite",
-                                                                onClick = { transferObjectConflictDecisions = transferObjectConflictDecisions + (objectInfo.directory to "overwrite") }
-                                                            )
-                                                            Text("Sobrescribir el objeto existente", fontSize = 12.sp)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                            }
-                            info.modalities.forEach { modalityInfo ->
-                                val modality = modalityInfo.modality
-                                val label = when (modality) { ContentStorage.Modality.TARJETAS -> "Tarjetas"; ContentStorage.Modality.PALABRAS -> "Palabras"; ContentStorage.Modality.SECUENCIAS -> "Secuencias" }
-                                item {
-                                    Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    if (modality == ContentStorage.Modality.SECUENCIAS) {
-                                        val selected = transferImportCategories[modality].orEmpty()
-                                        SequenceType.entries.forEach { type ->
-                                            val exercisesOfType = modalityInfo.categories.flatMap { category ->
-                                                category.sequenceExercises.filter { it.type == type }.map { exercise ->
-                                                    LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
-                                                }
-                                            }
-                                            if (exercisesOfType.isNotEmpty()) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Checkbox(
-                                                        checked = exercisesOfType.all { it in selected },
-                                                        onCheckedChange = { checked ->
-                                                            transferImportCategories = transferImportCategories.toMutableMap().also { map ->
-                                                                map[modality] = selected.toMutableSet().also { set ->
-                                                                    if (checked) set.addAll(exercisesOfType) else set.removeAll(exercisesOfType.toSet())
-                                                                }
-                                                            }
-                                                        }
-                                                    )
-                                                    Text(type.displayName, fontWeight = FontWeight.Bold)
-                                                }
-                                                val categoriesForType = modalityInfo.categories.filter { category ->
-                                                    category.sequenceExercises.any { it.type == type }
-                                                }
-                                                categoriesForType.forEach { category ->
-                                                    val exercises = category.sequenceExercises.filter { it.type == type }
-                                                    val categoryKey = "${type.jsonValue}::${category.directory}"
-                                                    val exerciseKeys = exercises.map { exercise ->
-                                                        LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
-                                                    }
-                                                    val expanded = categoryKey in expandedImportSequenceCategories
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth().clickable {
-                                                            expandedImportSequenceCategories = expandedImportSequenceCategories.toMutableSet().also {
-                                                                if (expanded) it.remove(categoryKey) else it.add(categoryKey)
-                                                            }
-                                                        }.padding(start = 28.dp, top = 4.dp, bottom = 4.dp),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Checkbox(
-                                                            checked = exerciseKeys.all { it in selected },
-                                                            onCheckedChange = { checked ->
-                                                                transferImportCategories = transferImportCategories.toMutableMap().also { map ->
-                                                                    map[modality] = selected.toMutableSet().also { set ->
-                                                                        if (checked) set.addAll(exerciseKeys) else set.removeAll(exerciseKeys.toSet())
-                                                                    }
-                                                                }
-                                                            }
-                                                        )
-                                                        Text(if (expanded) "▾" else "▸", modifier = Modifier.padding(end = 8.dp), color = Color(0xFF667085))
-                                                        Text(category.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF475467))
-                                                        Spacer(Modifier.weight(1f))
-                                                        Text("${exercises.size}", fontSize = 12.sp, color = Color(0xFF667085))
-                                                    }
-                                                    if (expanded) exercises.forEach { exercise ->
-                                                        val key = LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
-                                                        Row(
-                                                            modifier = Modifier.fillMaxWidth().padding(start = 68.dp, top = 2.dp, bottom = 2.dp),
-                                                            verticalAlignment = Alignment.CenterVertically
-                                                        ) {
-                                                            Checkbox(
-                                                                checked = key in selected,
-                                                                onCheckedChange = { checked ->
-                                                                    transferImportCategories = transferImportCategories.toMutableMap().also { map ->
-                                                                        map[modality] = selected.toMutableSet().also { set ->
-                                                                            if (checked) set.add(key) else set.remove(key)
-                                                                        }
-                                                                    }
-                                                                }
-                                                            )
-                                                            Text(exercise.title)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        modalityInfo.categories.forEach { category ->
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
-                                                    checked = category.directory in transferImportCategories[modality].orEmpty(),
-                                                    onCheckedChange = { checked -> transferImportCategories = transferImportCategories.toMutableMap().also { map -> map[modality] = map[modality].orEmpty().toMutableSet().also { set -> if (checked) set.add(category.directory) else set.remove(category.directory) } } }
-                                                )
-                                                Column {
-                                                    Text(category.name)
-                                                    Text("${category.exerciseCount} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Text(if (modalityInfo.includesLearningStatistics || modalityInfo.includesUsageStatistics) "El paquete incluye estadísticas." else "El paquete no incluye estadísticas.", fontSize = 12.sp, color = Color(0xFF667085))
-                                }
-                            }
-                            if (info.modalities.any { it.includesLearningStatistics }) {
-                                item {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = transferImportStatistics, onCheckedChange = { transferImportStatistics = it })
-                                        Column {
-                                            Text("Importar estadísticas de aprendizaje", fontWeight = FontWeight.SemiBold)
-                                            Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de aprendizaje del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
-                                        }
-                                    }
-                                }
-                            }
-                            if (info.modalities.any { it.includesUsageStatistics }) {
-                                item {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = transferImportUsageStatistics, onCheckedChange = { transferImportUsageStatistics = it })
-                                        Column {
-                                            Text("Importar estadísticas de uso", fontWeight = FontWeight.SemiBold)
-                                            Text("Desactivado por defecto. Si no lo marcas, se conservarán las estadísticas de uso del dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
-                                        }
-                                    }
-                                }
-                            }
-                            item {
-                                val exerciseConflicts = transferExerciseConflicts
-                                val groupedConflicts = ContentStorage.Modality.entries.mapNotNull { modality ->
-                                    val conflicts = exerciseConflicts.filter { it.modality == modality }
-                                    if (conflicts.isEmpty()) null else modality to conflicts
-                                }
-                                val unresolvedCount = exerciseConflicts.count {
-                                    transferExerciseConflictDecisions[it.key] !in setOf("reuse", "overwrite")
-                                }
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("Conflictos de ejercicios", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text(
-                                        if (exerciseConflicts.isEmpty()) "No hay ejercicios que coincidan con los que ya tienes."
-                                        else "${exerciseConflicts.size - unresolvedCount} de ${exerciseConflicts.size} conflictos resueltos. Puedes decidir por modalidad o individualmente.",
-                                        fontSize = 12.sp, color = Color(0xFF667085)
-                                    )
-                                    groupedConflicts.forEach { (modality, conflicts) ->
-                                        val modalityName = when (modality) {
-                                            ContentStorage.Modality.TARJETAS -> "Tarjetas"
-                                            ContentStorage.Modality.SECUENCIAS -> "Secuencias"
-                                            ContentStorage.Modality.PALABRAS -> "Palabras"
-                                        }
-                                        val groupResolved = conflicts.count {
-                                            transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite")
-                                        }
-                                        Card(
-                                            Modifier.fillMaxWidth(),
-                                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F9FC))
-                                        ) {
-                                            Column(
-                                                Modifier.fillMaxWidth().padding(12.dp),
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Text(
-                                                    "$modalityName · ${conflicts.size} conflictos",
-                                                    fontSize = 16.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    "$groupResolved de ${conflicts.size} resueltos",
-                                                    fontSize = 12.sp,
-                                                    color = Color(0xFF667085)
-                                                )
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                ) {
-                                                    OutlinedButton(
-                                                        modifier = Modifier.weight(1f),
-                                                        onClick = {
-                                                            transferExerciseConflictDecisions = transferExerciseConflictDecisions +
-                                                                conflicts.associate { it.key to "overwrite" }
-                                                        }
-                                                    ) {
-                                                        Text("Sustituir todo", fontSize = 12.sp)
-                                                    }
-                                                    OutlinedButton(
-                                                        modifier = Modifier.weight(1f),
-                                                        onClick = {
-                                                            transferExerciseConflictDecisions = transferExerciseConflictDecisions +
-                                                                conflicts.associate { it.key to "reuse" }
-                                                        }
-                                                    ) {
-                                                        Text("No sustituir nada", fontSize = 12.sp)
-                                                    }
-                                                }
-                                                conflicts.forEach { conflict ->
-                                                    Card(
-                                                        Modifier.fillMaxWidth(),
-                                                        colors = CardDefaults.cardColors(
-                                                            containerColor = if (transferExerciseConflictDecisions[conflict.key] == "overwrite") Color(0xFFFFF4E5) else Color.White
-                                                        )
-                                                    ) {
-                                                        Column(
-                                                            Modifier.padding(12.dp),
-                                                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                                                        ) {
-                                                            Text(conflict.incoming.metadata.title, fontWeight = FontWeight.Bold)
-                                                            Text(conflict.categoryName, fontSize = 12.sp, color = Color(0xFF667085))
-                                                            Text(
-                                                                "Ya existe un ejercicio con el mismo título o una carpeta de destino coincidente.",
-                                                                fontSize = 12.sp,
-                                                                color = Color(0xFF667085)
-                                                            )
-                                                            Text("En este dispositivo: ${conflict.existing.metadata.title}", fontSize = 12.sp)
-                                                            Text("En el ZIP: ${conflict.incoming.metadata.title}", fontSize = 12.sp)
-                                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                androidx.compose.material3.RadioButton(
-                                                                    selected = transferExerciseConflictDecisions[conflict.key] == "reuse",
-                                                                    onClick = {
-                                                                        transferExerciseConflictDecisions = transferExerciseConflictDecisions +
-                                                                            (conflict.key to "reuse")
-                                                                    }
-                                                                )
-                                                                Text("Conservar el ejercicio del dispositivo", fontSize = 12.sp)
-                                                            }
-                                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                androidx.compose.material3.RadioButton(
-                                                                    selected = transferExerciseConflictDecisions[conflict.key] == "overwrite",
-                                                                    onClick = {
-                                                                        transferExerciseConflictDecisions = transferExerciseConflictDecisions +
-                                                                            (conflict.key to "overwrite")
-                                                                    }
-                                                                )
-                                                                Text("Sustituirlo por el del ZIP", fontSize = 12.sp)
-                                                            }
-                                                            if (transferExerciseConflictDecisions[conflict.key] == "overwrite") {
-                                                                Text(
-                                                                    if (transferImportStatistics) "También se importarán las estadísticas incluidas en el ZIP."
-                                                                    else "Se conservarán las estadísticas locales existentes.",
-                                                                    fontSize = 11.sp,
-                                                                    color = Color(0xFF9A6700)
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (unresolvedCount > 0) {
-                                        Text(
-                                            "Debes resolver todos los conflictos antes de importar.",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFFB3261E)
-                                        )
-                                    }
-                                }
-                            }
-                            item {
-                                val finalConflictReview = transferObjectConflicts
-                                val resolvedCount = finalConflictReview.count { it.incoming.folderName in transferObjectConflictDecisions }
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("Resumen de coincidencias", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text("${resolvedCount} de ${finalConflictReview.size} conflictos resueltos.", fontSize = 12.sp, color = Color(0xFF667085))
-                                    finalConflictReview.forEach { conflict ->
-                                        val choice = when (transferObjectConflictDecisions[conflict.incoming.folderName]) {
-                                            "reuse" -> "Se conservará el objeto local"
-                                            "overwrite" -> "Se sobrescribirá el objeto local"
-                                            else -> "Pendiente de decisión"
-                                        }
-                                        Text("• ${conflict.incoming.metadata.name}: $choice", fontSize = 12.sp)
-                                    }
-                                }
-                            }
-                            item {
-                                Button(onClick = {
+                                    "library-import" -> {
+                        libraryImportContent(
+                            context = context,
+                            transferPackage = transferPackage,
+                            expandedImportSequenceCategoriesState = expandedImportSequenceCategoriesState,
+                            transferImportCategoriesState = transferImportCategoriesState,
+                            transferImportStoriesState = transferImportStoriesState,
+                            transferImportObjectsState = transferImportObjectsState,
+                            transferObjectConflictDecisionsState = transferObjectConflictDecisionsState,
+                            transferStoryConflictDecisionsState = transferStoryConflictDecisionsState,
+                            transferExerciseConflictDecisionsState = transferExerciseConflictDecisionsState,
+                            transferConflictIndexState = transferConflictIndexState,
+                            transferImportStatisticsState = transferImportStatisticsState,
+                            transferImportUsageStatisticsState = transferImportUsageStatisticsState,
+                            transferImportPreparationLoadingState = transferImportPreparationLoadingState,
+                            transferImportPreparationErrorState = transferImportPreparationErrorState,
+                            transferExerciseConflictsState = transferExerciseConflictsState,
+                            transferObjectConflictsState = transferObjectConflictsState,
+                            transferStoryNameConflictsState = transferStoryNameConflictsState,
+                            transferImportObjectEntriesState = transferImportObjectEntriesState,
+                            transferRequiredImportObjectsState = transferRequiredImportObjectsState,
+                            transferLocalObjectsState = transferLocalObjectsState,
+                            transferObjectConflictThumbnailsState = transferObjectConflictThumbnailsState,
+                            transferMessage = transferMessage,
+                            onImportSelection = {
+                                val info = transferPackage
+                                if (info != null) {
                                     libraryTaskRunning = true
                                     updateLibraryTaskProgress("Preparando la importación…", 0, 0)
                                     remoteLibraryScope.launch {
@@ -3150,8 +2593,24 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                         libraryTaskRunning = false
                                     }
                                     }
-                                }, enabled = !transferImportPreparationLoading && !transferImportPreparationError &&
-                                    (transferImportCategories.values.any { it.isNotEmpty() } || transferImportStories.isNotEmpty()) &&
+                                
+                                }
+                            },
+                            onCancelImport = {
+                                val info = transferPackage
+                                if (info != null) {
+                                transferPackage = null
+                                remoteLibraryScope.launch {
+                                    withContext(Dispatchers.IO) { LibraryPackageManager.discard(info) }
+                                }
+                                parentSection = if (transferRemoteLibraryName != null) "basic-library" else "library-transfer"
+                                transferRemoteLibraryName = null
+                            
+                                }
+                            }
+                        )
+                    }
+ransferImportStories.isNotEmpty()) &&
                                     transferExerciseConflicts.all { transferExerciseConflictDecisions[it.key] in setOf("reuse", "overwrite") } &&
                                     transferObjectConflicts.all { it.incoming.folderName in transferObjectConflictDecisions } &&
                                     transferStoryNameConflicts.all { transferStoryConflictDecisions[it.first.key] == "overwrite" },
