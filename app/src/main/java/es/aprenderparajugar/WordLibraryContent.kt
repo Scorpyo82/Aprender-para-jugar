@@ -177,7 +177,6 @@ internal fun LazyListScope.wordLibraryItems(
                 }
                 item { OutlinedButton(onClick = { wordLibraryPage = "list"; wordLibraryMessage = "" }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") } }
             }
-        }
         } else {
             item { Text("Categorías de Palabras", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
             item { Text("Estas categorías solo afectan a los ejercicios de Palabras; no modifican Tarjetas ni Secuencias.", fontSize = 14.sp, color = Color(0xFF667085)) }
@@ -217,4 +216,5 @@ internal fun LazyListScope.wordLibraryItems(
                     }
                 }
             }
+}
 }
