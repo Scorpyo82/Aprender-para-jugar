@@ -3989,7 +3989,7 @@ private fun SequenceCategorySelectionRoute(
 
 @Composable
 private fun WordOptionsRoute(
-    wordExercises: List<WordExercise>,
+    wordExercises: List<PairItem>,
     disabledCategories: Set<String>,
     difficulty: String,
     preferences: android.content.SharedPreferences,
