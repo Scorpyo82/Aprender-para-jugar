@@ -2981,28 +2981,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             storedStories.firstOrNull { it.directory.absolutePath == path }
                 ?: runCatching { StoryRepository.read(File(path)) }.getOrNull()
         }
-        if (selectedStory == null) {
-            screen = "stories"
-        } else if (selectedStory.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) {
-            StoryAccessRequirementsScreen(
-                story = selectedStory,
-                onBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
-            )
-        } else if (selectedStory.metadata.connections.values.any { STORY_LOST_DESTINATION in it }) {
-            AlertDialog(
-                onDismissRequest = { screen = "stories"; selectedStoryPath = null },
-                title = { Text("Estructura narrativa incompleta") },
-                text = { Text("Este cuento contiene conexiones huérfanas. Entra en su editor, abre «Editar estructura narrativa» y reasigna o elimina las salidas marcadas en rojo antes de reproducirlo.") },
-                confirmButton = { Button(onClick = { screen = "stories"; selectedStoryPath = null }) { Text("Volver") } }
-            )
-        } else {
-            StoryPlayerScreen(
-                story = selectedStory,
-                balanceSeconds = balanceSeconds,
-                fontFamily = exerciseFontFamily,
-                onExit = { screen = "stories"; selectedStoryPath = null }
-            )
-        }
+        StoryPlayerRoute(
+            story = selectedStory,
+            balanceSeconds = balanceSeconds,
+            fontFamily = exerciseFontFamily,
+            onMissingStory = { screen = "stories" },
+            onAccessRequirementsBack = { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false },
+            onExit = { screen = "stories"; selectedStoryPath = null }
+        )
     } else if (screen == "story-inventory") {
         StoryObjectInventoryScreen(
             objects = storedStoryObjects,
@@ -3685,5 +3671,39 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryTransferItems(
     }
     if (transferMessage.isNotBlank()) item {
         Text(transferMessage, color = if (transferMessage.startsWith("No se puede") || transferMessage.startsWith("No se pudo")) Color(0xFFB3261E) else Color(0xFF24733B), fontSize = 14.sp)
+    }
+}
+
+
+@Composable
+private fun StoryPlayerRoute(
+    story: StoredStory?,
+    balanceSeconds: Int,
+    fontFamily: FontFamily,
+    onMissingStory: () -> Unit,
+    onAccessRequirementsBack: () -> Unit,
+    onExit: () -> Unit
+) {
+    if (story == null) {
+        onMissingStory()
+    } else if (story.metadata.requiredAccessObjects.any { !InventoryRepository.contains(LocalContext.current, it) }) {
+        StoryAccessRequirementsScreen(
+            story = story,
+            onBack = onAccessRequirementsBack
+        )
+    } else if (story.metadata.connections.values.any { STORY_LOST_DESTINATION in it }) {
+        AlertDialog(
+            onDismissRequest = onExit,
+            title = { Text("Estructura narrativa incompleta") },
+            text = { Text("Este cuento contiene conexiones huérfanas. Entra en su editor, abre «Editar estructura narrativa» y reasigna o elimina las salidas marcadas en rojo antes de reproducirlo.") },
+            confirmButton = { Button(onClick = onExit) { Text("Volver") } }
+        )
+    } else {
+        StoryPlayerScreen(
+            story = story,
+            balanceSeconds = balanceSeconds,
+            fontFamily = fontFamily,
+            onExit = onExit
+        )
     }
 }
