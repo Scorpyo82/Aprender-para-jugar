@@ -2670,21 +2670,20 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             onExit = { screen = "home" }
         )
     } else if (screen == "word-options") {
-        val availableWords = wordExercises.filter { it.active && it.category !in disabledWordExerciseCategories && it.difficulty == wordSelectedDifficulty }
-        val wordCategories = availableWords.map { it.category }.distinct()
-        val wordQuota = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", wordSelectedDifficulty), availableWords.isNotEmpty())
-        val lockedWordDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
-            val hasExercises = wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(level, true) }
-            val status = ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("words", level), hasExercises)
-            hasExercises && status.limit != null && !status.available
-        }.toSet()
-        ExerciseOptionsScreen(title = "Palabras", difficulty = wordSelectedDifficulty, easyReward = easyRewardMinutes, normalReward = normalRewardMinutes, hardReward = hardRewardMinutes, isStarsMode = rewardMode.isStars, message = wordStartMessage.ifBlank { quotaMessage(wordQuota) },
-            lockedDifficulties = lockedWordDifficulties,
-            surpriseDescription = "La app elige una palabra entre todos los temas disponibles.", mixDescription = "La app busca cambiar de tema entre una palabra y la siguiente.",
-            surpriseAvailable = availableWords.isNotEmpty() && wordQuota.available, chooseAvailable = availableWords.isNotEmpty() && wordQuota.available, mixAvailable = wordCategories.size >= 2 && wordQuota.available,
-            onBack = { screen = "home"; wordStartMessage = "" }, onDifficultyChange = { wordSelectedDifficulty = it; wordStartMessage = "" },
+        WordOptionsRoute(
+            wordExercises = wordExercises,
+            disabledCategories = disabledWordExerciseCategories,
+            difficulty = wordSelectedDifficulty,
+            preferences = preferences,
+            easyReward = easyRewardMinutes,
+            normalReward = normalRewardMinutes,
+            hardReward = hardRewardMinutes,
+            isStarsMode = rewardMode.isStars,
+            startMessage = wordStartMessage,
+            onBack = { screen = "home"; wordStartMessage = "" },
+            onDifficultyChange = { wordSelectedDifficulty = it; wordStartMessage = "" },
             onSurprise = { wordSelectionMode = "Sorpresa"; startWordExercise(null) },
-            onChooseTheme = { wordSelectionMode = "Elegir tema"; wordCategoryCandidates = wordCategories.sorted(); wordStartMessage = ""; screen = "word-category-select" },
+            onChooseTheme = { categories -> wordSelectionMode = "Elegir tema"; wordCategoryCandidates = categories; wordStartMessage = ""; screen = "word-category-select" },
             onMixThemes = { wordSelectionMode = "Mezclar temas"; startWordExercise(null) }
         )
     } else if (screen == "word-category-select") {
@@ -3985,5 +3984,65 @@ private fun SequenceCategorySelectionRoute(
         message = message,
         onBack = onBack,
         onSelectCategory = onSelectCategory
+    )
+}
+
+@Composable
+private fun WordOptionsRoute(
+    wordExercises: List<WordExercise>,
+    disabledCategories: Set<String>,
+    difficulty: String,
+    preferences: android.content.SharedPreferences,
+    easyReward: Int,
+    normalReward: Int,
+    hardReward: Int,
+    isStarsMode: Boolean,
+    startMessage: String,
+    onBack: () -> Unit,
+    onDifficultyChange: (String) -> Unit,
+    onSurprise: () -> Unit,
+    onChooseTheme: (List<String>) -> Unit,
+    onMixThemes: () -> Unit
+) {
+    val availableWords = wordExercises.filter {
+        it.active && it.category !in disabledCategories && it.difficulty == difficulty
+    }
+    val wordCategories = availableWords.map { it.category }.distinct()
+    val wordQuota = ExerciseQuotaRepository.status(
+        preferences, ExerciseQuotaRepository.id("words", difficulty), availableWords.isNotEmpty()
+    )
+    val lockedWordDifficulties = listOf("Fácil", "Normal", "Difícil").filter { level ->
+        val hasExercises = wordExercises.any {
+            it.active && it.category !in disabledCategories && it.difficulty.equals(level, true)
+        }
+        val status = ExerciseQuotaRepository.status(
+            preferences, ExerciseQuotaRepository.id("words", level), hasExercises
+        )
+        hasExercises && status.limit != null && !status.available
+    }.toSet()
+    val quotaText = when {
+        wordQuota.limit == null -> "Sin límite de intentos."
+        wordQuota.available -> "Intentos restantes: ${wordQuota.remaining}/${wordQuota.limit}."
+        else -> wordQuota.reason ?: "Dificultad bloqueada."
+    }
+    ExerciseOptionsScreen(
+        title = "Palabras",
+        difficulty = difficulty,
+        easyReward = easyReward,
+        normalReward = normalReward,
+        hardReward = hardReward,
+        isStarsMode = isStarsMode,
+        message = startMessage.ifBlank { quotaText },
+        lockedDifficulties = lockedWordDifficulties,
+        surpriseDescription = "La app elige una palabra entre todos los temas disponibles.",
+        mixDescription = "La app busca cambiar de tema entre una palabra y la siguiente.",
+        surpriseAvailable = availableWords.isNotEmpty() && wordQuota.available,
+        chooseAvailable = availableWords.isNotEmpty() && wordQuota.available,
+        mixAvailable = wordCategories.size >= 2 && wordQuota.available,
+        onBack = onBack,
+        onDifficultyChange = onDifficultyChange,
+        onSurprise = onSurprise,
+        onChooseTheme = { onChooseTheme(wordCategories.sorted()) },
+        onMixThemes = onMixThemes
     )
 }
