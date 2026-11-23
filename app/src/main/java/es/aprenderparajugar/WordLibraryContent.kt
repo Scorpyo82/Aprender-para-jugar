@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -27,6 +29,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -93,6 +97,7 @@ internal fun LazyListScope.wordLibraryItems(
                     val index = indexed.index
                     val exercise = indexed.value
                     item {
+                        var pendingWordDeletion by remember { mutableStateOf(false) }
                         Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(exercise.word, fontSize = 19.sp, fontWeight = FontWeight.Bold)
@@ -116,9 +121,24 @@ internal fun LazyListScope.wordLibraryItems(
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(onClick = { wordLibraryEditingIndex = index; wordLibraryWordDraft = exercise.word; wordLibraryPictureDraft = exercise.picture; wordLibraryCategoryDraft = exercise.category; wordLibraryDifficultyDraft = exercise.difficulty; wordLibraryMessage = ""; wordLibraryPage = "edit" }, modifier = Modifier.weight(1f)) { Text("Editar") }
                                     OutlinedButton(onClick = { wordExercises = wordExercises.toMutableList().also { it[index] = exercise.copy(active = !exercise.active) }; wordExercises = state.saveExercises(wordExercises) }, modifier = Modifier.weight(1f)) { Text(if (exercise.active) "Desactivar" else "Activar") }
-                                    OutlinedButton(onClick = { wordExercises = state.saveExercises(wordExercises.filterIndexed { i, _ -> i != index }) }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
+                                    OutlinedButton(onClick = { pendingWordDeletion = true }, modifier = Modifier.weight(1f)) { Text("Eliminar") }
                                 }
                             }
+
+                        if (pendingWordDeletion) {
+                            AlertDialog(
+                                onDismissRequest = { pendingWordDeletion = false },
+                                title = { Text("Confirmar eliminación") },
+                                text = { Text("¿Quieres eliminar el ejercicio «" + exercise.word + "» de la biblioteca? Esta acción no se puede deshacer.") },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        wordExercises = state.saveExercises(wordExercises.filterIndexed { i, _ -> i != index })
+                                        pendingWordDeletion = false
+                                    }) { Text("Eliminar definitivamente") }
+                                },
+                                dismissButton = { TextButton(onClick = { pendingWordDeletion = false }) { Text("Cancelar") } }
+                            )
+                        }
                         }
                     }
                 }
