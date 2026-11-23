@@ -669,7 +669,7 @@ private fun AprenderApp() {
     var storyEditorScenes by storyEditorState.scenes
     var storyEditorSelectedScene by storyEditorState.selectedScene
     var storyScenePendingDeletion by remember { mutableStateOf<String?>(null) }
-    var storyAmbientDuringNarration by remember { mutableIntStateOf(preferences.getInt("story_ambient_during_narration_percent", 20).coerceIn(0, 30)) }
+    val storyAudioSettingsState = remember(preferences) { StoryAudioSettingsState(preferences) }
     var showPendingStoryObjectImages by remember { mutableStateOf(preferences.getBoolean("stories_show_pending_object_images", false)) }
     var storySceneTest by remember { mutableStateOf<StoredStoryScene?>(null) }
     var storySceneTestAmbientOverride by remember { mutableStateOf(false) }
@@ -885,7 +885,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             firstLaunchNeedsSetup = false
         }
     }
-    var musicMessage by remember { mutableStateOf("") }
     var appInForeground by remember { mutableStateOf(true) }
     var setupAccessibilityEnabled by remember { mutableStateOf(false) }
     var restrictedSettingsDone by remember { mutableStateOf(preferences.getBoolean("restricted_settings_done", false)) }
@@ -917,63 +916,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         lifecycleOwner?.lifecycle?.addObserver(observer)
         onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
     }
-    val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) {
-            try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
-            musicUri = uri.toString()
-            preferences.edit().putString("background_music_uri", musicUri).apply()
-            musicMessage = "Música seleccionada. Se reproducirá en bucle cuando el sonido esté activado."
-        }
-    }
-    var backgroundMusicPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-
-    // El reproductor general solo se recrea si cambia la pista seleccionada.
-    // Cambiar de actividad nunca destruye ni reinicia la música.
-    DisposableEffect(musicUri) {
-        var player: MediaPlayer? = null
-        try {
-            player = if (musicUri.isNullOrBlank()) {
-                MediaPlayer.create(context, R.raw.musica_infantil_2)
-            } else {
-                MediaPlayer.create(context, Uri.parse(musicUri))
-            }
-            player?.apply {
-                isLooping = true
-                setVolume(0.22f, 0.22f)
-            }
-            if (player == null) {
-                musicMessage = "No se ha podido cargar la música."
-            }
-            backgroundMusicPlayer = player
-            ExerciseVoiceManager.setBackgroundMusicPlayer(player)
-        } catch (_: Exception) {
-            backgroundMusicPlayer = null
-            musicMessage = "No se ha podido reproducir la música. Prueba con otro MP3."
-        }
-        onDispose {
-            if (backgroundMusicPlayer === player) backgroundMusicPlayer = null
-            if (player != null) ExerciseVoiceManager.setBackgroundMusicPlayer(null)
-            try { player?.stop() } catch (_: Exception) { }
-            player?.release()
-        }
-    }
-
-    // Al entrar en Cuentos se pausa la música general; al salir se reanuda
-    // desde la posición conservada. El resto de la navegación no la afecta.
-    DisposableEffect(backgroundMusicPlayer, soundEnabled, appInForeground, screen) {
-        val player = backgroundMusicPlayer
-        if (player != null) {
-            try {
-                if (soundEnabled && appInForeground && screen != "story-player") {
-                    if (!player.isPlaying) player.start()
-                } else {
-                    if (player.isPlaying) player.pause()
-                }
-            } catch (_: Exception) { }
-        }
-        onDispose { }
-    }
+    BackgroundMusicController(
+        musicUri = musicUri,
+        soundEnabled = soundEnabled,
+        appInForeground = appInForeground,
+        screen = screen
+    )
     var mode by remember { mutableStateOf("Al azar") }
     var cardsStartMessage by remember { mutableStateOf("") }
     var difficulty by remember { mutableStateOf("Fácil") }
@@ -2144,31 +2092,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             } else {
                 when (parentSection) {
                     "sound-settings" -> {
-                        item { Text("Ajustes de sonido", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "music" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    Text("🎵 Música de fondo", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("Elige la música que acompaña el uso general de la aplicación.", fontSize = 14.sp, color = Color(0xFF667085))
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "stories-audio" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    Text("📖 Audio de cuentos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("Configura el volumen del ambiente durante la narración.", fontSize = 14.sp, color = Color(0xFF667085))
-                                }
-                            }
-                        }
-                        item {
-                            Card(Modifier.fillMaxWidth().clickable { parentSection = "achievement-sounds" }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    Text("🏆 Efectos y notificaciones", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("Personaliza los sonidos de objetos, logros, recompensas y compras.", fontSize = 14.sp, color = Color(0xFF667085))
-                                }
-                            }
-                        }
+                        item { SoundSettingsMenu(onNavigate = { parentSection = it }) }
                     }
                     "achievement-sounds" -> {
                         item { AchievementSoundSettingsScreen() }
@@ -3749,7 +3673,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         item {
                             StorySceneEditorContent(
                                 state = storyEditorState,
-                                storyAmbientDuringNarration = storyAmbientDuringNarration,
+                                storyAmbientDuringNarration = storyAudioSettingsState.volume,
                                 illustrationRevision = storyEditorIllustrationRevision,
                                 onPickIllustration = {
                                     preferences.edit().putBoolean("content_picker_active", true).apply()
@@ -4924,43 +4848,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         QuotaSystemSettingsScreen(preferences = preferences)
                     }
                     "stories-audio" -> item {
-                        Text("Audio de cuentos", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("Cuando se reproduce una narración, el sonido ambiental se atenúa para que la voz se escuche con claridad. Al terminar, recupera progresivamente su volumen original.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Text("Volumen ambiental durante la narración", fontWeight = FontWeight.SemiBold)
-                        Text("$storyAmbientDuringNarration % del volumen original (máximo 30 %)", fontSize = 13.sp, color = Color(0xFF667085))
-                        Slider(
-                            value = storyAmbientDuringNarration.toFloat(),
-                            onValueChange = { value ->
-                                storyAmbientDuringNarration = value.toInt().coerceIn(0, 30)
-                                preferences.edit().putInt("story_ambient_during_narration_percent", storyAmbientDuringNarration).apply()
-                            },
-                            valueRange = 0f..30f,
-                            steps = 29
-                        )
-                        Text("Este ajuste es global: se aplica a todos los cuentos y se guarda automáticamente en este dispositivo.", fontSize = 12.sp, color = Color(0xFF667085))
+                        StoryAudioSettingsScreen(state = storyAudioSettingsState)
                     }
                     "music" -> item {
-                        Text("Música de fondo", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text("La música comienza al abrir la aplicación y se repite en bucle. Usa el altavoz de la pantalla principal para silenciar o activar la música de fondo.", fontSize = 14.sp, color = Color(0xFF667085))
-                        Text(if (musicUri.isNullOrBlank()) "Música predeterminada: Música Infantil 2." else "Archivo de música personalizado seleccionado.", fontWeight = FontWeight.SemiBold)
-                        Button(onClick = { preferences.edit().putBoolean("content_picker_active", true).putBoolean("parent_area_active", true).commit(); musicPicker.launch(arrayOf("audio/mpeg", "audio/mp3", "audio/*")) }, modifier = Modifier.fillMaxWidth()) { Text("Elegir archivo MP3") }
-                        OutlinedButton(onClick = {
-                            musicUri = null
-                            preferences.edit().remove("background_music_uri").apply()
-                            musicMessage = "Se ha restaurado la música predeterminada."
-                        }, enabled = !musicUri.isNullOrBlank(), modifier = Modifier.fillMaxWidth()) { Text("Quitar música") }
-                        OutlinedButton(onClick = {
-                            soundEnabled = !soundEnabled
-                            preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
-                        }, modifier = Modifier.fillMaxWidth()) { Text(if (soundEnabled) "Silenciar música" else "Activar música") }
-                        if (musicMessage.isNotBlank()) Text(musicMessage, color = Color(0xFF24733B))
-                        Text("Consejo: elige una melodía instrumental tranquila, sin cambios bruscos de volumen y con un final que encaje bien al repetirse.", fontSize = 13.sp, color = Color(0xFF667085))
-                        Spacer(Modifier.height(8.dp))
-                        Text("Agradecimientos musicales", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Música Infantil 2 — Ezequiel David Urbano", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Licencia declarada por el autor: Creative Commons Zero (CC0 1.0).", fontSize = 13.sp, color = Color(0xFF667085))
-                        OutlinedButton(onClick = { uriHandler.openUri("https://open.spotify.com/artist/3FnwImaOicMeRPERcj6ueb?si=LBbyDbPYRyyO1Z6ium2P0w") }, modifier = Modifier.fillMaxWidth()) { Text("Escuchar al autor en Spotify") }
-                        OutlinedButton(onClick = { uriHandler.openUri("https://www.instagram.com/ezequieldavidurbano/") }, modifier = Modifier.fillMaxWidth()) { Text("Instagram del autor") }
+                        MusicSettingsScreen(
+                            musicUri = musicUri,
+                            onMusicUriChange = { musicUri = it },
+                            soundEnabled = soundEnabled,
+                            onSoundEnabledChange = { soundEnabled = it }
+                        )
                     }
                     "device-setup-wizard" -> item {
                         DeviceSetupWizardScreen(
