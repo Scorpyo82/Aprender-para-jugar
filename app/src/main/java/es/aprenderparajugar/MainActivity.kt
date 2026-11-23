@@ -1720,6 +1720,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             if (decision != null && decision != previous) {
                 preferences.edit().putString("exercise_voice_last_decision", decision).apply()
                 if (voice != null) ExerciseVoiceManager.playLatest(context, voice)
+            } else if (decision == null) {
+                ExerciseVoiceManager.stop()
             }
         }
     }
