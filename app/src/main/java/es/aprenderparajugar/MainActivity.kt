@@ -5853,181 +5853,55 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                 !ExerciseQuotaRepository.status(preferences, ExerciseQuotaRepository.id("sequences", level, type), hasExercises).available
             }
         }
-        val cardsAllQuotaLocked = cardsQuotaStates.all { it }
-        val wordsAllQuotaLocked = wordsQuotaStates.all { it }
-        val sequencesAllQuotaLocked = sequencesQuotaStates.all { it }
-        val homeWidth = LocalConfiguration.current.screenWidthDp
-        val modeImageSize = if (homeWidth >= 700) 210.dp else if (homeWidth >= 500) 165.dp else 118.dp
-        val modeCardPadding = if (homeWidth >= 700) 20.dp else 12.dp
-        val modeTitleSize = if (homeWidth >= 700) 27.sp else 21.sp
-        val modeDescriptionSize = if (homeWidth >= 700) 17.sp else 14.sp
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(if (homeWidth >= 700) 28.dp else 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                HomeTopActions(
-                    soundEnabled = soundEnabled,
-                    onOpenSettings = { pinEntry = ""; pinError = false; screen = "parent-pin" },
-                    onToggleSound = {
-                        soundEnabled = !soundEnabled
-                        preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
-                    },
-                    onOpenHelp = { screen = "help" }
-                )
-            }
-            item {
-                HomeRewardBalanceCard(
-                    isStars = rewardMode.isStars,
-                    formattedBalance = formatRewardBalance(balanceSeconds, rewardMode),
-                    minutes = balanceMinutes,
-                    remainderSeconds = balanceRemainderSeconds
-                )
-            }
-            item {
-                HomeFoxHeader()
-            }
-            item { HomeSectionTitle("Elige cómo aprender") }
-            item {
-                Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveCards && !cardsAllQuotaLocked) { screen = "cards-options"; cardsStartMessage = "" },
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0B8)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B95D)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(modeCardPadding),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        ModeCardImage(0, "Ilustración de Tarjetas", Modifier.width(modeImageSize).height(modeImageSize))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text("Tarjetas", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF754411))
-                                if (cardsAllQuotaLocked) Text("⌛", fontSize = 17.sp)
-                            }
-                            Text("Aprender con imágenes", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
-                            Text(when { !gameActiveCards -> "🔒 BLOQUEADO"; cardsAllQuotaLocked -> "BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveCards) Color(0xFF754411) else Color(0xFFB3261E))
-                        }
-                    }
-                }
-            }
-            item {
-                Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveSequences && !sequencesAllQuotaLocked) { if (gameActiveSequences && !sequencesAllQuotaLocked) screen = "sequences" },
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFDDF3D3)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA9D79A))
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(modeCardPadding),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        ModeCardImage(1, "Ilustración de Secuencias", Modifier.width(modeImageSize).height(modeImageSize))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text("Secuencias", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF245C2A))
-                                if (sequencesAllQuotaLocked) Text("⌛", fontSize = 17.sp)
-                            }
-                            Text("Ordenar y razonar", fontSize = modeDescriptionSize, color = Color(0xFF476C51))
-                            Text(when { !gameActiveSequences -> "🔒 BLOQUEADO"; sequencesAllQuotaLocked -> "BLOQUEADO TEMPORALMENTE"; else -> "EMPEZAR  ›" }, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveSequences) Color(0xFF39713A) else Color(0xFFB3261E))
-                        }
-                    }
-                }
-            }
-            item {
-                Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveWords && !wordsAllQuotaLocked) {
-                        wordSelectedDifficulty = "Fácil"
-                        wordStartMessage = ""
-                        screen = "word-options"
-                    },
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD8EEFF)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9CCCF4))
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(modeCardPadding),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        ModeCardImage(2, "Ilustración de Palabras", Modifier.width(modeImageSize).height(modeImageSize))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text("Palabras", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
-                                if (wordsAllQuotaLocked) Text("⌛", fontSize = 17.sp)
-                            }
-                            Text("Ordenar letras y completar palabras", fontSize = modeDescriptionSize, color = Color(0xFF42647D))
-                            Text(when { !gameActiveWords -> "🔒 BLOQUEADO"; wordsAllQuotaLocked -> "BLOQUEADO TEMPORALMENTE"; else -> "¡JUGAR!" }, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveWords) Color(0xFF285F94) else Color(0xFFB3261E))
-                        }
-                    }
-                }
-            }
-            item {
-                Card(
-                    Modifier.fillMaxWidth().clickable(enabled = gameActiveStories) { if (gameActiveStories) screen = "stories" },
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE5D2)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE8B28D))
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(modeCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Image(painter = painterResource(id = R.drawable.activity_stories), contentDescription = "El zorro leyendo un cuento", modifier = Modifier.width(modeImageSize).height(modeImageSize), contentScale = ContentScale.Fit)
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Cuentos", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF87451F))
-                            Text("Leer, escuchar y descubrir historias", fontSize = modeDescriptionSize, color = Color(0xFF795A3C))
-                            Text(if (gameActiveStories) "EMPEZAR  ›" else "🔒 BLOQUEADO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (gameActiveStories) Color(0xFF87451F) else Color(0xFFB3261E))
-                        }
-                    }
-                }
-            }
-            item {
-                Card(
-                    Modifier.fillMaxWidth().clickable {
-                        storedStoryObjects = ObjectRepository.list(context)
-                        storyObjectInventoryState.refresh(context)
-                        storyInventoryMessage = ""
-                        screen = "story-inventory"
-                    },
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8E5FA)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB9AFE8))
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(modeCardPadding), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Box(
-                            Modifier.width(modeImageSize).height(modeImageSize).background(Color(0xFFD8D0F4), RoundedCornerShape(18.dp)),
-                            contentAlignment = Alignment.Center
-                        ) { Text("🎒", fontSize = if (homeWidth >= 700) 72.sp else 48.sp) }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Inventario", fontSize = modeTitleSize, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82))
-                            Text("Tus objetos conseguidos y los que puedes comprar", fontSize = modeDescriptionSize, color = Color(0xFF62578D))
-                            Text("VER OBJETOS  ›", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF493B82))
-                        }
-                    }
-                }
-            }
-            if (!rewardMode.isStars) item {
-                OutlinedButton(onClick = { pinEntry = ""; pinError = false; screen = "exit-pin" }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("🔒 Salir de la aplicación", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
-                Spacer(Modifier.height(4.dp))
-                Text("Completa ejercicios para acumular minutos de juego.", fontSize = 12.sp, color = Color(0xFF667085))
-                val sessionAlreadyAuthorized = preferences.getBoolean("play_session_authorized", false)
-                val canStartPlaySession = balanceSeconds > 0 &&
-                    (sessionAlreadyAuthorized || balanceSeconds >= minimumPlayMinutes * 60)
-                Button(onClick = {
-                    val now = System.currentTimeMillis()
-                    val existingDeadline = preferences.getLong("play_deadline_ms", 0L)
-                    val savedBalance = preferences.getInt("balance_seconds", balanceSeconds).coerceAtLeast(0)
-                    val sessionAuthorized = preferences.getBoolean("play_session_authorized", false)
-                    // A new session requires the configured minimum; an already-authorized
-                    // session can continue after leaving the app or returning with less time.
-                    if (!sessionAuthorized && savedBalance < minimumPlayMinutes * 60) {
-                        balanceSeconds = savedBalance
-                        return@Button
-                    }
-                    // If a countdown already exists, never replace it with stale Compose state.
-                    // Otherwise returning from Home could reset the deadline and spend the same
-                    // earned time twice.
+        HomeDashboardScreen(
+            cardsAllQuotaLocked = cardsQuotaStates.all { it },
+            wordsAllQuotaLocked = wordsQuotaStates.all { it },
+            sequencesAllQuotaLocked = sequencesQuotaStates.all { it },
+            isStarsMode = rewardMode.isStars,
+            formattedBalance = formatRewardBalance(balanceSeconds, rewardMode),
+            balanceSeconds = balanceSeconds,
+            balanceMinutes = balanceMinutes,
+            balanceRemainderSeconds = balanceRemainderSeconds,
+            soundEnabled = soundEnabled,
+            gameActiveCards = gameActiveCards,
+            gameActiveSequences = gameActiveSequences,
+            gameActiveWords = gameActiveWords,
+            gameActiveStories = gameActiveStories,
+            minimumPlayMinutes = minimumPlayMinutes,
+            canStartPlaySession = balanceSeconds > 0 && (
+                preferences.getBoolean("play_session_authorized", false) ||
+                    balanceSeconds >= minimumPlayMinutes * 60
+            ),
+            showParentPlaceholder = screen == "parent",
+            onOpenSettings = { pinEntry = ""; pinError = false; screen = "parent-pin" },
+            onToggleSound = {
+                soundEnabled = !soundEnabled
+                preferences.edit().putBoolean("sound_enabled", soundEnabled).apply()
+            },
+            onOpenHelp = { screen = "help" },
+            onOpenCards = { screen = "cards-options"; cardsStartMessage = "" },
+            onOpenSequences = { if (gameActiveSequences && !sequencesQuotaStates.all { it }) screen = "sequences" },
+            onOpenWords = {
+                wordSelectedDifficulty = "Fácil"
+                wordStartMessage = ""
+                screen = "word-options"
+            },
+            onOpenStories = { if (gameActiveStories) screen = "stories" },
+            onOpenInventory = {
+                storedStoryObjects = ObjectRepository.list(context)
+                storyObjectInventoryState.refresh(context)
+                storyInventoryMessage = ""
+                screen = "story-inventory"
+            },
+            onExit = { pinEntry = ""; pinError = false; screen = "exit-pin" },
+            onStartPlaySession = {
+                val now = System.currentTimeMillis()
+                val existingDeadline = preferences.getLong("play_deadline_ms", 0L)
+                val savedBalance = preferences.getInt("balance_seconds", balanceSeconds).coerceAtLeast(0)
+                val sessionAuthorized = preferences.getBoolean("play_session_authorized", false)
+                if (!sessionAuthorized && savedBalance < minimumPlayMinutes * 60) {
+                    balanceSeconds = savedBalance
+                } else {
                     val deadline = if (existingDeadline > now) existingDeadline
                         else if (savedBalance > 0) now + savedBalance.toLong() * 1000L
                         else 0L
@@ -6040,28 +5914,18 @@ Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arra
                             .putBoolean("expiry_relaunch_attempted", false)
                             .commit()
                         balanceSeconds = remaining
-                        androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START))
+                        androidx.core.content.ContextCompat.startForegroundService(
+                            context,
+                            Intent(context, PlayTimeService::class.java).setAction(PlayTimeService.ACTION_START)
+                        )
                         screen = "play-time"
                         (context as? ComponentActivity)?.moveTaskToBack(true)
                     } else {
                         balanceSeconds = 0
                     }
-                }, enabled = canStartPlaySession, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF267A55), disabledContainerColor = Color(0xFFE7E1D8), disabledContentColor = Color(0xFF667085))) {
-                    Text(
-                        when {
-                            balanceSeconds <= 0 -> "🔒 Sin tiempo para jugar"
-                            !canStartPlaySession -> "🔒 Necesitas $minimumPlayMinutes min para empezar"
-                            else -> "▶ Jugar con el tiempo ganado"
-                        },
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
-            if (screen == "parent") item {
-                Text("Configuración parental pendiente: PIN, categorías y biblioteca de palabras se añadirán en una siguiente fase.")
-            }
-        }
+        )
     }
     if (showPermissionRecoveryDialog) {
         AlertDialog(
