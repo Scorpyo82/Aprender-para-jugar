@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -41,7 +41,7 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
                 Text("Activar locuciones", style = MaterialTheme.typography.titleMedium)
                 Text("Control general de todas las locuciones educativas.", style = MaterialTheme.typography.bodySmall)
             }
-            Switch(checked = masterEnabled, onCheckedChange = {
+            Checkbox(checked = masterEnabled, onCheckedChange = {
                 masterEnabled = it
                 ExerciseVoiceManager.setMasterEnabled(context, it)
                 if (!it) ExerciseVoiceManager.stop()
@@ -52,7 +52,7 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
         Text("Explican cómo realizar cada modalidad o tipo de Secuencias. Se reproducen automáticamente al comenzar y pueden repetirse manualmente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Activar todas las instrucciones", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Switch(checked = instructionsEnabled, onCheckedChange = {
+            Checkbox(checked = instructionsEnabled, onCheckedChange = {
                 instructionsEnabled = it
                 ExerciseVoiceManager.setGroupEnabled(context, ExerciseVoiceManager.Group.INSTRUCTIONS, it)
                 if (!it) ExerciseVoiceManager.stop()
@@ -68,7 +68,7 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
         Text("Mensajes breves que animan al niño al elegir modalidad, dificultad o tipo de ejercicio.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Activar todos los mensajes de acompañamiento", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            Switch(checked = encouragementEnabled, onCheckedChange = {
+            Checkbox(checked = encouragementEnabled, onCheckedChange = {
                 encouragementEnabled = it
                 ExerciseVoiceManager.setGroupEnabled(context, ExerciseVoiceManager.Group.ENCOURAGEMENT, it)
                 if (!it) ExerciseVoiceManager.stop()
