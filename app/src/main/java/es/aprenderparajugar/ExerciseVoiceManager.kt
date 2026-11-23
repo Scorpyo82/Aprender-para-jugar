@@ -109,8 +109,8 @@ internal object ExerciseVoiceManager {
     }
 
     /** Starts immediately; a newer call always releases and replaces the previous voice. */
-    fun playLatest(context: Context, item: VoiceItem, preview: Boolean = false) {
-        if (!preview && !shouldPlay(context, item)) return
+    fun playLatest(context: Context, item: VoiceItem, preview: Boolean = false): Boolean {
+        if (!preview && !shouldPlay(context, item)) return false
         val token = generation.incrementAndGet()
         musicRestoreRunnable?.let(handler::removeCallbacks)
         musicRestoreRunnable = null
@@ -130,7 +130,7 @@ internal object ExerciseVoiceManager {
             }
             if (next == null) {
                 restoreMusic(token)
-                return
+                return false
             }
             player = next
             next.setOnCompletionListener {
@@ -149,10 +149,12 @@ internal object ExerciseVoiceManager {
                 true
             }
             next.start()
+            return true
         } catch (_: Exception) {
             runCatching { player?.release() }
             player = null
             restoreMusic(token)
+            return false
         }
     }
 
