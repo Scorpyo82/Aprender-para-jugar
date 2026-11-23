@@ -10,7 +10,6 @@ import android.content.pm.PackageManager
 import android.content.Context
 import android.net.Uri
 import android.widget.ImageView
-import android.media.MediaPlayer
 import android.view.ViewGroup
 import org.json.JSONArray
 import org.json.JSONObject
@@ -539,48 +538,6 @@ internal fun StoryImagePreview(file: File?, label: String, revision: Int = 0) {
     }
 }
 
-@Composable
-internal fun StoryAudioPreview(file: File?, label: String) {
-    val context = LocalContext.current
-    val player = remember(file?.absolutePath, file?.lastModified()) {
-        file?.takeIf { it.isFile && it.length() > 0L }?.let { runCatching { MediaPlayer.create(context, Uri.fromFile(it)) }.getOrNull() }
-    }
-    var playing by remember(file?.absolutePath) { mutableStateOf(false) }
-    DisposableEffect(player) {
-        player?.setOnCompletionListener { playing = false }
-        onDispose {
-            runCatching { if (player?.isPlaying == true) player.pause() }
-            player?.release()
-        }
-    }
-    Column(
-        modifier = Modifier.fillMaxWidth()
-            .border(1.dp, Color(0xFFD8D0C7), RoundedCornerShape(12.dp))
-            .background(Color(0xFFFFFDF8), RoundedCornerShape(12.dp))
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color(0xFF667085))
-        Text(file?.name ?: "Todavía no hay ningún audio seleccionado.", fontSize = 12.sp, color = Color(0xFF667085))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = {
-                player?.let {
-                    if (it.isPlaying) { it.pause(); playing = false }
-                    else { if (it.currentPosition >= it.duration) it.seekTo(0); it.start(); playing = true }
-                }
-            }, enabled = player != null) { Text(if (playing) "Pausar" else "Reproducir") }
-            OutlinedButton(onClick = {
-                player?.let {
-                    if (it.isPlaying) it.pause()
-                    it.seekTo(0)
-                    playing = false
-                }
-            }, enabled = player != null) { Text("Detener") }
-        }
-        if (file != null && player == null) Text("No se pudo cargar este audio.", color = Color(0xFFB3261E), fontSize = 12.sp)
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AprenderApp() {
@@ -656,12 +613,11 @@ private fun AprenderApp() {
     var storyCollectionDraft by storyCollectionsState.draft
     var storyCollectionMessage by storyCollectionsState.message
     val storyEditorState = remember(context) { StoryEditorState(context) }
+    val storyEditorAudioActions = rememberStoryEditorAudioActions(storyEditorState, preferences)
     var storyEditorTitle by storyEditorState.title
     var showStoryAccessRequirements by remember { mutableStateOf(false) }
     var storyEditorCover by storyEditorState.cover
     var storyEditorIllustrations by storyEditorState.illustrations
-    var storyEditorAmbientAudio by storyEditorState.ambientAudio
-    var storyEditorNarrationAudio by storyEditorState.narrationAudio
     var editingStoryFolder by storyEditorState.editingFolder
     var editingStoryCollectionFolder by storyEditorState.editingCollectionFolder
     var storedStories by storyEditorState.storedStories
@@ -794,26 +750,6 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             persistStoryDraft()
             storyEditorIllustrationRevision++
         }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la ilustración." }
-    }
-    val storyAmbientPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) runCatching {
-            val stored = persistStoryDraft() ?: error(storyEditorMessage)
-            val scene = StoryRepository.sceneFolderName(storyEditorSelectedScene)
-            val fileName = StoryRepository.importMedia(context, uri, File(File(stored.directory, "escenas"), scene), "ambiente")
-            storyEditorAmbientAudio = storyEditorAmbientAudio.toMutableMap().apply { put(storyEditorSelectedScene, fileName) }
-            persistStoryDraft()
-        }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar el audio ambiental." }
-    }
-    val storyNarrationPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        preferences.edit().putBoolean("content_picker_active", false).apply()
-        if (uri != null) runCatching {
-            val stored = persistStoryDraft() ?: error(storyEditorMessage)
-            val scene = StoryRepository.sceneFolderName(storyEditorSelectedScene)
-            val fileName = StoryRepository.importMedia(context, uri, File(File(stored.directory, "escenas"), scene), "narracion")
-            storyEditorNarrationAudio = storyEditorNarrationAudio.toMutableMap().apply { put(storyEditorSelectedScene, fileName) }
-            persistStoryDraft()
-        }.onFailure { storyEditorMessage = it.message ?: "No se pudo importar la narración." }
     }
     val sequenceImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         preferences.edit().putBoolean("content_picker_active", false).apply()
@@ -2603,8 +2539,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorTitle = stored.metadata.title
                                 storyEditorCover = stored.metadata.cover
                                 storyEditorIllustrations = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.illustration }.getOrNull() }
-                                storyEditorAmbientAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.ambientAudio }.getOrNull() }
-                                storyEditorNarrationAudio = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.narrationAudio }.getOrNull() }
+                                storyEditorAudioActions.load(stored)
                                 storyEditorState.loadDecisions(stored)
                                 storyEditorAwardedObjectByScene = stored.metadata.scenes.associate { scene -> scene to runCatching { StoryRepository.readScene(stored, scene).metadata.awardedObject }.getOrNull() }
                                 storyEditorAwardedObjectsByScene = stored.metadata.scenes.associate { scene ->
@@ -2629,8 +2564,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                 storyEditorTitle = ""
                                 storyEditorCover = null
                                 storyEditorIllustrations = emptyMap()
-                                storyEditorAmbientAudio = emptyMap()
-                                storyEditorNarrationAudio = emptyMap()
+                                storyEditorAudioActions.reset()
                                 storyEditorState.resetDecisions()
                                 storyEditorAwardedObjectByScene = emptyMap()
                                 storyEditorAwardedObjectsByScene = emptyMap()
@@ -2717,14 +2651,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                                     preferences.edit().putBoolean("content_picker_active", true).apply()
                                     storyIllustrationPicker.launch(arrayOf("image/*"))
                                 },
-                                onPickAmbient = {
-                                    preferences.edit().putBoolean("content_picker_active", true).apply()
-                                    storyAmbientPicker.launch(arrayOf("audio/*"))
-                                },
-                                onPickNarration = {
-                                    preferences.edit().putBoolean("content_picker_active", true).apply()
-                                    storyNarrationPicker.launch(arrayOf("audio/*"))
-                                },
+                                onPickAmbient = storyEditorAudioActions.onPickAmbient,
+                                onPickNarration = storyEditorAudioActions.onPickNarration,
                                 onBackToMap = { parentSection = "stories-editor" }
                             )
                         }
