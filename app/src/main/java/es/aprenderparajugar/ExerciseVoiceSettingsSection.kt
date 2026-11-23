@@ -186,7 +186,15 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, groupEnabled: 
             }
         }
     }
-    DisposableEffect(item) { onDispose { if (recording) finishRecording(false) } }
+    DisposableEffect(recorder) {
+        onDispose {
+            if (recorder != null) {
+                runCatching { recorder?.stop() }
+                runCatching { recorder?.release() }
+                recordingFile?.delete()
+            }
+        }
+    }
 
     Column(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
