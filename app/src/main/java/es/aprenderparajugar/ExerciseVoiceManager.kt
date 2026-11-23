@@ -152,3 +152,18 @@ internal object ExerciseVoiceManager {
     private fun groupKey(group: Group) = if (group == Group.INSTRUCTIONS) INSTRUCTIONS_KEY else ENCOURAGEMENT_KEY
     private fun itemKey(item: VoiceItem) = "exercise_voice_item_${item.key}_enabled"
 }
+
+internal fun String.toVoiceKey(): String = when (trim().lowercase()) {
+    "orden temporal" -> "temporal_order"
+    "procesos" -> "processes"
+    "causa y consecuencia" -> "cause_consequence"
+    "ciclos" -> "cycles"
+    else -> trim().lowercase().replace(" ", "_")
+}
+
+internal fun String.toVoiceDifficultyKey(): String = when (trim().lowercase()) {
+    "fácil", "facil" -> "easy"
+    "normal" -> "normal"
+    "difícil", "dificil" -> "hard"
+    else -> trim().lowercase()
+}
