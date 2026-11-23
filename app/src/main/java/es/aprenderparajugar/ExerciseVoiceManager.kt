@@ -25,7 +25,29 @@ internal object ExerciseVoiceManager {
     private var musicWasPlaying = false
     private var musicRestoreRunnable: Runnable? = null
 
-    data class VoiceItem(val key: String, val title: String, val resource: Int, val group: Group)
+    data class VoiceItem(val key: String, val title: String, val resource: Int, val group: Group) {
+        val description: String
+            get() = when (key) {
+                "instruction_cards" -> "Explica cómo observar las imágenes y completar el ejercicio de Tarjetas."
+                "instruction_words" -> "Explica cómo ordenar las letras y formar palabras."
+                "instruction_sequences_temporal_order" -> "Explica cómo ordenar escenas según el momento en que suceden."
+                "instruction_sequences_processes" -> "Explica cómo ordenar los pasos de un proceso."
+                "instruction_sequences_cause_consequence" -> "Explica cómo relacionar una causa con su consecuencia."
+                "instruction_sequences_cycles" -> "Explica cómo ordenar las fases de un ciclo que se repite."
+                "encouragement_cards" -> "Mensaje de ánimo al seleccionar la modalidad Tarjetas."
+                "encouragement_words" -> "Mensaje de ánimo al seleccionar la modalidad Palabras."
+                "encouragement_sequences" -> "Mensaje de ánimo al seleccionar la modalidad Secuencias."
+                "encouragement_stories" -> "Mensaje de bienvenida a la sección Cuentos; independiente de la narración."
+                "encouragement_difficulty_easy" -> "Mensaje al elegir el nivel de dificultad fácil."
+                "encouragement_difficulty_normal" -> "Mensaje al elegir el nivel de dificultad normal."
+                "encouragement_difficulty_hard" -> "Mensaje al elegir el nivel de dificultad difícil."
+                "encouragement_sequences_temporal_order" -> "Mensaje de ánimo al elegir Orden temporal."
+                "encouragement_sequences_processes" -> "Mensaje de ánimo al elegir Procesos."
+                "encouragement_sequences_cause_consequence" -> "Mensaje de ánimo al elegir Causa y consecuencia."
+                "encouragement_sequences_cycles" -> "Mensaje de ánimo al elegir Ciclos."
+                else -> "Locución utilizada durante la selección de esta modalidad."
+            }
+    }
     enum class Group { INSTRUCTIONS, ENCOURAGEMENT }
 
     val items: List<VoiceItem> = listOf(
