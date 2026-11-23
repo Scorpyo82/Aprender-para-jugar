@@ -1,0 +1,154 @@
+package es.aprenderparajugar
+
+import android.content.Context
+import android.media.MediaPlayer
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.atomic.AtomicLong
+
+/**
+ * Locuciones educativas de Tarjetas, Palabras y Secuencias.
+ * No participa en los efectos de logros ni en el audio de Cuentos.
+ */
+internal object ExerciseVoiceManager {
+    private const val PREFS = "aprender_para_jugar"
+    private const val MASTER_KEY = "exercise_voice_enabled"
+    private const val INSTRUCTIONS_KEY = "exercise_voice_instructions_enabled"
+    private const val ENCOURAGEMENT_KEY = "exercise_voice_encouragement_enabled"
+    private const val MUSIC_NORMAL_VOLUME = 0.22f
+    private const val MUSIC_DUCK_VOLUME = 0.045f
+    private val handler = Handler(Looper.getMainLooper())
+    private val generation = AtomicLong(0L)
+    private var player: MediaPlayer? = null
+    private var musicPlayer: MediaPlayer? = null
+    private var musicWasPlaying = false
+    private var musicRestoreRunnable: Runnable? = null
+
+    data class VoiceItem(val key: String, val title: String, val resource: Int, val group: Group)
+    enum class Group { INSTRUCTIONS, ENCOURAGEMENT }
+
+    val items: List<VoiceItem> = listOf(
+        VoiceItem("instruction_cards", "Instrucciones · Tarjetas", R.raw.instruction_cards, Group.INSTRUCTIONS),
+        VoiceItem("instruction_words", "Instrucciones · Palabras", R.raw.instruction_words, Group.INSTRUCTIONS),
+        VoiceItem("instruction_sequences_temporal_order", "Instrucciones · Orden temporal", R.raw.instruction_sequences_temporal_order, Group.INSTRUCTIONS),
+        VoiceItem("instruction_sequences_processes", "Instrucciones · Procesos", R.raw.instruction_sequences_processes, Group.INSTRUCTIONS),
+        VoiceItem("instruction_sequences_cause_consequence", "Instrucciones · Causa y consecuencia", R.raw.instruction_sequences_cause_consequence, Group.INSTRUCTIONS),
+        VoiceItem("instruction_sequences_cycles", "Instrucciones · Ciclos", R.raw.instruction_sequences_cycles, Group.INSTRUCTIONS),
+        VoiceItem("encouragement_cards", "Tarjetas", R.raw.encouragement_cards, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_words", "Palabras", R.raw.encouragement_words, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_sequences", "Secuencias", R.raw.encouragement_sequences, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_stories", "Cuentos", R.raw.encouragement_stories, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_difficulty_easy", "Dificultad fácil", R.raw.encouragement_difficulty_easy, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_difficulty_normal", "Dificultad normal", R.raw.encouragement_difficulty_normal, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_difficulty_hard", "Dificultad difícil", R.raw.encouragement_difficulty_hard, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_sequences_temporal_order", "Orden temporal", R.raw.encouragement_sequences_temporal_order, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_sequences_processes", "Procesos", R.raw.encouragement_sequences_processes, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_sequences_cause_consequence", "Causa y consecuencia", R.raw.encouragement_sequences_cause_consequence, Group.ENCOURAGEMENT),
+        VoiceItem("encouragement_sequences_cycles", "Ciclos", R.raw.encouragement_sequences_cycles, Group.ENCOURAGEMENT)
+    )
+
+    fun isMasterEnabled(context: Context) = prefs(context).getBoolean(MASTER_KEY, true)
+    fun setMasterEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(MASTER_KEY, enabled).apply()
+    fun isGroupEnabled(context: Context, group: Group) = prefs(context).getBoolean(groupKey(group), true)
+    fun setGroupEnabled(context: Context, group: Group, enabled: Boolean) = prefs(context).edit().putBoolean(groupKey(group), enabled).apply()
+    fun isItemEnabled(context: Context, item: VoiceItem) = prefs(context).getBoolean(itemKey(item), true)
+    fun setItemEnabled(context: Context, item: VoiceItem, enabled: Boolean) = prefs(context).edit().putBoolean(itemKey(item), enabled).apply()
+
+    fun shouldPlay(context: Context, item: VoiceItem): Boolean =
+        isMasterEnabled(context) && isGroupEnabled(context, item.group) && isItemEnabled(context, item)
+
+    fun markInstructionPlayed(context: Context, item: VoiceItem): Boolean {
+        val key = "exercise_voice_first_played_${item.key}"
+        val preferences = prefs(context)
+        if (preferences.getBoolean(key, false)) return false
+        preferences.edit().putBoolean(key, true).apply()
+        return true
+    }
+
+    fun setBackgroundMusicPlayer(value: MediaPlayer?) {
+        musicPlayer = value
+        if (value != null && player != null) duckMusic()
+    }
+
+    /** Starts immediately; a newer call always releases and replaces the previous voice. */
+    fun playLatest(context: Context, item: VoiceItem, preview: Boolean = false) {
+        if (!preview && !shouldPlay(context, item)) return
+        val token = generation.incrementAndGet()
+        handler.removeCallbacksAndMessages(null)
+        runCatching { player?.stop() }
+        runCatching { player?.release() }
+        player = null
+        duckMusic()
+        try {
+            val next = MediaPlayer.create(context.applicationContext, item.resource)
+            if (next == null) {
+                restoreMusic(token)
+                return
+            }
+            player = next
+            next.setOnCompletionListener {
+                if (generation.get() == token) {
+                    runCatching { it.release() }
+                    player = null
+                    restoreMusic(token)
+                }
+            }
+            next.setOnErrorListener { failed, _, _ ->
+                if (generation.get() == token) {
+                    runCatching { failed.release() }
+                    player = null
+                    restoreMusic(token)
+                }
+                true
+            }
+            next.start()
+        } catch (_: Exception) {
+            runCatching { player?.release() }
+            player = null
+            restoreMusic(token)
+        }
+    }
+
+    fun stop() {
+        val token = generation.incrementAndGet()
+        handler.removeCallbacksAndMessages(null)
+        runCatching { player?.stop() }
+        runCatching { player?.release() }
+        player = null
+        restoreMusic(token)
+    }
+
+    private fun duckMusic() {
+        val music = musicPlayer ?: return
+        musicRestoreRunnable?.let(handler::removeCallbacks)
+        musicRestoreRunnable = null
+        musicWasPlaying = runCatching { music.isPlaying }.getOrDefault(false) || musicWasPlaying
+        if (musicWasPlaying) runCatching { music.setVolume(MUSIC_DUCK_VOLUME, MUSIC_DUCK_VOLUME) }
+    }
+
+    private fun restoreMusic(token: Long) {
+        if (generation.get() != token) return
+        val music = musicPlayer ?: return
+        if (!musicWasPlaying) return
+        val steps = 8
+        var step = 0
+        val restore = object : Runnable {
+            override fun run() {
+                if (generation.get() != token || musicPlayer !== music) return
+                step++
+                val volume = MUSIC_DUCK_VOLUME + (MUSIC_NORMAL_VOLUME - MUSIC_DUCK_VOLUME) * step / steps
+                runCatching { music.setVolume(volume, volume) }
+                if (step < steps) handler.postDelayed(this, 45L) else {
+                    musicWasPlaying = false
+                    musicRestoreRunnable = null
+                }
+            }
+        }
+        musicRestoreRunnable = restore
+        handler.postDelayed(restore, 45L)
+    }
+
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun groupKey(group: Group) = if (group == Group.INSTRUCTIONS) INSTRUCTIONS_KEY else ENCOURAGEMENT_KEY
+    private fun itemKey(item: VoiceItem) = "exercise_voice_item_${item.key}_enabled"
+}
