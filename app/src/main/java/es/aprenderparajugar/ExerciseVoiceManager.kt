@@ -223,7 +223,7 @@ internal object ExerciseVoiceManager {
     private fun groupKey(group: Group) = if (group == Group.INSTRUCTIONS) INSTRUCTIONS_KEY else ENCOURAGEMENT_KEY
     private fun itemKey(item: VoiceItem) = "exercise_voice_item_${item.key}_enabled"
     private fun customKey(item: VoiceItem) = "exercise_voice_custom_path_${item.key}"
-    private fun firstPlayedKey(item: VoiceItem) = "exercise_voice_first_played_${item.key}"
+    private fun firstPlayedKey(item: VoiceItem) = "exercise_voice_first_played_v2_${item.key}"
 }
 
 internal fun String.toVoiceKey(): String = when (trim().lowercase()) {
