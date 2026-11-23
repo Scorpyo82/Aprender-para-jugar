@@ -2735,90 +2735,53 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         )
     } else if (screen == "word-exercise") {
         val target = wordExerciseTarget
-        if (target == null) {
-            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Palabras", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
-                Spacer(Modifier.height(16.dp))
-                Text(wordExerciseMessage, fontSize = 17.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                Spacer(Modifier.height(20.dp))
-                OutlinedButton(onClick = { screen = "home" }, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
-            }
-        } else {
-            val targetWord = target.word
-            val complete = wordExercisePlaced.size == targetWord.length
-            val wordQuotaStatus = ExerciseQuotaRepository.status(
+        val wordQuotaStatus = target?.let {
+            ExerciseQuotaRepository.status(
                 preferences,
-                ExerciseQuotaRepository.id("words", target.difficulty),
-                wordExercises.any { it.active && it.category !in disabledWordExerciseCategories && it.difficulty.equals(target.difficulty, true) }
+                ExerciseQuotaRepository.id("words", it.difficulty),
+                wordExercises.any { exercise -> exercise.active && exercise.category !in disabledWordExerciseCategories && exercise.difficulty.equals(it.difficulty, true) }
             )
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                ExerciseStatusBar(
-                    balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
-                    roundsUsed = wordQuotaStatus.used,
-                    roundsLimit = wordQuotaStatus.limit,
-                    difficulty = target.difficulty
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Palabras", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedButton(onClick = { ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }?.let { ExerciseVoiceManager.playLatest(context, it, preview = true) } }) { Text("🔊") }
-                        OutlinedButton(onClick = { wordExerciseTarget = null; screen = "home" }) { Text("Salir") }
-                    }
-                }
-                Text("Forma la palabra", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                if (target.picture.startsWith("content://") || target.picture.startsWith("file://")) {
-                    AndroidView(
-                        factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) } },
-                        update = { view -> try { view.setImageURI(Uri.parse(target.picture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
-                        modifier = Modifier.fillMaxWidth().height(170.dp)
-                    )
-                } else {
-                    Text(target.picture, fontSize = 76.sp)
-                }
-                Text("Toca las letras en el orden correcto.", fontSize = 15.sp, color = Color(0xFF667085))
-                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    targetWord.indices.forEach { position ->
-                        Card(
-                            modifier = Modifier.width(42.dp).height(54.dp),
-                            colors = CardDefaults.cardColors(containerColor = if (position < wordExercisePlaced.size) Color(0xFFE2F4DF) else Color.White),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB7C8B2))
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(wordExercisePlaced.getOrNull(position)?.let { targetWord[it].uppercase() } ?: "·", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    wordExerciseLetterOrder.forEach { letterIndex ->
-                        val alreadyPlaced = letterIndex in wordExercisePlaced
-                        OutlinedButton(
-                            onClick = {
-                                val letterResult = wordGameState.chooseLetter(letterIndex)
-                                if (letterResult?.completed == true) {
-                                    val baseReward = when (target.difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
-                                    val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
-                                    val rewardPercent = (100 - letterResult.wrongAnswers * penaltyPercent).coerceAtLeast(20)
-                                    addEarnedTime(baseReward * rewardPercent / 100)
-                                    resultCorrectCount = (targetWord.length - letterResult.wrongAnswers).coerceIn(0, targetWord.length)
-                                    resultTotalCount = targetWord.length
-                                    correct = if (letterResult.wrongAnswers == 0) targetWord.length else resultCorrectCount
-                                    target.directory?.let { directory ->
-                                        runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, letterResult.wrongAnswers) }
-                                    }
-                                    runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.PALABRAS, target.difficulty) }
-                                    screen = "result"
-                                }
-                            },
-                            enabled = !complete && !alreadyPlaced,
-                            modifier = Modifier.height(58.dp)
-                        ) { Text(targetWord.getOrNull(letterIndex)?.uppercase() ?: "", fontSize = 24.sp, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold) }
-                    }
-                }
-                Text(wordExerciseMessage, fontSize = 16.sp, color = if (wordExerciseMessage.startsWith("¡")) Color(0xFF24733B) else Color(0xFF667085))
-                Text("Dificultad: ${target.difficulty}", fontSize = 13.sp, color = Color(0xFF667085))
-            }
         }
+        WordExerciseScreen(
+            hasTarget = target != null,
+            targetWord = target?.word.orEmpty(),
+            targetPicture = target?.picture.orEmpty(),
+            difficulty = target?.difficulty.orEmpty(),
+            message = wordExerciseMessage,
+            placedLetters = wordExercisePlaced,
+            letterOrder = wordExerciseLetterOrder,
+            balanceText = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            roundsUsed = wordQuotaStatus?.used ?: 0,
+            roundsLimit = wordQuotaStatus?.limit,
+            exerciseFontFamily = exerciseFontFamily,
+            onPlayInstruction = {
+                ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }?.let {
+                    ExerciseVoiceManager.playLatest(context, it, preview = true)
+                }
+            },
+            onExit = { wordExerciseTarget = null; screen = "home" },
+            onBackHome = { screen = "home" },
+            onChooseLetter = { letterIndex ->
+                if (target != null) {
+                    val targetWord = target.word
+                    val letterResult = wordGameState.chooseLetter(letterIndex)
+                    if (letterResult?.completed == true) {
+                        val baseReward = when (target.difficulty) { "Normal" -> normalRewardMinutes * 60; "Difícil" -> hardRewardMinutes * 60; else -> easyRewardMinutes * 60 }
+                        val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
+                        val rewardPercent = (100 - letterResult.wrongAnswers * penaltyPercent).coerceAtLeast(20)
+                        addEarnedTime(baseReward * rewardPercent / 100)
+                        resultCorrectCount = (targetWord.length - letterResult.wrongAnswers).coerceIn(0, targetWord.length)
+                        resultTotalCount = targetWord.length
+                        correct = if (letterResult.wrongAnswers == 0) targetWord.length else resultCorrectCount
+                        target.directory?.let { directory ->
+                            runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, letterResult.wrongAnswers) }
+                        }
+                        runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.PALABRAS, target.difficulty) }
+                        screen = "result"
+                    }
+                }
+            }
+        )
     } else if (screen == "play-time" && !rewardMode.isStars) {
         PlayTimeScreen(
             balanceText = formatRewardBalance(balanceSeconds, rewardMode),
@@ -3391,6 +3354,109 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 TextButton(onClick = { remoteLibraryPendingImport = null }) { Text("Más tarde") }
             }
         )
+    }
+}
+
+
+
+@Composable
+private fun WordExerciseScreen(
+    hasTarget: Boolean,
+    targetWord: String,
+    targetPicture: String,
+    difficulty: String,
+    message: String,
+    placedLetters: List<Int>,
+    letterOrder: List<Int>,
+    balanceText: String,
+    roundsUsed: Int,
+    roundsLimit: Int?,
+    exerciseFontFamily: FontFamily,
+    onPlayInstruction: () -> Unit,
+    onExit: () -> Unit,
+    onBackHome: () -> Unit,
+    onChooseLetter: (Int) -> Unit
+) {
+    if (!hasTarget) {
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Palabras", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+            Spacer(Modifier.height(16.dp))
+            Text(message, fontSize = 17.sp, color = Color(0xFF667085), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(20.dp))
+            OutlinedButton(onClick = onBackHome, modifier = Modifier.fillMaxWidth()) { Text("Volver al inicio") }
+        }
+        return
+    }
+
+    val complete = placedLetters.size == targetWord.length
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        ExerciseStatusBar(
+            balance = balanceText,
+            roundsUsed = roundsUsed,
+            roundsLimit = roundsLimit,
+            difficulty = difficulty
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Palabras", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF24537A))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = onPlayInstruction) { Text("🔊") }
+                OutlinedButton(onClick = onExit) { Text("Salir") }
+            }
+        }
+        Text("Forma la palabra", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        if (targetPicture.startsWith("content://") || targetPicture.startsWith("file://")) {
+            AndroidView(
+                factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 220) } },
+                update = { view -> try { view.setImageURI(Uri.parse(targetPicture)) } catch (_: Exception) { view.setImageResource(android.R.drawable.ic_menu_gallery) } },
+                modifier = Modifier.fillMaxWidth().height(170.dp)
+            )
+        } else {
+            Text(targetPicture, fontSize = 76.sp)
+        }
+        Text("Toca las letras en el orden correcto.", fontSize = 15.sp, color = Color(0xFF667085))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            targetWord.indices.forEach { position ->
+                Card(
+                    modifier = Modifier.width(42.dp).height(54.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (position < placedLetters.size) Color(0xFFE2F4DF) else Color.White),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB7C8B2))
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(placedLetters.getOrNull(position)?.let { targetWord[it].uppercase() } ?: "·", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            letterOrder.forEach { letterIndex ->
+                val alreadyPlaced = letterIndex in placedLetters
+                OutlinedButton(
+                    onClick = { onChooseLetter(letterIndex) },
+                    enabled = !complete && !alreadyPlaced,
+                    modifier = Modifier.height(58.dp)
+                ) {
+                    Text(targetWord.getOrNull(letterIndex)?.uppercase() ?: "", fontSize = 24.sp, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        Text(message, fontSize = 16.sp, color = if (message.startsWith("¡")) Color(0xFF24733B) else Color(0xFF667085))
+        Text("Dificultad: $difficulty", fontSize = 13.sp, color = Color(0xFF667085))
     }
 }
 
