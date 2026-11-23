@@ -190,7 +190,7 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, expanded: Bool
                 OutlinedButton(modifier = Modifier.weight(1f), onClick = { finishRecording(false) }) { Text("Descartar") }
             }
         } else {
-            OutlinedButton(Modifier.fillMaxWidth(), onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Grabar audio") }
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Grabar audio") }
         }
         if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
     }
