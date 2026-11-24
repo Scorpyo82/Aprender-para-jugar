@@ -3509,10 +3509,10 @@ private fun CardsExerciseScreen(
             difficulty = difficulty
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Une las palabras con sus dibujos", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63), modifier = Modifier.weight(1f))
+            Text("Une las palabras con sus dibujos", fontSize = 25.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold, color = Color(0xFF284B63), modifier = Modifier.weight(1f))
             OutlinedButton(onClick = { ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }?.let { ExerciseVoiceManager.playLatest(context, it, preview = true) } }) { Text("🔊") }
         }
-        Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp)
+        Text("1. Elige una palabra.  2. Toca su dibujo.", fontSize = 18.sp, lineHeight = 26.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 wordCardOrder.forEach { item ->
@@ -3603,8 +3603,8 @@ private fun CardsExerciseScreen(
                 }
             }
         }
-        Text("Parejas resueltas: ${resolved.size}/$pairCount", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-        if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
+        Text("Parejas resueltas: ${resolved.size}/$pairCount", fontSize = 18.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold)
+        if (feedback.isNotBlank()) Text(feedback, fontSize = 18.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold, color = if (feedback.startsWith("Muy bien")) Color(0xFF24733B) else Color(0xFF72521B))
         OutlinedButton(onClick = onExit) { Text("Salir del ejercicio") }
     }
 }
