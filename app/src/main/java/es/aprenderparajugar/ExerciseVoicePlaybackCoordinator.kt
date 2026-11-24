@@ -48,25 +48,25 @@ internal fun ExerciseVoicePlaybackCoordinator(
             when (screen) {
                 "cards-options" -> {
                     decision = "cards|$difficulty"
-                    voice = if (previous?.startsWith("cards|") == true)
+                    voice = if (!enteredScreen && previous?.startsWith("cards|") == true && previous != decision)
                         ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_difficulty_${difficulty.toVoiceDifficultyKey()}" }
                     else ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_cards" }
                 }
                 "word-options" -> {
                     decision = "words|$wordSelectedDifficulty"
-                    voice = if (previous?.startsWith("words|") == true)
+                    voice = if (!enteredScreen && previous?.startsWith("words|") == true && previous != decision)
                         ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_difficulty_${wordSelectedDifficulty.toVoiceDifficultyKey()}" }
                     else ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_words" }
                 }
                 "sequences" -> {
                     decision = "sequence-type|$sequenceChosenCategory"
-                    voice = if (previous?.startsWith("sequence-type|") == true)
+                    voice = if (!enteredScreen && previous?.startsWith("sequence-type|") == true && previous != decision)
                         ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_sequences_${sequenceChosenCategory.toVoiceKey()}" }
                     else ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_sequences" }
                 }
                 "sequence-difficulty" -> {
                     decision = "sequence-difficulty|$sequenceChosenCategory|$sequenceChosenDifficulty"
-                    voice = if (previous?.startsWith("sequence-difficulty|$sequenceChosenCategory|") == true)
+                    voice = if (!enteredScreen && previous?.startsWith("sequence-difficulty|$sequenceChosenCategory|") == true && previous != decision)
                         ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_difficulty_${sequenceChosenDifficulty.toVoiceDifficultyKey()}" }
                     else ExerciseVoiceManager.items.firstOrNull { it.key == "encouragement_sequences_${sequenceChosenCategory.toVoiceKey()}" }
                 }
