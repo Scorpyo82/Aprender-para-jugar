@@ -140,15 +140,42 @@ internal fun LazyListScope.libraryExportContent(
                                                     }
                                                 }
                                                 if (exercisesOfType.isNotEmpty()) {
+                                                    val typeIsFullySelected = categoriesForModality
+                                                        .filter { category -> category.sequenceExercises.any { it.type == type } }
+                                                        .all { category ->
+                                                            category.directory in selected ||
+                                                                LibraryPackageManager.sequenceSelectionKey(category.directory, type) in selected ||
+                                                                category.sequenceExercises.filter { it.type == type }.all { exercise ->
+                                                                    LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory) in selected
+                                                                }
+                                                        }
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                                         Checkbox(
-                                                            checked = exercisesOfType.all { it in selected },
+                                                            checked = typeIsFullySelected,
                                                             onCheckedChange = { checked ->
-                                                                transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { map ->
-                                                                    map[modality] = selected.toMutableSet().also { set ->
-                                                                        if (checked) set.addAll(exercisesOfType) else set.removeAll(exercisesOfType.toSet())
+                                                                val updated = selected.toMutableSet()
+                                                                categoriesForModality.forEach { category ->
+                                                                    if (category.directory in updated) {
+                                                                        updated.remove(category.directory)
+                                                                        category.sequenceExercises.forEach { exercise ->
+                                                                            updated.add(LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory))
+                                                                        }
+                                                                    }
+                                                                    val typeKey = LibraryPackageManager.sequenceSelectionKey(category.directory, type)
+                                                                    if (typeKey in updated) {
+                                                                        updated.remove(typeKey)
+                                                                        category.sequenceExercises.filter { it.type == type }.forEach { exercise ->
+                                                                            updated.add(LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory))
+                                                                        }
+                                                                    }
+                                                                    if (category.sequenceExercises.any { it.type == type }) {
+                                                                        val keys = category.sequenceExercises.filter { it.type == type }.map { exercise ->
+                                                                            LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
+                                                                        }
+                                                                        if (checked) updated.addAll(keys) else updated.removeAll(keys.toSet())
                                                                     }
                                                                 }
+                                                                transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { it[modality] = updated }
                                                             }
                                                         )
                                                         Text(type.displayName, fontWeight = FontWeight.Bold)
@@ -160,6 +187,8 @@ internal fun LazyListScope.libraryExportContent(
                                                             val exerciseKeys = exercises.map { exercise ->
                                                                 LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
                                                             }
+                                                            val typeKey = LibraryPackageManager.sequenceSelectionKey(category.directory, type)
+                                                            val categoryIsFullySelected = category.directory in selected || typeKey in selected || exerciseKeys.all { it in selected }
                                                             val expanded = categoryKey in expandedExportSequenceCategoriesState.value
                                                             Row(
                                                                 modifier = Modifier.fillMaxWidth().clickable {
@@ -170,13 +199,23 @@ internal fun LazyListScope.libraryExportContent(
                                                                 verticalAlignment = Alignment.CenterVertically
                                                             ) {
                                                                 Checkbox(
-                                                                    checked = exerciseKeys.all { it in selected },
+                                                                    checked = categoryIsFullySelected,
                                                                     onCheckedChange = { checked ->
-                                                                        transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { map ->
-                                                                            map[modality] = selected.toMutableSet().also { set ->
-                                                                                if (checked) set.addAll(exerciseKeys) else set.removeAll(exerciseKeys.toSet())
+                                                                        val updated = selected.toMutableSet()
+                                                                        if (category.directory in updated) {
+                                                                            updated.remove(category.directory)
+                                                                            category.sequenceExercises.forEach { exercise ->
+                                                                                updated.add(LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory))
                                                                             }
                                                                         }
+                                                                        if (typeKey in updated) {
+                                                                            updated.remove(typeKey)
+                                                                            exercises.forEach { exercise ->
+                                                                                updated.add(LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory))
+                                                                            }
+                                                                        }
+                                                                        if (checked) updated.addAll(exerciseKeys) else updated.removeAll(exerciseKeys.toSet())
+                                                                        transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { it[modality] = updated }
                                                                     }
                                                                 )
                                                                 Text(if (expanded) "▾" else "▸", modifier = Modifier.padding(end = 8.dp), color = Color(0xFF667085))
@@ -186,18 +225,29 @@ internal fun LazyListScope.libraryExportContent(
                                                             }
                                                             if (expanded) exercises.forEach { exercise ->
                                                                 val key = LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, exercise.directory)
+                                                                val inheritedSelection = category.directory in selected || typeKey in selected
                                                                 Row(
                                                                     modifier = Modifier.fillMaxWidth().padding(start = 68.dp, top = 2.dp, bottom = 2.dp),
                                                                     verticalAlignment = Alignment.CenterVertically
                                                                 ) {
                                                                     Checkbox(
-                                                                        checked = key in selected,
+                                                                        checked = inheritedSelection || key in selected,
                                                                         onCheckedChange = { checked ->
-                                                                            transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { map ->
-                                                                                map[modality] = selected.toMutableSet().also { set ->
-                                                                                    if (checked) set.add(key) else set.remove(key)
+                                                                            val updated = selected.toMutableSet()
+                                                                            if (category.directory in updated) {
+                                                                                updated.remove(category.directory)
+                                                                                category.sequenceExercises.forEach { sibling ->
+                                                                                    updated.add(LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, sibling.type, sibling.directory))
                                                                                 }
                                                                             }
+                                                                            if (typeKey in updated) {
+                                                                                updated.remove(typeKey)
+                                                                                exercises.forEach { sibling ->
+                                                                                    updated.add(LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, type, sibling.directory))
+                                                                                }
+                                                                            }
+                                                                            if (checked) updated.add(key) else updated.remove(key)
+                                                                            transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { it[modality] = updated }
                                                                         }
                                                                     )
                                                                     Text(exercise.title)
@@ -207,27 +257,7 @@ internal fun LazyListScope.libraryExportContent(
                                                     }
                                                 }
                                             }
-                                        } else {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Checkbox(
-                                                    checked = categoriesForModality.all { it.directory in transferExportCategoriesState.value[modality].orEmpty() },
-                                                    onCheckedChange = { checked -> transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { it[modality] = if (checked) categoriesForModality.map { category -> category.directory }.toSet() else emptySet() } }
-                                                )
-                                                Text("Seleccionar todas las categorías")
-                                            }
-                                            categoriesForModality.forEach { category ->
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Checkbox(
-                                                        checked = category.directory in transferExportCategoriesState.value[modality].orEmpty(),
-                                                        onCheckedChange = { checked -> transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { map -> map[modality] = map[modality].orEmpty().toMutableSet().also { set -> if (checked) set.add(category.directory) else set.remove(category.directory) } } }
-                                                    )
-                                                    Column {
-                                                        Text(category.name)
-                                                        Text("${category.exerciseCount} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
-                                                    }
-                                                }
-                                            }
-                                        }
+
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Checkbox(
                                                 checked = modality in transferExportStatisticsState.value,
