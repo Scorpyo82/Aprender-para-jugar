@@ -149,6 +149,7 @@ internal fun AchievementSoundSettingsScreen() {
                 event = event,
                 custom = custom != null,
                 enabled = eventEnabled,
+                parentEnabled = masterEnabled && enabled,
                 expanded = expandedAudioKey == cardKey,
                 onEnabledChange = { AchievementSoundManager.setEventEnabled(context, event, it); refresh++ },
                 onExpandChange = { expandedAudioKey = if (expandedAudioKey == cardKey) null else cardKey },
@@ -235,6 +236,7 @@ private fun AchievementSoundEventCard(
     event: AchievementSoundEvent,
     custom: Boolean,
     enabled: Boolean,
+    parentEnabled: Boolean,
     expanded: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     onExpandChange: () -> Unit,
@@ -258,7 +260,10 @@ private fun AchievementSoundEventCard(
         enabled = enabled,
         expanded = expanded,
         onEnabledChange = onEnabledChange,
-        onExpandChange = onExpandChange
+        onExpandChange = onExpandChange,
+        checkboxEnabled = parentEnabled,
+        contentEnabled = parentEnabled && enabled,
+        expandEnabled = parentEnabled
     ) {
         Text(if (custom) "Audio personalizado" else "Sonido predeterminado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         if (!custom && event.defaultSpeech != null) Text("«${event.defaultSpeech}»", style = MaterialTheme.typography.bodyMedium)
