@@ -3801,6 +3801,7 @@ private fun StoryPlayerRoute(
 
 @Composable
 private fun ExerciseResultRoute(
+    onBack: () -> Unit,
     resultCorrectCount: Int,
     resultTotalCount: Int,
     isPerfectCardsResult: Boolean,
@@ -3835,6 +3836,7 @@ private fun ExerciseResultRoute(
         rewardUnitText = if (rewardMode.isStars) "ESTRELLAS GANADAS" else "MINUTOS GANADOS",
         correctCount = resultCorrectCount,
         totalCount = resultTotalCount,
+        onBack = onBack,
         onHome = onHome,
         onNextExercise = onNextExercise
     )
