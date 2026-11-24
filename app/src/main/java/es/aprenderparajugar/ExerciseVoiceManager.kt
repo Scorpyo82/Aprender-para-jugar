@@ -89,6 +89,22 @@ internal object ExerciseVoiceManager {
         return true
     }
 
+    fun hasPlayed(context: Context, item: VoiceItem): Boolean =
+        prefs(context).getBoolean(firstPlayedKey(item), false)
+
+    fun markPlayed(context: Context, item: VoiceItem): Boolean {
+        val preferences = prefs(context)
+        if (preferences.getBoolean(firstPlayedKey(item), false)) return false
+        preferences.edit().putBoolean(firstPlayedKey(item), true).apply()
+        return true
+    }
+
+    fun resetPlayed(context: Context, items: List<VoiceItem>) {
+        val editor = prefs(context).edit()
+        items.forEach { editor.putBoolean(firstPlayedKey(it), false) }
+        editor.apply()
+    }
+
     fun customPath(context: Context, item: VoiceItem): String? =
         prefs(context).getString(customKey(item), null)?.takeIf { File(it).isFile && File(it).length() > 0L }
 
