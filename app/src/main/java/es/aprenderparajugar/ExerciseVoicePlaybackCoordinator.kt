@@ -80,7 +80,7 @@ internal fun ExerciseVoicePlaybackCoordinator(
             if (decision != null) {
                 // Volver a un menú de selección cierra la sesión anterior.
                 instructionSessionActive.value = false
-                if (decision != previous || (screen == "stories" && enteredScreen)) {
+                if (decision != previous || enteredScreen) {
                     preferences.edit().putString("exercise_voice_last_decision", decision).apply()
                     if (voice != null) ExerciseVoiceManager.playLatest(context, voice)
                 }
