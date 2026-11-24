@@ -5,6 +5,7 @@ import android.media.MediaRecorder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.alpha
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,7 +93,7 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
 
 @Composable
 private fun VoiceGroupCard(title: String, description: String, checked: Boolean, parentEnabled: Boolean, onCheckedChange: (Boolean) -> Unit, content: @Composable () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = if (parentEnabled) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))) {
+    Card(modifier = Modifier.fillMaxWidth().alpha(if (parentEnabled) 1f else 0.42f), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -204,6 +205,7 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, parentEnabled:
         },
         onExpandChange = onExpand,
         checkboxEnabled = parentEnabled,
+        contentEnabled = itemControlsEnabled,
         containerColor = if (parentEnabled) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
     ) {
         Text(if (custom) "Audio personalizado" else "Audio predeterminado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
