@@ -1494,11 +1494,15 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
             "sequence-game" -> { screen = sequenceGameReturnScreen; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
-            "sequence-result" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
+            "sequence-result" -> { screen = "sequence-game"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "pin-setup" -> Unit
             "parent-pin", "exit-pin" -> { screen = "home"; permissionRecoveryEntryPending = false; pinEntry = ""; pinError = false }
             "exercise" -> { screen = cardsExerciseReturnScreen; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
-            "result" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
+            "result" -> {
+                screen = if (activeExerciseMode == "words") "word-exercise" else "exercise"
+                resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap()
+                correct = 0; feedback = ""; lastEarnedSeconds = 0
+            }
             else -> { screen = "home"; parentSection = "menu" }
         }
     }
