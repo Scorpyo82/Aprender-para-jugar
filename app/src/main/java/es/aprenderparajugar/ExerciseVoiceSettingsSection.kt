@@ -30,28 +30,36 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 
 @Composable
-internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAudio: (String?) -> Unit) {
+internal fun ExerciseVoiceSettingsSection(masterEnabled: Boolean, onMasterEnabledChange: (Boolean) -> Unit, expandedAudioKey: String?, onExpandAudio: (String?) -> Unit) {
     val context = LocalContext.current
-    var masterEnabled by remember { mutableStateOf(ExerciseVoiceManager.isMasterEnabled(context)) }
     var instructionsEnabled by remember { mutableStateOf(ExerciseVoiceManager.isGroupEnabled(context, ExerciseVoiceManager.Group.INSTRUCTIONS)) }
     var encouragementEnabled by remember { mutableStateOf(ExerciseVoiceManager.isGroupEnabled(context, ExerciseVoiceManager.Group.ENCOURAGEMENT)) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Locuciones educativas", style = MaterialTheme.typography.titleLarge)
-                Text("Mensajes de Tarjetas, Palabras y Secuencias. La música baja mientras habla la locución y recupera gradualmente su volumen al terminar.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Activar locuciones", style = MaterialTheme.typography.titleMedium)
-                        Text("Control general de todas las locuciones educativas.", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Checkbox(checked = masterEnabled, onCheckedChange = {
-                        masterEnabled = it
-                        ExerciseVoiceManager.setMasterEnabled(context, it)
-                        if (!it) ExerciseVoiceManager.stop()
-                    })
-                }
+        Text("Locuciones educativas", style = MaterialTheme.typography.titleLarge)
+        Text("Mensajes de Tarjetas, Palabras y Secuencias. La música baja mientras habla la locución y recupera gradualmente su volumen al terminar.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Activar locuciones", style = MaterialTheme.typography.titleMedium)
+                Text("Control general de todas las locuciones educativas.", style = MaterialTheme.typography.bodySmall)
+            }
+            Checkbox(checked = masterEnabled, onCheckedChange = onMasterEnabledChange)
+        }
+        VoiceGroupCard(
+            title = "Acompañamiento",
+            description = "Mensajes breves que animan al niño al elegir modalidad, dificultad o tipo de ejercicio.",
+            checked = encouragementEnabled,
+            parentEnabled = masterEnabled,
+            onCheckedChange = {
+                encouragementEnabled = it
+                ExerciseVoiceManager.setGroupEnabled(context, ExerciseVoiceManager.Group.ENCOURAGEMENT, it)
+                if (!it) ExerciseVoiceManager.stop()
+            }
+        ) {
+            ExerciseVoiceManager.items.filter { it.group == ExerciseVoiceManager.Group.ENCOURAGEMENT }.forEach { item ->
+                VoiceItemEditor(item, masterEnabled && encouragementEnabled, expandedAudioKey == "voice:" + item.key, {
+                    onExpandAudio(if (expandedAudioKey == "voice:" + item.key) null else "voice:" + item.key)
+                })
             }
         }
         VoiceGroupCard(
@@ -67,23 +75,6 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
         ) {
             ExerciseVoiceManager.items.filter { it.group == ExerciseVoiceManager.Group.INSTRUCTIONS }.forEach { item ->
                 VoiceItemEditor(item, masterEnabled && instructionsEnabled, expandedAudioKey == "voice:" + item.key, {
-                    onExpandAudio(if (expandedAudioKey == "voice:" + item.key) null else "voice:" + item.key)
-                })
-            }
-        }
-        VoiceGroupCard(
-            title = "Acompañamiento",
-            description = "Mensajes breves que animan al niño al elegir modalidad, dificultad o tipo de ejercicio.",
-            checked = encouragementEnabled,
-            parentEnabled = masterEnabled,
-            onCheckedChange = {
-                encouragementEnabled = it
-                ExerciseVoiceManager.setGroupEnabled(context, ExerciseVoiceManager.Group.ENCOURAGEMENT, it)
-                if (!it) ExerciseVoiceManager.stop()
-            }
-        ) {
-            ExerciseVoiceManager.items.filter { it.group == ExerciseVoiceManager.Group.ENCOURAGEMENT }.forEach { item ->
-                VoiceItemEditor(item, masterEnabled && encouragementEnabled, expandedAudioKey == "voice:" + item.key, {
                     onExpandAudio(if (expandedAudioKey == "voice:" + item.key) null else "voice:" + item.key)
                 })
             }
