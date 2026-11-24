@@ -850,6 +850,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         )
     }
     var activeExerciseMode by remember { mutableStateOf("cards") }
+    // Pantallas padre conservadas para que el gesto Atrás respete el origen real.
+    var cardsExerciseReturnScreen by remember { mutableStateOf("cards-options") }
+    var wordExerciseReturnScreen by remember { mutableStateOf("word-options") }
+    var sequenceGameReturnScreen by remember { mutableStateOf("sequence-difficulty") }
+    var storyAccessReturnScreen by remember { mutableStateOf("stories") }
     val appAudioState = remember(context, firstLaunchNeedsSetup) {
         AppAudioState(context, firstLaunchNeedsSetup)
     }
@@ -1476,7 +1481,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     selectedStoryPath = null
                 }
             }
-            "story-access", "story-player" -> { screen = "stories"; selectedStoryPath = null; showStoryAccessRequirements = false }
+            "story-access" -> { screen = storyAccessReturnScreen; if (screen == "stories") selectedStoryPath = null; showStoryAccessRequirements = false }
+            "story-player" -> { screen = "story-cover" }
             "story-inventory" -> { screen = "home"; storyInventoryMessage = "" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
@@ -1484,14 +1490,14 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             "word-options" -> { screen = "home"; wordStartMessage = "" }
             "word-category-select" -> { screen = "word-options"; wordStartMessage = "" }
             "sequence-category-select" -> { screen = "sequence-difficulty"; sequencePlayMessage = "" }
-            "word-exercise" -> { screen = "word-options"; wordExerciseTarget = null; wordExercisePlaced = emptyList(); wordStartMessage = "" }
+            "word-exercise" -> { screen = wordExerciseReturnScreen; wordExerciseTarget = null; wordExercisePlaced = emptyList(); wordStartMessage = "" }
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
-            "sequence-game" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
+            "sequence-game" -> { screen = sequenceGameReturnScreen; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "sequence-result" -> { screen = "sequence-difficulty"; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
             "pin-setup" -> Unit
             "parent-pin", "exit-pin" -> { screen = "home"; permissionRecoveryEntryPending = false; pinEntry = ""; pinError = false }
-            "exercise" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
+            "exercise" -> { screen = cardsExerciseReturnScreen; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
             "result" -> { screen = "home"; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = ""; lastEarnedSeconds = 0 }
             else -> { screen = "home"; parentSection = "menu" }
         }
@@ -1535,6 +1541,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         }
 
     fun startWordExercise(category: String? = null) {
+        if (screen == "word-options" || screen == "word-category-select") wordExerciseReturnScreen = screen
         val previousCategory = wordCurrentCategory
         val avoidCategory = if (wordSelectionMode == "Mezclar temas" && category == null) previousCategory else null
         val quotaId = ExerciseQuotaRepository.id("words", wordSelectedDifficulty)
@@ -1557,6 +1564,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
     }
 
     fun startSequenceExercise(type: String, level: String, category: String? = null): Boolean {
+        if (screen == "sequence-difficulty" || screen == "sequence-category-select") sequenceGameReturnScreen = screen
         val previousCategory = sequencePlayingExercise?.category
         val avoidCategory = if (sequenceSelectionMode == "Mezclar temas" && category == null) previousCategory else null
         val quotaId = ExerciseQuotaRepository.id("sequences", level, type)
@@ -1602,6 +1610,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
 
 
     fun startCardsGame(requestedMode: String, requestedCategory: String? = null) {
+        if (screen == "cards-options" || screen == "category-select") cardsExerciseReturnScreen = screen
         cardsStartMessage = ""
         if (requestedMode == "Elegir" && manualCategoryLimitReached) {
             cardsStartMessage = "Has alcanzado el límite diario de elecciones manuales."
@@ -2944,7 +2953,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             onHome = { screen = "home"; selectedStoriesCollection = null; selectedStoryPath = null },
             onSelectStory = { story ->
                 selectedStoryPath = story.directory.absolutePath
-                screen = if (story.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }) "story-access" else "story-cover"
+                val needsAccess = story.metadata.requiredAccessObjects.any { !InventoryRepository.contains(context, it) }
+                if (needsAccess) storyAccessReturnScreen = "stories"
+                screen = if (needsAccess) "story-access" else "story-cover"
             }
         )
     } else if (screen == "story-cover") {
@@ -2964,7 +2975,12 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     InventoryRepository.contains(context, it)
                 }
                 showStoryAccessRequirements = false
-                screen = if (missingObjects.isEmpty()) "story-player" else "story-access"
+                if (missingObjects.isEmpty()) {
+                    screen = "story-player"
+                } else {
+                    storyAccessReturnScreen = "story-cover"
+                    screen = "story-access"
+                }
             }
         )
     } else if (screen == "story-access") {
