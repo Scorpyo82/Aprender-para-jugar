@@ -38,7 +38,8 @@ import java.io.File
 internal fun AchievementSoundSettingsScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var enabled by remember { mutableStateOf(AchievementSoundManager.isEnabled(context)) }
+    var enabled by remember { mutableStateOf(AchievementSoundManager.isGroupEnabled(context)) }
+    var masterEnabled by remember { mutableStateOf(ExerciseVoiceManager.isMasterEnabled(context)) }
     var message by remember { mutableStateOf("") }
     var refresh by remember { mutableStateOf(0) }
     var expandedAudioKey by remember { mutableStateOf<String?>(null) }
@@ -124,21 +125,16 @@ internal fun AchievementSoundSettingsScreen() {
     DisposableEffect(Unit) { onDispose { stopRecording(false) } }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ExerciseVoiceSettingsSection(expandedAudioKey = expandedAudioKey, onExpandAudio = { expandedAudioKey = it })
-        Text("Efectos y notificaciones", style = MaterialTheme.typography.headlineSmall)
-        Text("Independientes de la música de fondo. En los cuentos, la narración se pausa mientras suena cada efecto y continúa desde el mismo punto al terminar.")
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(Modifier.weight(1f)) {
-                    Text("Activar efectos sonoros", style = MaterialTheme.typography.titleMedium)
-                    Text("Logros, objetos, recompensas y compras.")
-                }
-                Checkbox(checked = enabled, onCheckedChange = {
-                    enabled = it
-                    AchievementSoundManager.setEnabled(context, it)
-                })
-            }
-        }
+        ExerciseVoiceSettingsSection(
+            masterEnabled = masterEnabled,
+            onMasterEnabledChange = {
+                masterEnabled = it
+                ExerciseVoiceManager.setMasterEnabled(context, it)
+                if (!it) ExerciseVoiceManager.stop()
+            },
+            expandedAudioKey = expandedAudioKey,
+            onExpandAudio = { expandedAudioKey = it }
+        )
         if (message.isNotBlank()) Text(message, color = MaterialTheme.colorScheme.primary)
         val resultEvents = listOf(
             AchievementSoundEvent.REWARD_GRANTED,
@@ -205,17 +201,30 @@ internal fun AchievementSoundSettingsScreen() {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("Notificaciones y logros", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Efectos y locuciones de logros, objetos, recompensas y compras. Independientes de la música de fondo.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Checkbox(checked = enabled, enabled = masterEnabled, onCheckedChange = {
+                        enabled = it
+                        AchievementSoundManager.setGroupEnabled(context, it)
+                    })
+                }
                 Text("Locuciones de resultados", style = MaterialTheme.typography.titleLarge)
                 Text(
                     "La voz cambia según cómo haya ido el ejercicio. Puedes personalizar cada mensaje por separado.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 resultEvents.forEach { event -> renderSoundCard(event) }
+                AchievementSoundEvent.values().filterNot { it in resultEvents }.forEach { event ->
+                    renderSoundCard(event)
+                }
             }
-        }
-
-        AchievementSoundEvent.values().filterNot { it in resultEvents }.forEach { event ->
-            renderSoundCard(event)
         }
     }
 }
