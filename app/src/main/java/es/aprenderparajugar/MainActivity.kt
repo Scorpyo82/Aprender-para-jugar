@@ -1854,10 +1854,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     onNavigate = { parentSection = it },
                     onOpenLibraryTransfer = {
                         transferExportCategories = ContentStorage.Modality.entries.associateWith { modality ->
-                            LibraryPackageManager.categories(context, modality).flatMap { category ->
-                                if (modality == ContentStorage.Modality.SECUENCIAS) category.sequenceExercises.map { exercise ->
-                                    LibraryPackageManager.sequenceExerciseSelectionKey(category.directory, exercise.type, exercise.directory)
-                                } else listOf(category.directory)
+                            // Al abrir la exportación se selecciona cada categoría completa.
+                            // Los selectores de tipo y ejercicio concretan después esa selección
+                            // sin dejar las secuencias inicialmente desmarcadas.
+                            LibraryPackageManager.categories(context, modality).map { category ->
+                                category.directory
                             }.toSet()
                         }
                         expandedExportSequenceCategories = emptySet()
