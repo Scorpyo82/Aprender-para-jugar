@@ -1415,6 +1415,32 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         }
     }
 
+    fun returnFromResult() {
+        when (screen) {
+            "sequence-result" -> {
+                screen = sequenceGameReturnScreen
+                sequenceSelectedOrder = emptyList()
+                sequencePlayMessage = ""
+            }
+            else -> {
+                if (activeExerciseMode == "words") {
+                    screen = wordExerciseReturnScreen
+                    wordExerciseTarget = null
+                    wordExercisePlaced = emptyList()
+                    wordStartMessage = ""
+                } else {
+                    screen = cardsExerciseReturnScreen
+                    resolved = emptySet()
+                    selected = emptyMap()
+                    selectedPicture = ""
+                    evaluatedPictures = emptyMap()
+                    correct = 0
+                    feedback = ""
+                }
+            }
+        }
+    }
+
     BackHandler(enabled = screen != "home" && screen != "play-time") {
         when (screen) {
             "help" -> { screen = "home" }
@@ -1494,11 +1520,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             "sequences" -> { screen = "home" }
             "sequence-difficulty" -> { screen = "sequences" }
             "sequence-game" -> { screen = sequenceGameReturnScreen; sequenceSelectedOrder = emptyList(); sequencePlayMessage = "" }
-            "sequence-result" -> { screen = "sequence-game" }
+            "sequence-result" -> returnFromResult()
             "pin-setup" -> Unit
             "parent-pin", "exit-pin" -> { screen = "home"; permissionRecoveryEntryPending = false; pinEntry = ""; pinError = false }
             "exercise" -> { screen = cardsExerciseReturnScreen; resolved = emptySet(); selected = emptyMap(); selectedPicture = ""; evaluatedPictures = emptyMap(); correct = 0; feedback = "" }
-            "result" -> { screen = if (activeExerciseMode == "words") "word-exercise" else "exercise" }
+            "result" -> returnFromResult()
             else -> { screen = "home"; parentSection = "menu" }
         }
     }
@@ -2793,6 +2819,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         )
     } else if (screen == "result" || screen == "sequence-result") {
         ExerciseResultRoute(
+            onBack = { returnFromResult() },
             resultCorrectCount = resultCorrectCount,
             resultTotalCount = resultTotalCount,
             isPerfectCardsResult = correct == pairCount,
