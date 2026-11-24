@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 
 /**
  * Coordina las locuciones educativas asociadas a la navegación por los ejercicios.
@@ -22,12 +24,16 @@ internal fun ExerciseVoicePlaybackCoordinator(
     sequenceType: String?,
     appInForeground: Boolean
 ) {
+    // La marca vive únicamente mientras esta instancia de la aplicación mantiene
+    // abierta la sesión de ejercicios; nunca se persiste entre sesiones.
+    val instructionSessionActive = remember { mutableStateOf(false) }
+
     // Un único efecto ordena las locuciones de navegación y las instrucciones.
     // Así, el stop() al abandonar un menú no puede cancelar la instrucción que
     // acaba de iniciarse al entrar en el ejercicio.
     LaunchedEffect(
         screen, difficulty, wordSelectedDifficulty, sequenceChosenCategory,
-        sequenceChosenDifficulty, sequenceType, appInForeground
+        sequenceChosenDifficulty, appInForeground
     ) {
         val previousScreen = preferences.getString("exercise_voice_last_screen", null)
         val enteredScreen = previousScreen != screen
@@ -72,27 +78,41 @@ internal fun ExerciseVoicePlaybackCoordinator(
             }
 
             if (decision != null) {
+                // Volver a un menú de selección cierra la sesión anterior.
+                instructionSessionActive.value = false
                 if (decision != previous || (screen == "stories" && enteredScreen)) {
                     preferences.edit().putString("exercise_voice_last_decision", decision).apply()
                     if (voice != null) ExerciseVoiceManager.playLatest(context, voice)
                 }
             } else {
-                // Al entrar en un ejercicio, detener el mensaje de selección anterior
-                // antes de intentar reproducir la instrucción correspondiente.
-                ExerciseVoiceManager.stop()
-                val instruction = when (screen) {
-                    "exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }
-                    "word-exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }
-                    "sequence-game" -> {
-                        val typeKey = sequenceType?.toVoiceKey()
-                        ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_sequences_$typeKey" }
+                val isExerciseScreen = screen == "exercise" ||
+                    screen == "word-exercise" || screen == "sequence-game"
+                val isResultScreen = screen == "result" || screen == "sequence-result"
+
+                if (isExerciseScreen) {
+                    if (!instructionSessionActive.value) {
+                        // Abrir una tarea inicia una sesión; los siguientes ejercicios
+                        // y la pantalla de resultados pertenecen a esa misma sesión.
+                        instructionSessionActive.value = true
+                        val instruction = when (screen) {
+                            "exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }
+                            "word-exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }
+                            "sequence-game" -> {
+                                val typeKey = sequenceType?.toVoiceKey()
+                                ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_sequences_$typeKey" }
+                            }
+                            else -> null
+                        }
+                        if (instruction != null && ExerciseVoiceManager.shouldPlay(context, instruction)) {
+                            ExerciseVoiceManager.playLatest(context, instruction)
+                        }
                     }
-                    else -> null
+                } else {
+                    ExerciseVoiceManager.stop()
+                    // Los resultados no cierran la sesión: «Siguiente ejercicio»
+                    // debe conservarla. Cualquier menú previo sí la cierra.
+                    if (!isResultScreen) instructionSessionActive.value = false
                 }
-                if (instruction != null && ExerciseVoiceManager.shouldPlay(context, instruction) &&
-                    !ExerciseVoiceManager.hasPlayedInstruction(context, instruction) &&
-                    ExerciseVoiceManager.playLatest(context, instruction)
-                ) ExerciseVoiceManager.markInstructionPlayed(context, instruction)
             }
         }
     }
