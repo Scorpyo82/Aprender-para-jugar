@@ -3544,34 +3544,19 @@ private fun CardsExerciseScreen(
                         ),
                         border = if (isSelected) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null
                     ) {
-                        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = cardPadding, vertical = cardPadding)) {
-                            val availableWidthPx = with(density) { maxWidth.toPx() }
-                            val baseStyle = TextStyle(
-                                fontSize = wordCardFontSize,
-                                fontFamily = exerciseFontFamily,
-                                fontWeight = FontWeight.Bold
-                            )
-                            val measuredWidthPx = textMeasurer.measure(
-                                text = AnnotatedString(item.word),
-                                style = baseStyle,
-                                maxLines = 1,
-                                softWrap = false
-                            ).size.width.toFloat()
-                            val fittedFontSize = if (measuredWidthPx > availableWidthPx && measuredWidthPx > 0f) {
-                                (wordCardFontSize.value * availableWidthPx / measuredWidthPx).sp
-                            } else wordCardFontSize
+                        Box(Modifier.fillMaxWidth().padding(horizontal = cardPadding, vertical = cardPadding)) {
                             Text(
                                 item.word,
                                 modifier = Modifier.fillMaxWidth(),
                                 style = TextStyle(
-                                    fontSize = fittedFontSize,
-                                    lineHeight = fittedFontSize * 1.3f,
+                                    fontSize = wordCardFontSize,
+                                    lineHeight = wordCardFontSize * 1.3f,
                                     fontFamily = exerciseFontFamily,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF29213B)
+                                    color = Color(0xFF29213B),
+                                    textAlign = TextAlign.Center
                                 ),
-                                maxLines = 1,
-                                softWrap = false,
+                                softWrap = true,
                                 overflow = TextOverflow.Clip
                             )
                         }
