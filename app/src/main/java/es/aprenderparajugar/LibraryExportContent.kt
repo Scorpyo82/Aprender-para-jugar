@@ -258,6 +258,37 @@ internal fun LazyListScope.libraryExportContent(
                                                 }
                                             }
 
+                                        } else {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = categoriesForModality.all { it.directory in transferExportCategoriesState.value[modality].orEmpty() },
+                                                    onCheckedChange = { checked ->
+                                                        transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also {
+                                                            it[modality] = if (checked) categoriesForModality.map { category -> category.directory }.toSet() else emptySet()
+                                                        }
+                                                    }
+                                                )
+                                                Text("Seleccionar todas las categorías")
+                                            }
+                                            categoriesForModality.forEach { category ->
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Checkbox(
+                                                        checked = category.directory in transferExportCategoriesState.value[modality].orEmpty(),
+                                                        onCheckedChange = { checked ->
+                                                            transferExportCategoriesState.value = transferExportCategoriesState.value.toMutableMap().also { map ->
+                                                                map[modality] = map[modality].orEmpty().toMutableSet().also { set ->
+                                                                    if (checked) set.add(category.directory) else set.remove(category.directory)
+                                                                }
+                                                            }
+                                                        }
+                                                    )
+                                                    Column {
+                                                        Text(category.name)
+                                                        Text("${category.exerciseCount} ejercicios", fontSize = 12.sp, color = Color(0xFF667085))
+                                                    }
+                                                }
+                                            }
+                                        }
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Checkbox(
                                                 checked = modality in transferExportStatisticsState.value,
