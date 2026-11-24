@@ -7,6 +7,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 
+/** Identifica los retornos a la pantalla anterior para no repetir su locución. */
+private fun isBackwardVoiceNavigation(previousScreen: String?, screen: String): Boolean =
+    when (previousScreen to screen) {
+        "category-select" to "cards-options",
+        "word-category-select" to "word-options",
+        "sequence-category-select" to "sequence-difficulty",
+        "sequence-difficulty" to "sequences",
+        "sequence-game" to "sequence-difficulty",
+        "sequence-result" to "sequence-difficulty",
+        "story-cover" to "stories",
+        "story-access" to "stories",
+        "story-player" to "stories" -> true
+        else -> false
+    }
+
 /**
  * Coordina las locuciones educativas asociadas a la navegación por los ejercicios.
  * La reproducción y la sustitución de audios siguen siendo responsabilidad de
@@ -82,7 +97,9 @@ internal fun ExerciseVoicePlaybackCoordinator(
                 instructionSessionActive.value = false
                 if (decision != previous || enteredScreen) {
                     preferences.edit().putString("exercise_voice_last_decision", decision).apply()
-                    if (voice != null) ExerciseVoiceManager.playLatest(context, voice)
+                    if (voice != null && !isBackwardVoiceNavigation(previousScreen, screen)) {
+                        ExerciseVoiceManager.playLatest(context, voice)
+                    }
                 }
             } else {
                 val isExerciseScreen = screen == "exercise" ||
