@@ -68,6 +68,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
+
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Switch
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -77,6 +79,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -2518,6 +2521,11 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         }
     }
 
+    val parentalTypographyScreen = screen == "pin-setup" || screen == "parent-pin" || screen == "exit-pin" || screen == "parent"
+    val inheritedExerciseTextStyle = LocalTextStyle.current.copy(
+        fontFamily = if (parentalTypographyScreen) LocalTextStyle.current.fontFamily else exerciseFontFamily
+    )
+    CompositionLocalProvider(LocalTextStyle provides inheritedExerciseTextStyle) {
     if (screen == "pin-setup") {
         BackHandler(enabled = true) { }
         PinSetupScreen(
@@ -3126,6 +3134,7 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 }
             }
         )
+    }
     }
     if (showPermissionRecoveryDialog) {
         AlertDialog(
