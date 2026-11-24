@@ -93,7 +93,7 @@ internal fun ExerciseVoiceSettingsSection(expandedAudioKey: String?, onExpandAud
 
 @Composable
 private fun VoiceGroupCard(title: String, description: String, checked: Boolean, parentEnabled: Boolean, onCheckedChange: (Boolean) -> Unit, content: @Composable () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().alpha(if (parentEnabled) 1f else 0.42f), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+    Card(modifier = Modifier.fillMaxWidth().alpha(if (parentEnabled) 1f else 0.58f), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -205,7 +205,8 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, parentEnabled:
         },
         onExpandChange = onExpand,
         checkboxEnabled = parentEnabled,
-        contentEnabled = itemControlsEnabled,
+        contentEnabled = !parentEnabled || checked,
+        expandEnabled = parentEnabled,
         containerColor = if (parentEnabled) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
     ) {
         Text(if (custom) "Audio personalizado" else "Audio predeterminado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
