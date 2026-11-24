@@ -39,6 +39,7 @@ internal fun ExerciseResultScreen(
     rewardUnitText: String,
     correctCount: Int,
     totalCount: Int,
+    onBack: () -> Unit,
     onHome: () -> Unit,
     onNextExercise: () -> Unit
 ) {
@@ -86,6 +87,10 @@ internal fun ExerciseResultScreen(
             Button(onClick = onNextExercise, modifier = Modifier.weight(1f)) {
                 Text("Siguiente ejercicio", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
+        }
+        Spacer(Modifier.height(10.dp))
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+            Text("↩  Volver", fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
