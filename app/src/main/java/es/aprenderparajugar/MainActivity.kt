@@ -3544,13 +3544,34 @@ private fun CardsExerciseScreen(
                         ),
                         border = if (isSelected) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null
                     ) {
-                        Box(Modifier.fillMaxWidth().padding(horizontal = cardPadding, vertical = cardPadding)) {
+                        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = cardPadding, vertical = cardPadding)) {
+                            val availableWidthPx = with(density) { maxWidth.toPx() }
+                            val baseStyle = TextStyle(
+                                fontSize = wordCardFontSize,
+                                fontFamily = exerciseFontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            // Keep each whitespace-delimited word indivisible: size the whole
+                            // phrase against its widest word, not against the full phrase.
+                            val widestWordPx = item.word.split(Regex("\\s+"))
+                                .filter { it.isNotBlank() }
+                                .maxOfOrNull { word ->
+                                    textMeasurer.measure(
+                                        text = AnnotatedString(word),
+                                        style = baseStyle,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    ).size.width.toFloat()
+                                } ?: 0f
+                            val fittedFontSize = if (widestWordPx > availableWidthPx && widestWordPx > 0f) {
+                                (wordCardFontSize.value * (availableWidthPx * 0.96f) / widestWordPx).sp
+                            } else wordCardFontSize
                             Text(
                                 item.word,
                                 modifier = Modifier.fillMaxWidth(),
                                 style = TextStyle(
-                                    fontSize = wordCardFontSize,
-                                    lineHeight = wordCardFontSize * 1.3f,
+                                    fontSize = fittedFontSize,
+                                    lineHeight = fittedFontSize * 1.3f,
                                     fontFamily = exerciseFontFamily,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF29213B),
