@@ -37,6 +37,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.heightIn
@@ -101,6 +102,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -3491,6 +3496,8 @@ private fun CardsExerciseScreen(
         val shuffled = exercisePairs.shuffled()
         if (shuffled.size > 1 && shuffled.map { it.word } == wordCardOrder.map { it.word }) shuffled.drop(1) + shuffled.first() else shuffled
     }
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
     Column(
         modifier = Modifier.fillMaxSize().clipToBounds().verticalScroll(rememberScrollState()).padding(if (isTabletLayout) 28.dp else 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -3537,7 +3544,37 @@ private fun CardsExerciseScreen(
                         ),
                         border = if (isSelected) androidx.compose.foundation.BorderStroke(3.dp, Color(0xFFB56A00)) else null
                     ) {
-                        Text(item.word, Modifier.padding(cardPadding), fontSize = wordCardFontSize, fontFamily = exerciseFontFamily, fontWeight = FontWeight.Bold, color = Color(0xFF29213B))
+                        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = cardPadding, vertical = cardPadding)) {
+                            val availableWidthPx = with(density) { maxWidth.toPx() }
+                            val baseStyle = TextStyle(
+                                fontSize = wordCardFontSize,
+                                fontFamily = exerciseFontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            val measuredWidthPx = textMeasurer.measure(
+                                text = AnnotatedString(item.word),
+                                style = baseStyle,
+                                maxLines = 1,
+                                softWrap = false
+                            ).size.width.toFloat()
+                            val fittedFontSize = if (measuredWidthPx > availableWidthPx && measuredWidthPx > 0f) {
+                                (wordCardFontSize.value * availableWidthPx / measuredWidthPx).sp
+                            } else wordCardFontSize
+                            Text(
+                                item.word,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = TextStyle(
+                                    fontSize = fittedFontSize,
+                                    lineHeight = fittedFontSize * 1.3f,
+                                    fontFamily = exerciseFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF29213B)
+                                ),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Clip
+                            )
+                        }
                     }
                 }
             }
