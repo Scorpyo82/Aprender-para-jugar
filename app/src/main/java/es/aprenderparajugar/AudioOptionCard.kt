@@ -35,10 +35,11 @@ internal fun AudioOptionCard(
     checkboxEnabled: Boolean = true,
     containerColor: Color = MaterialTheme.colorScheme.surface,
     contentEnabled: Boolean = enabled,
+    expandEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().alpha(if (checkboxEnabled) 1f else 0.42f),
+        modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
@@ -52,7 +53,7 @@ internal fun AudioOptionCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Column(
-                    modifier = Modifier.weight(1f).clickable(onClick = onExpandChange),
+                    modifier = Modifier.weight(1f).clickable(enabled = expandEnabled, onClick = onExpandChange),
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(title, style = MaterialTheme.typography.titleMedium)
