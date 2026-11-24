@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.alpha
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -33,10 +34,11 @@ internal fun AudioOptionCard(
     onExpandChange: () -> Unit,
     checkboxEnabled: Boolean = true,
     containerColor: Color = MaterialTheme.colorScheme.surface,
+    contentEnabled: Boolean = enabled,
     content: @Composable () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().alpha(if (checkboxEnabled) 1f else 0.42f),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
@@ -64,7 +66,9 @@ internal fun AudioOptionCard(
                 Checkbox(checked = enabled, onCheckedChange = onEnabledChange, enabled = checkboxEnabled)
             }
             if (expanded) {
-                content()
+                Column(Modifier.fillMaxWidth().alpha(if (contentEnabled) 1f else 0.42f)) {
+                    content()
+                }
             }
         }
     }
