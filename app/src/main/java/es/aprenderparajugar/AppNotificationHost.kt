@@ -33,8 +33,13 @@ import kotlinx.coroutines.delay
   if(objectFolder!=null){
    if(storedObject==null){NotificationQueueRepository.complete(context,objectFolder);return@LaunchedEffect}
    if(notificationsPaused)return@LaunchedEffect
-   val tone=runCatching{ToneGenerator(AudioManager.STREAM_MUSIC,65)}.getOrNull()
-   try{tone?.startTone(ToneGenerator.TONE_PROP_ACK,180);delay(3000);NotificationQueueRepository.complete(context,objectFolder)}finally{tone?.release()}
+   if(AchievementSoundManager.isEnabled(context)){
+    val tone=runCatching{ToneGenerator(AudioManager.STREAM_MUSIC,65)}.getOrNull()
+    try{tone?.startTone(ToneGenerator.TONE_PROP_ACK,180);delay(3000)}finally{tone?.release()}
+   }else{
+    delay(3000)
+   }
+   NotificationQueueRepository.complete(context,objectFolder)
   }else if(storyPath!=null){
    if(storedStory==null){StoryUnlockNotificationRepository.complete(context,storyPath);return@LaunchedEffect}
    delay(2000);if(StoryUnlockNotificationRepository.isInterpreterActive)return@LaunchedEffect
