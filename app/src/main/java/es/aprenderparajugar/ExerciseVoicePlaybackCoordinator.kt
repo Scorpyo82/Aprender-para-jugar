@@ -33,7 +33,7 @@ internal fun ExerciseVoicePlaybackCoordinator(
     // acaba de iniciarse al entrar en el ejercicio.
     LaunchedEffect(
         screen, difficulty, wordSelectedDifficulty, sequenceChosenCategory,
-        sequenceChosenDifficulty, appInForeground
+        sequenceChosenDifficulty, sequenceType, appInForeground
     ) {
         val previousScreen = preferences.getString("exercise_voice_last_screen", null)
         val enteredScreen = previousScreen != screen
@@ -93,18 +93,23 @@ internal fun ExerciseVoicePlaybackCoordinator(
                     if (!instructionSessionActive.value) {
                         // Abrir una tarea inicia una sesión; los siguientes ejercicios
                         // y la pantalla de resultados pertenecen a esa misma sesión.
-                        instructionSessionActive.value = true
                         val instruction = when (screen) {
                             "exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_cards" }
                             "word-exercise" -> ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_words" }
                             "sequence-game" -> {
                                 val typeKey = sequenceType?.toVoiceKey()
-                                ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_sequences_$typeKey" }
+                                if (typeKey == null) null
+                                else ExerciseVoiceManager.items.firstOrNull { it.key == "instruction_sequences_$typeKey" }
                             }
                             else -> null
                         }
-                        if (instruction != null && ExerciseVoiceManager.shouldPlay(context, instruction)) {
-                            ExerciseVoiceManager.playLatest(context, instruction)
+                        // En Secuencias puede llegar primero la pantalla y después el ejercicio;
+                        // no cerrar la sesión hasta disponer del tipo que identifica su instrucción.
+                        if (instruction != null) {
+                            instructionSessionActive.value = true
+                            if (ExerciseVoiceManager.shouldPlay(context, instruction)) {
+                                ExerciseVoiceManager.playLatest(context, instruction)
+                            }
                         }
                     }
                 } else {
