@@ -10,6 +10,8 @@ import androidx.compose.runtime.remember
 /** Identifica los retornos a la pantalla anterior para no repetir su locución. */
 private fun isBackwardVoiceNavigation(previousScreen: String?, screen: String): Boolean =
     when (previousScreen to screen) {
+        "exercise" to "cards-options",
+        "word-exercise" to "word-options",
         "category-select" to "cards-options",
         "word-category-select" to "word-options",
         "sequence-category-select" to "sequence-difficulty",
