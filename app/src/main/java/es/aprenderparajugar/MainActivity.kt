@@ -3551,18 +3551,17 @@ private fun CardsExerciseScreen(
                                 fontFamily = exerciseFontFamily,
                                 fontWeight = FontWeight.Bold
                             )
-                            val displayWord = item.word.lowercase().replaceFirstChar { it.titlecase() }
                             val measuredWidthPx = textMeasurer.measure(
-                                text = AnnotatedString(displayWord),
+                                text = AnnotatedString(item.word),
                                 style = baseStyle,
                                 maxLines = 1,
                                 softWrap = false
                             ).size.width.toFloat()
-                            val fittedFontSize = if (measuredWidthPx > 0f) {
-                                (wordCardFontSize.value * (availableWidthPx * 0.82f) / measuredWidthPx).sp
+                            val fittedFontSize = if (measuredWidthPx > availableWidthPx && measuredWidthPx > 0f) {
+                                (wordCardFontSize.value * availableWidthPx / measuredWidthPx).sp
                             } else wordCardFontSize
                             Text(
-                                displayWord,
+                                item.word,
                                 modifier = Modifier.fillMaxWidth(),
                                 style = TextStyle(
                                     fontSize = fittedFontSize,
