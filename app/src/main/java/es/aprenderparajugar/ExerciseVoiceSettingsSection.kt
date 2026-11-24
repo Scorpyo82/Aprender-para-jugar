@@ -92,6 +92,7 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, parentEnabled:
     var recorder by remember(item) { mutableStateOf<MediaRecorder?>(null) }
     var recordingFile by remember(item) { mutableStateOf<File?>(null) }
     var message by remember(item) { mutableStateOf("") }
+    val itemControlsEnabled = parentEnabled && checked
 
     fun finishRecording(save: Boolean) {
         val activeRecorder = recorder
@@ -183,16 +184,16 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, parentEnabled:
     ) {
         Text(if (custom) "Audio personalizado" else "Audio predeterminado", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(modifier = Modifier.weight(1f), enabled = parentEnabled, onClick = {
+            OutlinedButton(modifier = Modifier.weight(1f), enabled = itemControlsEnabled, onClick = {
                 if (!ExerciseVoiceManager.playLatest(context, item, preview = true)) message = "No se ha podido reproducir el audio."
             }) { Text("▶ Escuchar", maxLines = 1) }
         }
-        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = custom && !recording, onClick = {
+        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = itemControlsEnabled && custom && !recording, onClick = {
             ExerciseVoiceManager.restoreDefault(context, item)
             custom = false
             message = "Se ha restaurado el audio original."
         }) { Text("Dejar por defecto") }
-        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !recording && !preparing, onClick = { importLauncher.launch(arrayOf("audio/*")) }) { Text("Cargar audio") }
+        OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = itemControlsEnabled && !recording && !preparing, onClick = { importLauncher.launch(arrayOf("audio/*")) }) { Text("Cargar audio") }
         if (recording) {
             Text("● GRABACIÓN EN CURSO", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
             Text("Cuando termines de hablar, pulsa «Parar y guardar».", style = MaterialTheme.typography.bodySmall)
@@ -203,13 +204,13 @@ private fun VoiceItemEditor(item: ExerciseVoiceManager.VoiceItem, parentEnabled:
         } else if (preparing) {
             Text("Preparar grabación", style = MaterialTheme.typography.titleSmall)
             Text("Cuando estés preparado, pulsa «Iniciar grabación». El micrófono no se activará hasta entonces.", style = MaterialTheme.typography.bodySmall)
-            Button(modifier = Modifier.fillMaxWidth(), onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Iniciar grabación") }
+            Button(modifier = Modifier.fillMaxWidth(), enabled = itemControlsEnabled, onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) { Text("Iniciar grabación") }
             OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                 preparing = false
                 message = "Grabación cancelada."
             }) { Text("Cancelar") }
         } else {
-            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+            OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = itemControlsEnabled, onClick = {
                 preparing = true
                 message = ""
             }) { Text("Grabar audio") }
