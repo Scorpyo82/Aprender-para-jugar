@@ -29,10 +29,12 @@ internal enum class AchievementSoundEvent(
 internal object AchievementSoundManager {
     private const val PREFS = "aprender_para_jugar"
     private val mutex = Mutex()
-    fun isEnabled(context: Context) = context.getSharedPreferences(PREFS, 0).getBoolean("achievement_sounds_enabled", true)
+    fun isEnabled(context: Context) = ExerciseVoiceManager.isMasterEnabled(context) && isGroupEnabled(context)
+    fun isGroupEnabled(context: Context) = context.getSharedPreferences(PREFS, 0).getBoolean("achievement_sounds_enabled", true)
+    fun setGroupEnabled(context: Context, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean("achievement_sounds_enabled", enabled).apply() }
     fun isEventEnabled(context: Context, event: AchievementSoundEvent) = context.getSharedPreferences(PREFS, 0).getBoolean(eventEnabledKey(event), true)
     fun setEventEnabled(context: Context, event: AchievementSoundEvent, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean(eventEnabledKey(event), enabled).apply() }
-    fun setEnabled(context: Context, enabled: Boolean) { context.getSharedPreferences(PREFS, 0).edit().putBoolean("achievement_sounds_enabled", enabled).apply() }
+    fun setEnabled(context: Context, enabled: Boolean) = setGroupEnabled(context, enabled)
     fun customPath(context: Context, event: AchievementSoundEvent): String? =
         context.getSharedPreferences(PREFS, 0).getString(pathKey(event), null)?.takeIf { File(it).isFile }
     fun setCustomPath(context: Context, event: AchievementSoundEvent, path: String) {
@@ -57,7 +59,7 @@ internal object AchievementSoundManager {
         return target.absolutePath
     }
     suspend fun play(context: Context, event: AchievementSoundEvent, preview: Boolean = false) {
-        if (!preview && (!isEnabled(context) || !isEventEnabled(context, event))) return
+        if (!isEnabled(context) || (!preview && !isEventEnabled(context, event))) return
         NotificationAudioCoordinator.withNotificationFocus(
             resumeStoryAudio = event != AchievementSoundEvent.STORY_COMPLETED
         ) {
