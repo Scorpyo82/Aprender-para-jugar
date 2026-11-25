@@ -29,7 +29,8 @@ import kotlin.math.ceil
 internal fun StarsBalanceIndicator(
     seconds: Int,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    compact: Boolean = false,
+    showStarIcon: Boolean = true
 ) {
     val safeSeconds = seconds.coerceAtLeast(0)
     val wholeStars = safeSeconds / 60
@@ -38,25 +39,37 @@ internal fun StarsBalanceIndicator(
     val dustPercent = if (remainingSeconds == 0) 0 else (ceil(remainingSeconds / 6.0).toInt() * 10).coerceAtMost(90)
 
     if (compact) {
-        Column(
+        Row(
             modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (showStarIcon) Text("⭐", fontSize = 17.sp, maxLines = 1)
                 Text(wholeStars.toString(), fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
-                StardustIcon(size = 19.dp, fontSize = 11.sp)
-                Text("$dustPercent%", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFFB27A08), maxLines = 1)
             }
-            LinearProgressIndicator(
-                progress = { dustPercent / 100f },
-                modifier = Modifier.fillMaxWidth().height(5.dp),
-                color = Color(0xFFEAB12E),
-                trackColor = Color(0xFF343434)
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StardustIcon(size = 19.dp, fontSize = 11.sp)
+                    Text("$dustPercent%", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFFB27A08), maxLines = 1)
+                }
+                LinearProgressIndicator(
+                    progress = { dustPercent / 100f },
+                    modifier = Modifier.fillMaxWidth().height(5.dp),
+                    color = Color(0xFFEAB12E),
+                    trackColor = Color(0xFF343434)
+                )
+            }
         }
     } else {
         Row(
@@ -65,26 +78,27 @@ internal fun StarsBalanceIndicator(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (showStarIcon) Text("⭐", fontSize = 30.sp, maxLines = 1)
                 Text(wholeStars.toString(), fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
             }
-            Row(
-                modifier = Modifier.weight(1f, fill = false),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                StardustIcon(size = 54.dp, fontSize = 29.sp)
-                Column(
-                    modifier = Modifier.weight(1f, fill = true),
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    StardustIcon(size = 54.dp, fontSize = 29.sp)
                     Text("$dustPercent %", fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFFF0B52E), maxLines = 1)
-                    LinearProgressIndicator(
-                        progress = { dustPercent / 100f },
-                        modifier = Modifier.fillMaxWidth().height(9.dp),
-                        color = Color(0xFFEAB12E),
-                        trackColor = Color(0xFF343434)
-                    )
                 }
+                LinearProgressIndicator(
+                    progress = { dustPercent / 100f },
+                    modifier = Modifier.fillMaxWidth().height(9.dp),
+                    color = Color(0xFFEAB12E),
+                    trackColor = Color(0xFF343434)
+                )
             }
         }
     }
