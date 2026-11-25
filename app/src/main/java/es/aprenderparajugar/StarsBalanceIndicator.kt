@@ -47,7 +47,6 @@ internal fun StarsBalanceIndicator(
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                BalanceStarIcon(size = 22.dp, fontSize = 13.sp)
                 Text(wholeStars.toString(), fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
                 StardustIcon(size = 19.dp, fontSize = 11.sp)
                 Text("$dustPercent%", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFFB27A08), maxLines = 1)
@@ -66,8 +65,7 @@ internal fun StarsBalanceIndicator(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                BalanceStarIcon(size = 58.dp, fontSize = 31.sp)
-                Text(wholeStars.toString(), fontSize = 27.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
+                Text(wholeStars.toString(), fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
             }
             Row(
                 modifier = Modifier.weight(1f, fill = false),
@@ -89,16 +87,6 @@ internal fun StarsBalanceIndicator(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun BalanceStarIcon(size: androidx.compose.ui.unit.Dp, fontSize: androidx.compose.ui.unit.TextUnit) {
-    Box(
-        modifier = Modifier.size(size).background(Color(0xFF20A9E8), CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("⭐", fontSize = fontSize)
     }
 }
 
