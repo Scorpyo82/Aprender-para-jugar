@@ -58,7 +58,8 @@ internal fun HomeRewardBalanceCard(
                     if (isStars) {
                         StarsBalanceIndicator(
                             seconds = minutes * 60 + remainderSeconds,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            showStarIcon = false
                         )
                     } else {
                         Text(
