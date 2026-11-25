@@ -1727,9 +1727,8 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                 else -> (resolution.correctCount * 2 - wrong).coerceAtLeast(0)
             }
             val earnedSeconds = (rewardSeconds * netCorrectUnits) / (pairCount * 2)
-            val belowStarsThreshold = rewardMode.isStars &&
-                resolution.correctCount * 100 < pairCount * 20
-            addEarnedTime(if (belowStarsThreshold) 0 else earnedSeconds)
+            val minimumStarsReward = if (rewardMode.isStars) rewardSeconds * 20 / 100 else 0
+            addEarnedTime(maxOf(earnedSeconds, minimumStarsReward))
             runCatching { UsageStatisticsRepository.recordCompleted(context, ContentStorage.Modality.TARJETAS, difficulty) }
             resultCorrectCount = resolution.correctCount
             resultTotalCount = pairCount
@@ -2796,10 +2795,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                         val penaltyPercent = when (wrongAnswerPenalty) { "none" -> 0; "full" -> 100; else -> 50 }
                         resultCorrectCount = (targetWord.length - letterResult.wrongAnswers).coerceIn(0, targetWord.length)
                         resultTotalCount = targetWord.length
-                        val rewardPercent = (100 - letterResult.wrongAnswers * penaltyPercent).coerceAtLeast(0)
-                        val belowStarsThreshold = rewardMode.isStars &&
-                            resultCorrectCount * 100 < resultTotalCount * 20
-                        addEarnedTime(if (belowStarsThreshold) 0 else baseReward * rewardPercent / 100)
+                        val minimumRewardPercent = if (rewardMode.isStars) 20 else 0
+                        val rewardPercent = (100 - letterResult.wrongAnswers * penaltyPercent).coerceAtLeast(minimumRewardPercent)
+                        addEarnedTime(baseReward * rewardPercent / 100)
                         correct = if (letterResult.wrongAnswers == 0) targetWord.length else resultCorrectCount
                         target.directory?.let { directory ->
                             runCatching { ExerciseRepository.recordResult(directory, resultCorrectCount, letterResult.wrongAnswers) }
@@ -2964,10 +2962,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
                     val resultSize = exercise.cards.size
                     resultCorrectCount = (resultSize - sequenceWrongAnswers).coerceIn(0, resultSize)
                     resultTotalCount = resultSize
-                    val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(0)
-                    val belowStarsThreshold = rewardMode.isStars &&
-                        resultCorrectCount * 100 < resultTotalCount * 20
-                    addEarnedTime(if (belowStarsThreshold) 0 else baseRewardSeconds * rewardPercent / 100)
+                    val minimumRewardPercent = if (rewardMode.isStars) 20 else 0
+                    val rewardPercent = (100 - sequenceWrongAnswers * penaltyPercent).coerceAtLeast(minimumRewardPercent)
+                    addEarnedTime(baseRewardSeconds * rewardPercent / 100)
                     val usageKey = sequenceGameState.dailyUsagePreferenceKey(exercise)
                     preferences.edit().putInt(usageKey, preferences.getInt(usageKey, 0) + 1).apply()
                     exercise.directory?.let { directory ->
