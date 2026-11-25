@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -74,9 +76,9 @@ internal fun StarsBalanceIndicator(
         for (star in 1..wholeStars) {
             animatedStars.intValue = star
             starScale.snapTo(0.82f)
-            starScale.animateTo(1.2f, animationSpec = tween(130))
-            starScale.animateTo(1f, animationSpec = tween(130))
-            delay(55)
+            starScale.animateTo(1.2f, animationSpec = tween(100))
+            starScale.animateTo(1f, animationSpec = tween(100))
+            delay(35)
         }
 
         dustVisible.value = true
@@ -145,6 +147,8 @@ internal fun StarsBalanceIndicator(
                     }
                     Text(visibleStars.toString(), fontSize = 38.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
                 }
+            } else {
+                Spacer(Modifier.width(60.dp))
             }
             Column(
                 modifier = Modifier.weight(1f),
