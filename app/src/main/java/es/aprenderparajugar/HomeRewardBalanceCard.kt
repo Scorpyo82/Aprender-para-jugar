@@ -56,11 +56,9 @@ internal fun HomeRewardBalanceCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     if (isStars) {
-                        Text(
-                            formattedBalance,
-                            fontSize = 38.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFF59357D)
+                        StarsBalanceIndicator(
+                            seconds = minutes * 60 + remainderSeconds,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     } else {
                         Text(
