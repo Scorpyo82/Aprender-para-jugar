@@ -3839,7 +3839,7 @@ private fun ExerciseResultRoute(
         else -> 0
     }
     val rewardIcon = when {
-        resultCorrectCount == 0 -> "😢"
+        resultCorrectCount == 0 -> "💪"
         resultCorrectCount == resultTotalCount -> "🏆"
         else -> "⭐"
     }
