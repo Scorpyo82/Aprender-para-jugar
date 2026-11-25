@@ -35,11 +35,11 @@ internal fun StarsBalanceIndicator(
     val safeSeconds = seconds.coerceAtLeast(0)
     val wholeStars = safeSeconds / 60
     val remainingSeconds = safeSeconds % 60
-    val dustPercent = if (remainingSeconds == 0) 0 else ceil(remainingSeconds / 6.0).toInt() * 10
-    val iconSize = if (compact) 34.dp else 58.dp
-    val starSize = if (compact) 18.sp else 31.sp
-    val numberSize = if (compact) 18.sp else 27.sp
-    val percentSize = if (compact) 19.sp else 34.sp
+    val dustPercent = if (remainingSeconds == 0) 0 else (ceil(remainingSeconds / 6.0).toInt() * 10).coerceAtMost(90)
+    val iconSize = if (compact) 25.dp else 58.dp
+    val starSize = if (compact) 14.sp else 31.sp
+    val numberSize = if (compact) 14.sp else 27.sp
+    val percentSize = if (compact) 14.sp else 34.sp
 
     Row(
         modifier = modifier,
@@ -67,10 +67,10 @@ internal fun StarsBalanceIndicator(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(if (compact) 30.dp else 54.dp).background(Color(0xFF302A25), CircleShape),
+                modifier = Modifier.size(if (compact) 20.dp else 54.dp).background(Color(0xFF302A25), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text("✨", fontSize = if (compact) 17.sp else 29.sp)
+                Text("✨", fontSize = if (compact) 12.sp else 29.sp)
             }
             Column(
                 modifier = Modifier.weight(1f, fill = true),
