@@ -37,6 +37,8 @@ internal fun ExerciseResultScreen(
     isPerfectCardsResult: Boolean,
     rewardAmountText: String,
     rewardUnitText: String,
+    rewardSeconds: Int = 0,
+    isStarsMode: Boolean = false,
     correctCount: Int,
     totalCount: Int,
     onBack: () -> Unit,
@@ -75,8 +77,16 @@ internal fun ExerciseResultScreen(
         Spacer(Modifier.height(8.dp))
         Text(rewardMessage, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = TextAlign.Center)
         Spacer(Modifier.height(18.dp))
-        Text(rewardAmountText, fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
-        Text(rewardUnitText, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
+        if (isStarsMode) {
+            StarsBalanceIndicator(
+                seconds = rewardSeconds,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+            )
+            Text("RECOMPENSA CONSEGUIDA", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
+        } else {
+            Text(rewardAmountText, fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF267A55), modifier = Modifier.graphicsLayer { scaleX = timeScale; scaleY = timeScale })
+            Text(rewardUnitText, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
+        }
         Spacer(Modifier.height(14.dp))
         Text("$correctCount de $totalCount aciertos", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF49445A))
         Spacer(Modifier.height(24.dp))
