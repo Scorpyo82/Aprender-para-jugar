@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,61 +34,80 @@ internal fun StarsBalanceIndicator(
     val safeSeconds = seconds.coerceAtLeast(0)
     val wholeStars = safeSeconds / 60
     val remainingSeconds = safeSeconds % 60
+    // Redondeo visual por decenas, sin convertir 59 segundos en un 100 % prematuro.
     val dustPercent = if (remainingSeconds == 0) 0 else (ceil(remainingSeconds / 6.0).toInt() * 10).coerceAtMost(90)
-    val iconSize = if (compact) 25.dp else 58.dp
-    val starSize = if (compact) 14.sp else 31.sp
-    val numberSize = if (compact) 14.sp else 27.sp
-    val percentSize = if (compact) 14.sp else 34.sp
 
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Box(
-                modifier = Modifier.size(iconSize).background(Color(0xFF20A9E8), CircleShape),
-                contentAlignment = Alignment.Center
+    if (compact) {
+        Column(
+            modifier = modifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("⭐", fontSize = starSize)
+                BalanceStarIcon(size = 22.dp, fontSize = 13.sp)
+                Text(wholeStars.toString(), fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
+                StardustIcon(size = 19.dp, fontSize = 11.sp)
+                Text("$dustPercent%", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFFB27A08), maxLines = 1)
             }
-            Text(
-                wholeStars.toString(),
-                fontSize = numberSize,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF253344),
-                maxLines = 1
+            LinearProgressIndicator(
+                progress = { dustPercent / 100f },
+                modifier = Modifier.fillMaxWidth().height(5.dp),
+                color = Color(0xFFEAB12E),
+                trackColor = Color(0xFF343434)
             )
         }
+    } else {
         Row(
-            modifier = Modifier.weight(1f, fill = false),
-            horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier.size(if (compact) 20.dp else 54.dp).background(Color(0xFF302A25), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("✨", fontSize = if (compact) 12.sp else 29.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                BalanceStarIcon(size = 58.dp, fontSize = 31.sp)
+                Text(wholeStars.toString(), fontSize = 27.sp, fontWeight = FontWeight.Black, color = Color(0xFF253344), maxLines = 1)
             }
-            Column(
-                modifier = Modifier.weight(1f, fill = true),
-                verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 5.dp)
+            Row(
+                modifier = Modifier.weight(1f, fill = false),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "$dustPercent %",
-                    fontSize = percentSize,
-                    fontWeight = FontWeight.Black,
-                    color = Color(0xFFF0B52E),
-                    maxLines = 1
-                )
-                LinearProgressIndicator(
-                    progress = { dustPercent / 100f },
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 5.dp else 9.dp),
-                    color = Color(0xFFEAB12E),
-                    trackColor = Color(0xFF343434)
-                )
+                StardustIcon(size = 54.dp, fontSize = 29.sp)
+                Column(
+                    modifier = Modifier.weight(1f, fill = true),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text("$dustPercent %", fontSize = 34.sp, fontWeight = FontWeight.Black, color = Color(0xFFF0B52E), maxLines = 1)
+                    LinearProgressIndicator(
+                        progress = { dustPercent / 100f },
+                        modifier = Modifier.fillMaxWidth().height(9.dp),
+                        color = Color(0xFFEAB12E),
+                        trackColor = Color(0xFF343434)
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun BalanceStarIcon(size: androidx.compose.ui.unit.Dp, fontSize: androidx.compose.ui.unit.TextUnit) {
+    Box(
+        modifier = Modifier.size(size).background(Color(0xFF20A9E8), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("⭐", fontSize = fontSize)
+    }
+}
+
+@Composable
+private fun StardustIcon(size: androidx.compose.ui.unit.Dp, fontSize: androidx.compose.ui.unit.TextUnit) {
+    Box(
+        modifier = Modifier.size(size).background(Color(0xFF302A25), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("✨", fontSize = fontSize)
     }
 }
