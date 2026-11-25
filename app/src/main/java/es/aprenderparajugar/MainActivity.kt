@@ -3435,6 +3435,8 @@ private fun WordExerciseScreen(
     placedLetters: List<Int>,
     letterOrder: List<Int>,
     balanceText: String,
+    balanceSeconds: Int,
+    isStarsMode: Boolean,
     roundsUsed: Int,
     roundsLimit: Int?,
     exerciseFontFamily: FontFamily,
@@ -3466,6 +3468,8 @@ private fun WordExerciseScreen(
     ) {
         ExerciseStatusBar(
             balance = balanceText,
+            balanceSeconds = balanceSeconds,
+            isStarsMode = isStarsMode,
             roundsUsed = roundsUsed,
             roundsLimit = roundsLimit,
             difficulty = difficulty
@@ -3869,6 +3873,8 @@ private fun ExerciseResultRoute(
 @Composable
 private fun SequenceGameRoute(
     balance: String,
+    balanceSeconds: Int,
+    isStarsMode: Boolean,
     roundsStatus: ExerciseQuotaRepository.QuotaStatus?,
     exercise: SequenceExercise?,
     selectedOrder: List<Int>,
@@ -3883,6 +3889,8 @@ private fun SequenceGameRoute(
 ) {
     SequenceGameScreen(
         balance = balance,
+        balanceSeconds = balanceSeconds,
+        isStarsMode = isStarsMode,
         roundsStatus = roundsStatus,
         exercise = exercise,
         selectedOrder = selectedOrder,
