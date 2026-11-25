@@ -42,8 +42,13 @@ internal fun RewardsSettingsContent(
     onOpenQuotaSystem: () -> Unit
 ) {
                         Text("Saldo de recompensas", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text(if (rewardMode.isStars) "Saldo actual: ${formatRewardBalance(balanceSeconds.value, rewardMode)} estrellas" else "Saldo actual: ${balanceSeconds.value / 60} min ${balanceSeconds.value % 60} s", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Unidad: Minutos/Estrellas (equivalencia 1:1)", fontSize = 14.sp, color = Color(0xFF667085))
+                        if (rewardMode.isStars) {
+                            StarsBalanceIndicator(seconds = balanceSeconds.value, modifier = Modifier.fillMaxWidth())
+                            Text("Las estrellas representan minutos completos y el polvo muestra el progreso hacia la siguiente estrella.", fontSize = 14.sp, color = Color(0xFF667085))
+                        } else {
+                            Text("Saldo actual: ${balanceSeconds.value / 60} min ${balanceSeconds.value % 60} s", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Unidad: Minutos", fontSize = 14.sp, color = Color(0xFF667085))
+                        }
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedButton(onClick = {
                                 val updated = (balanceSeconds.value + 60).coerceAtMost(24 * 60 * 60)
