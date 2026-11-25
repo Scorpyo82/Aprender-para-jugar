@@ -2774,7 +2774,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
             message = wordExerciseMessage,
             placedLetters = wordExercisePlaced,
             letterOrder = wordExerciseLetterOrder,
-            balanceText = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            balanceText = if (rewardMode.isStars) "" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            balanceSeconds = balanceSeconds,
+            isStarsMode = rewardMode.isStars,
             roundsUsed = wordQuotaStatus?.used ?: 0,
             roundsLimit = wordQuotaStatus?.limit,
             exerciseFontFamily = exerciseFontFamily,
@@ -2924,7 +2926,9 @@ val storyCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts
         )
     } else if (screen == "sequence-game") {
         SequenceGameRoute(
-            balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            balance = if (rewardMode.isStars) "" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            balanceSeconds = balanceSeconds,
+            isStarsMode = rewardMode.isStars,
             roundsStatus = sequencePlayingExercise?.let { exercise ->
                 ExerciseQuotaRepository.status(
                     preferences,
@@ -3562,7 +3566,9 @@ private fun CardsExerciseScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ExerciseStatusBar(
-            balance = if (rewardMode.isStars) "${formatRewardBalance(balanceSeconds, rewardMode)} ⭐" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            balance = if (rewardMode.isStars) "" else "${balanceSeconds / 60} min ${balanceSeconds % 60} s",
+            balanceSeconds = balanceSeconds,
+            isStarsMode = rewardMode.isStars,
             roundsUsed = roundsUsed,
             roundsLimit = roundsLimit,
             difficulty = difficulty
@@ -3849,7 +3855,9 @@ private fun ExerciseResultRoute(
         rewardMessage = rewardMessage,
         isPerfectCardsResult = isPerfectCardsResult,
         rewardAmountText = if (rewardMode.isStars) "+${formatRewardBalance(lastEarnedSeconds, rewardMode)} ⭐" else "+${lastEarnedSeconds / 60}:${(lastEarnedSeconds % 60).toString().padStart(2, '0')}",
-        rewardUnitText = if (rewardMode.isStars) "ESTRELLAS GANADAS" else "MINUTOS GANADOS",
+        rewardUnitText = if (rewardMode.isStars) "RECOMPENSA CONSEGUIDA" else "MINUTOS GANADOS",
+        rewardSeconds = lastEarnedSeconds,
+        isStarsMode = rewardMode.isStars,
         correctCount = resultCorrectCount,
         totalCount = resultTotalCount,
         onBack = onBack,
