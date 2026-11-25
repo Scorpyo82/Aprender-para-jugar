@@ -80,7 +80,8 @@ internal fun ExerciseResultScreen(
         if (isStarsMode) {
             StarsBalanceIndicator(
                 seconds = rewardSeconds,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                animateReward = true
             )
             Text("RECOMPENSA CONSEGUIDA", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF267A55))
         } else {
