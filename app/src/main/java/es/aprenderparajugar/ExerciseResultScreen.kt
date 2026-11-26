@@ -14,11 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.foundation.Image
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,17 +66,15 @@ internal fun ExerciseResultScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (rewardStars > 0) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale }
-            ) {
-                repeat(rewardStars) { Text("⭐", fontSize = 76.sp) }
+        Image(
+            painter = painterResource(id = R.drawable.zorro_pulgares),
+            contentDescription = "Nuestro zorro animando",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(136.dp).graphicsLayer {
+                scaleX = iconScale
+                scaleY = iconScale
             }
-        } else {
-            Text(rewardIcon, fontSize = if (isPerfectCardsResult) 104.sp else 76.sp, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale })
-        }
+        )
         Spacer(Modifier.height(8.dp))
         Text(rewardMessage, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF253344), textAlign = TextAlign.Center)
         Spacer(Modifier.height(18.dp))
