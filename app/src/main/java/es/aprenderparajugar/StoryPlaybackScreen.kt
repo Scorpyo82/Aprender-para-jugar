@@ -70,6 +70,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 
 private val StoryBackground = Color(0xFF101827)
 private val StoryGold = Color(0xFFFFD968)
@@ -308,19 +310,23 @@ internal fun StoryPlayerScreen(
 
     LaunchedEffect(
         snapshot.scene.folderName,
-        snapshot.scene.metadata.narrationAudio,
-        pendingRewardAction,
-        rewardQueue.isEmpty(),
-        notificationAudioInProgress
+        snapshot.scene.metadata.narrationAudio
     ) {
-        if (pendingRewardAction != null || rewardQueue.isNotEmpty() || notificationAudioInProgress) {
-            return@LaunchedEffect
-        }
+        // La narración se inicia una sola vez por escena. Las notificaciones
+        // pueden pausar/reanudar este mismo reproductor, pero no reinicializarlo.
+        snapshotFlow {
+            pendingRewardAction == null &&
+                rewardQueue.isEmpty() &&
+                !notificationAudioInProgress
+        }.first { it }
+
         safelyStopAndRelease(narrationPlayer)
         narrationPlayer = null
         narrationIsPlaying = false
         narrationFinished = false
-        val audio = snapshot.scene.metadata.narrationAudio?.let { File(snapshot.scene.directory, it) }?.takeIf { it.isFile }
+        val audio = snapshot.scene.metadata.narrationAudio
+            ?.let { File(snapshot.scene.directory, it) }
+            ?.takeIf { it.isFile }
         if (audio != null) {
             narrationPlayer = runCatching {
                 MediaPlayer().apply {
