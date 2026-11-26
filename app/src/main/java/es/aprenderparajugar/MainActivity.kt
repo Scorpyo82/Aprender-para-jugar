@@ -3614,11 +3614,14 @@ private fun CardsExerciseScreen(
                             val availableWidthPx = with(density) { maxWidth.toPx() }
                             val baseStyle = TextStyle(
                                 fontSize = wordCardFontSize,
+                                lineHeight = wordCardFontSize * 1.3f,
                                 fontFamily = exerciseFontFamily,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF29213B),
+                                textAlign = TextAlign.Center
                             )
-                            // Keep each whitespace-delimited word indivisible: size the whole
-                            // phrase against its widest word, not against the full phrase.
+                            // Fit against the exact typography used by Text and leave a wider
+                            // safety margin so the last glyph cannot be pushed onto a new line.
                             val widestWordPx = item.word.split(Regex("\\s+"))
                                 .filter { it.isNotBlank() }
                                 .maxOfOrNull { word ->
@@ -3629,19 +3632,17 @@ private fun CardsExerciseScreen(
                                         softWrap = false
                                     ).size.width.toFloat()
                                 } ?: 0f
-                            val fittedFontSize = if (widestWordPx > availableWidthPx && widestWordPx > 0f) {
-                                (wordCardFontSize.value * (availableWidthPx * 0.96f) / widestWordPx).sp
+                            val fittedFontSize = if (widestWordPx > 0f) {
+                                (wordCardFontSize.value * (availableWidthPx * 0.90f) / widestWordPx)
+                                    .coerceAtMost(wordCardFontSize.value)
+                                    .sp
                             } else wordCardFontSize
                             Text(
                                 item.word,
                                 modifier = Modifier.fillMaxWidth(),
-                                style = TextStyle(
+                                style = baseStyle.copy(
                                     fontSize = fittedFontSize,
-                                    lineHeight = fittedFontSize * 1.3f,
-                                    fontFamily = exerciseFontFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF29213B),
-                                    textAlign = TextAlign.Center
+                                    lineHeight = fittedFontSize * 1.3f
                                 ),
                                 softWrap = true,
                                 overflow = TextOverflow.Clip
